@@ -5,3 +5,10 @@ Either a smartphone app for people or a computer app for organizations. It is us
 - Participation in voting in the JEDO ecosystem
 
 Based on the ionic framework (https://ionicframework.com/) with Angular (https://angular.dev/).
+
+Run ionic Server: 
+- cd WALLET
+- npm run ionic:serve
+
+Update: 
+- ionic serve
