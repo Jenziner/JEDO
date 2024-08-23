@@ -14,7 +14,7 @@ Run new Fabric Blockchain:
 
 
 Check, if network is alive: 
-1. cd fabric-samples/test-network$ 
+1. cd fabric-samples/test-network 
 2. ./network.sh cc list
 
 Shutodown: ./network.sh down
