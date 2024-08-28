@@ -61,3 +61,16 @@ Checks:
 - check approval: peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name basic --version 1.0 --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" --output json
 - check chaincode: peer lifecycle chaincode querycommitted --channelID mychannel --name basic --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
 - Query chaincode: peer chaincode query -C mychannel -n basic -c '{"Args":["GetAllAssets"]}'
+
+
+
+
+Tests mit asset-transfer-basic
+API-Setup:
+1. REST-API im test-network erstellen --> siehe server.js
+2. node enrollAdmin.js
+3. node registerUser.js
+4. node server.js --> API hört auf Port 3000
+
+Neues Terminal, Test API:
+1. curl http://localhost:3000/asset/asset1

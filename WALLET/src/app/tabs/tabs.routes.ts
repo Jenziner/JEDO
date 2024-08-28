@@ -17,6 +17,16 @@ export const routes: Routes = [
           import('../tab_receiving/tab_receiving.page').then((m) => m.TabReceivingPage),
       },
       {
+        path: 'tab_test',
+        loadComponent: () =>
+          import('../tab_test/tab_test.page').then((m) => m.TabTestPage),
+      },
+      {
+        path: 'tab_assets',
+        loadComponent: () =>
+          import('../tab_assets/tab_assets.page').then((m) => m.TabAssetsPage),
+      },
+      {
         path: '',
         redirectTo: '/tabs/tab_sending',
         pathMatch: 'full',
