@@ -1,8 +1,34 @@
 // For information on how to create your own theme, please see:
 // http://ionicframework.com/docs/theming/
+$colors: (
+  primary: #b8860b,  // Dunkles Gold-Gelb
+  secondary: #8b8b8b,  // Anthrazit
+  background: #2b2b2b,  // Anthrazit für den Hintergrund
+);
+
 :root {
+    --ion-color-primary: #b8860b;  // Dunkles Gold-Gelb
+    --ion-color-primary-rgb: 184, 134, 11;
+    --ion-color-primary-contrast: #ffffff;
+    --ion-color-primary-contrast-rgb: 255, 255, 255;
+    --ion-color-primary-shade: #9f760a;
+    --ion-color-primary-tint: #c79719;
+  
+    --ion-color-secondary: #8b8b8b;  // Anthrazit
+    --ion-color-secondary-rgb: 139, 139, 139;
+    --ion-color-secondary-contrast: #ffffff;
+    --ion-color-secondary-contrast-rgb: 255, 255, 255;
+    --ion-color-secondary-shade: #7a7a7a;
+    --ion-color-secondary-tint: #9a9a9a;
+  
+    --ion-background-color: #2b2b2b;  // Anthrazit für den Hintergrund
+
+    -ion-text-color: #b8860b;
+  }
+
+/*  :root {
     --ion-background-color: #545454;
     --ion-text-color: #ffc409;
     --ion-tab-bar-color: #e0ac08;
     --ion-tab-bar-color-selected: #ffca22;
-}
+}*/
