@@ -1,20 +1,19 @@
 import { Component, OnInit } from '@angular/core';
-import { IonHeader, IonToolbar, IonTitle, IonContent } from '@ionic/angular/standalone';
-import { ExploreContainerComponent } from '../explore-container/explore-container.component';
+//import { IonHeader, IonToolbar, IonTitle, IonContent, IonButton } from '@ionic/angular/standalone';
 
 // for Fabric API Test
 import { AssetService } from '../services/asset.service';
 //import { provideHttpClient } from '@angular/common/http';
 import { HttpClientModule } from '@angular/common/http';
 //import { CommonModule } from '@angular/common';
-//import { IonicModule } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular';
 
 @Component({
   selector: 'app-tab-assets',
   templateUrl: 'tab_assets.page.html',
   styleUrls: ['tab_assets.page.scss'],
   standalone: true,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, ExploreContainerComponent, HttpClientModule],
+  imports: [IonicModule, HttpClientModule],
   providers: [ AssetService],
 })
 export class TabAssetsPage implements OnInit {

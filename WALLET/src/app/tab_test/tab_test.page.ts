@@ -1,6 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { IonHeader, IonToolbar, IonTitle, IonContent } from '@ionic/angular/standalone';
-import { ExploreContainerComponent } from '../explore-container/explore-container.component';
 
 // for Fabric API Test
 import { AssetService } from '../services/asset.service';
@@ -12,7 +10,7 @@ import { IonicModule } from '@ionic/angular';
   templateUrl: 'tab_test.page.html',
   styleUrls: ['tab_test.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, IonHeader, IonToolbar, IonTitle, IonContent, ExploreContainerComponent]
+  imports: [CommonModule, IonicModule]
 })
 
 

@@ -28,14 +28,14 @@ export const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: '/tabs/tab_sending',
+        redirectTo: 'tab_sending',
         pathMatch: 'full',
       },
     ],
   },
   {
     path: '',
-    redirectTo: '/tabs/tab_sending',
+    redirectTo: '/tabs',
     pathMatch: 'full',
   },
 ];
