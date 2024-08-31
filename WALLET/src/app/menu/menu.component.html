@@ -2,20 +2,48 @@
   <ion-menu content-id="main-content">
     <ion-header>
       <ion-toolbar>
-        <ion-title color="primary" >Menu</ion-title>
+        <ion-title color="primary" >Settings</ion-title>
       </ion-toolbar>
     </ion-header>
     <ion-content class="ion-padding">
-      Here are the Settings:
       <ion-list>
-        <ion-item routerLink="/tabs/tab_sending">
-          <ion-label>Send JEDO</ion-label>
+        <ion-item>
+          <ion-label position="stacked">UUID</ion-label>
+          <ion-input
+            [(ngModel)]="uuid"
+            [readonly]="!isImportMode"
+            placeholder="Keine UUID"
+          ></ion-input>
         </ion-item>
-        <ion-item routerLink="/tabs/tab_receiving">
-          <ion-label>Receive JEDO</ion-label>
+    
+        <ion-item>
+          <ion-label position="stacked">Password</ion-label>
+          <ion-input
+            [(ngModel)]="password"
+            [readonly]="!isImportMode"
+            placeholder="Kein Passwort"
+            type="password"
+          ></ion-input>
         </ion-item>
       </ion-list>
+    
+      <ion-button expand="full" (click)="generateCredentials()" [disabled]="isGenerated">
+        Generate
+      </ion-button>
+    
+      <ion-button expand="full" (click)="enableImportMode()" [disabled]="isImportMode || isGenerated">
+        Import
+      </ion-button>
+    
+      <ion-button expand="full" (click)="saveImportedData()" *ngIf="isImportMode">
+        Save Imported Data
+      </ion-button>
+    
+      <ion-button expand="full" color="danger" (click)="deleteData()">
+        Delete (Debug)
+      </ion-button>
     </ion-content>
+
   </ion-menu>
 
 
