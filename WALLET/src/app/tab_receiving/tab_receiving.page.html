@@ -12,6 +12,7 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
+
   <ion-header collapse="condense">
     <ion-toolbar>
       <ion-buttons slot="start">
@@ -21,5 +22,14 @@
     </ion-toolbar>
   </ion-header>
 
-  <p>Content of the tab_receiving.page</p>
+  <div *ngIf="uuid; else noUuid">
+    <qrcode [qrdata]="uuid" [width]="256" [errorCorrectionLevel]="'M'"></qrcode>
+    <div *ngIf="amount" style="margin-top: 20px; font-size: 2em;">
+      {{ amount }} JEDO
+    </div>
+  </div>
+  <ng-template #noUuid>
+    <p>UUID nicht vorhanden. Das Menu wurde geöffnet, um eine UUID einzugeben.</p>
+  </ng-template>
+
 </ion-content>

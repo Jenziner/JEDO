@@ -23,8 +23,13 @@ $colors: (
   
     --ion-background-color: #2b2b2b;  // Anthrazit für den Hintergrund
 
-    -ion-text-color: #b8860b;
+    --ion-text-color: #b8860b;
+    --ion-text-color-step-100: #b8860b; /* Helle Schriftfarbe (z.B. für dunkle Hintergründe) */
+    --ion-text-color-step-400: #c79719; /* Mittlere Schriftfarbe */
+    --ion-text-color-step-600: #9f760a; /* Dunklere Schriftfarbe */
   }
+
+
 
 /*  :root {
     --ion-background-color: #545454;

@@ -1,0 +1,42 @@
+<ion-header>
+    <ion-toolbar>
+      <ion-title>Enter amount</ion-title>
+      <ion-buttons slot="end">
+        <ion-button (click)="cancel()">Cancel</ion-button>
+      </ion-buttons>
+    </ion-toolbar>
+  </ion-header>
+  
+  <ion-content>
+    <div style="text-align: center; font-size: 2em; padding: 20px;">
+      {{ amount || '0.00' }}
+    </div>
+    <div style="text-align: center;">
+      <ion-grid>
+        <ion-row>
+          <ion-col><ion-button (click)="addNumber('1')">1</ion-button></ion-col>
+          <ion-col><ion-button (click)="addNumber('2')">2</ion-button></ion-col>
+          <ion-col><ion-button (click)="addNumber('3')">3</ion-button></ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col><ion-button (click)="addNumber('4')">4</ion-button></ion-col>
+          <ion-col><ion-button (click)="addNumber('5')">5</ion-button></ion-col>
+          <ion-col><ion-button (click)="addNumber('6')">6</ion-button></ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col><ion-button (click)="addNumber('7')">7</ion-button></ion-col>
+          <ion-col><ion-button (click)="addNumber('8')">8</ion-button></ion-col>
+          <ion-col><ion-button (click)="addNumber('9')">9</ion-button></ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col><ion-button (click)="addNumber('0')">0</ion-button></ion-col>
+          <ion-col><ion-button (click)="addNumber('.')">.</ion-button></ion-col>
+          <ion-col><ion-button (click)="removeLast()">←</ion-button></ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col><ion-button (click)="confirmAmount()">Generate QR-Code</ion-button></ion-col>
+        </ion-row>
+      </ion-grid>
+    </div>
+  </ion-content>
+  
