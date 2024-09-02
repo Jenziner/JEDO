@@ -20,7 +20,7 @@ export const routes: Routes = [
         path: 'tab_receiving',
         loadComponent: () =>
           import('../tab_receiving/tab_receiving.page').then((m) => m.TabReceivingPage),
-      },
+      }, 
       {
         path: 'tab_test',
         loadComponent: () =>
@@ -30,7 +30,7 @@ export const routes: Routes = [
         path: 'tab_assets',
         loadComponent: () =>
           import('../tab_assets/tab_assets.page').then((m) => m.TabAssetsPage),
-      },
+      }, 
       {
         path: '',
         redirectTo: 'tab_sending',

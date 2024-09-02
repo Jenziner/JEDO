@@ -6,6 +6,9 @@ import { AssetService } from '../services/asset.service';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 
+// Button-Test
+import { NavController } from '@ionic/angular';
+
 @Component({
   selector: 'app-tab-test',
   templateUrl: 'tab_test.page.html',
@@ -19,7 +22,11 @@ export class TabTestPage implements OnInit {
 //  asset: any;
 
 //  constructor(private assetService: AssetService) {}
-constructor() {}
+constructor(private navCtrl: NavController) {}
+
+openSettings() {
+  this.navCtrl.navigateRoot('/tabs/tab_settings');
+}
 
   ngOnInit() {
     console.log('TabTestPage loaded');

@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
-import { Storage } from '@ionic/storage-angular';
-import { TabSendingPage } from './tab_sending/tab_sending.page';
+//import { Storage } from '@ionic/storage-angular';
+//import { TabSendingPage } from './tab_sending/tab_sending.page';
 
 @Component({
   selector: 'app-root',
@@ -11,17 +11,19 @@ import { TabSendingPage } from './tab_sending/tab_sending.page';
   imports: [
     CommonModule,
     IonicModule,
-    TabSendingPage
+//    TabSendingPage
   ],
-  providers: [Storage]
+//  providers: [Storage]
 })
 
 export class AppComponent {
-  constructor(private storage: Storage) {
+  constructor() {}
+/*    constructor(private storage: Storage) {
     this.initializeApp();
   }
 
   async initializeApp() {
     await this.storage.create(); 
-  }
+  } */
+
 }

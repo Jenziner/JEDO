@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonIcon, IonFab, IonFabButton } from '@ionic/angular/standalone';
+
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 
 
@@ -11,7 +12,19 @@ import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
   standalone: true,
   imports: [
     CommonModule,
-    IonicModule
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonList,
+    IonItem,
+    IonLabel,
+    IonInput,
+    IonButtons,
+    IonButton,
+    IonIcon,
+    IonFab,
+    IonFabButton,
   ],
 })
 export class TabSendingPage {
