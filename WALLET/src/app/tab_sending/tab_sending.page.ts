@@ -1,9 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonIcon, IonFab, IonFabButton } from '@ionic/angular/standalone';
-
+import { IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonMenuButton, IonIcon, IonFab, IonFabButton } from '@ionic/angular/standalone';
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
-
 
 @Component({
   selector: 'app-tab-sending',
@@ -22,6 +20,7 @@ import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
     IonInput,
     IonButtons,
     IonButton,
+    IonMenuButton,
     IonIcon,
     IonFab,
     IonFabButton,

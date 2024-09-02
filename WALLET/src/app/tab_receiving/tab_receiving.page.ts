@@ -1,7 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QRCodeModule } from 'angularx-qrcode';
-import { IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonIcon, IonGrid, IonRow, IonCol, NavController } from '@ionic/angular/standalone';
+import { IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonMenuButton, IonIcon, IonGrid, IonRow, IonCol, NavController } from '@ionic/angular/standalone';
 import { Storage } from '@ionic/storage-angular';
 
 
@@ -23,6 +23,7 @@ import { Storage } from '@ionic/storage-angular';
     IonInput,
     IonButtons,
     IonButton,
+    IonMenuButton,
     IonIcon,
     IonGrid,
     IonRow,
