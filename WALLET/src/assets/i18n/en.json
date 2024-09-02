@@ -1,0 +1,11 @@
+{
+    "SETTINGS": "Settings",
+    "UUID": "UUID",
+    "PASSWORD": "Password",
+    "GENERATE": "GENERATE",
+    "IPMORT": "IMPORT",
+    "SAVE": "Save Imported Data",
+    "DELETE": "DELETE (Debug-Version)",
+    "SENDING": "Sending",
+    "RECEIVING": "Receiving"
+  }

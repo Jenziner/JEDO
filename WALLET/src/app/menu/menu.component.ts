@@ -4,6 +4,7 @@ import { IonMenu, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem,
 import { FormsModule } from '@angular/forms';
 import { Storage } from '@ionic/storage-angular';
 import { v4 as uuidv4 } from 'uuid';
+import { TranslateService, TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-menu',
@@ -26,6 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
     IonMenuButton,
     IonIcon,
     FormsModule,
+    TranslateModule,
   ],
   providers: [Storage],
 })
@@ -36,8 +38,12 @@ export class MenuComponent  implements OnInit {
   isGenerated: boolean = false;
   isImportMode: boolean = false;
 
-  constructor(private storage: Storage) { 
+  constructor(
+    private storage: Storage, 
+    private translate: TranslateService,
+  ) { 
     this.init();
+    translate.setDefaultLang('en');
   }
 
   async init() {
@@ -86,4 +92,7 @@ export class MenuComponent  implements OnInit {
     this.isGenerated = false;
   }
 
+  changeLanguage(lang: string) {
+    this.translate.use(lang);
+  }
 }

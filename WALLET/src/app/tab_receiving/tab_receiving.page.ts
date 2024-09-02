@@ -2,6 +2,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QRCodeModule } from 'angularx-qrcode';
 import { IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonMenuButton, IonIcon, IonGrid, IonRow, IonCol, NavController } from '@ionic/angular/standalone';
+import { TranslateService, TranslateModule } from '@ngx-translate/core';
 import { Storage } from '@ionic/storage-angular';
 
 
@@ -28,6 +29,7 @@ import { Storage } from '@ionic/storage-angular';
     IonGrid,
     IonRow,
     IonCol,
+    TranslateModule,
   ],
   providers: [Storage],
 })
@@ -39,10 +41,12 @@ export class TabReceivingPage {
   amount: string | null = null; 
   isFirstInput: boolean = true;
  
+  pageTitle: string = '';
 
   constructor(
     private storage: Storage,
     private navController: NavController,
+    private translate: TranslateService,
   ) {
     this.initializeApp();
   }

@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonMenuButton, IonIcon, IonFab, IonFabButton } from '@ionic/angular/standalone';
+import { TranslateService, TranslateModule } from '@ngx-translate/core';
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
+
 
 @Component({
   selector: 'app-tab-sending',
@@ -24,6 +26,7 @@ import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
     IonIcon,
     IonFab,
     IonFabButton,
+    TranslateModule,
   ],
 })
 export class TabSendingPage {
@@ -31,7 +34,7 @@ export class TabSendingPage {
   scannedAmount: string | null = null;
   scannedError: string | null = null;
 
-  constructor() {}
+  constructor(private translate: TranslateService,) {}
 
   async scanQrCode() {
     await BarcodeScanner.checkPermission({ force: true });

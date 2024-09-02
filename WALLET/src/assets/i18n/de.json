@@ -1,0 +1,11 @@
+{
+    "SETTINGS": "Einstellungen",
+    "UUID": "UUID",
+    "PASSWORD": "Passwort",
+    "GENERATE": "Generieren",
+    "IMPORT": "Importieren",
+    "SAVE": "Importierte Daten speichern",
+    "DELETE": "Löschen (Debug-Version)",
+    "SENDING": "Senden",
+    "RECEIVING": "Empfangen"
+  }

@@ -4,7 +4,6 @@ import { IonicModule } from '@ionic/angular';
 import { Storage } from '@ionic/storage-angular';
 import { MenuComponent } from './menu/menu.component';
 import { TabSendingPage } from './tab_sending/tab_sending.page';
-
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
@@ -13,13 +12,15 @@ import { TabSendingPage } from './tab_sending/tab_sending.page';
     CommonModule,
     IonicModule,
     MenuComponent,
-    TabSendingPage
+    TabSendingPage,
   ],
   providers: [Storage]
 })
 
 export class AppComponent {
-    constructor(private storage: Storage) {
+    constructor(
+      private storage: Storage,
+    ) {
     this.initializeApp();
   }
 
