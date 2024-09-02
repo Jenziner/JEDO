@@ -20,5 +20,27 @@
       <ion-title color="primary" size="large">JEDO</ion-title>
     </ion-toolbar>
   </ion-header>
-  <p>Content of the tab_sending.page</p>
+
+  <ion-fab vertical="bottom" horizontal="center" slot="fixed">
+    <ion-fab-button (click)="scanQrCode()">
+      <ion-icon name="camera"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <div *ngIf="scannedUuid">
+    <h2>Scanned UUID:</h2>
+    <p>{{ scannedUuid }}</p>
+  </div>
+
+  <div *ngIf="scannedAmount">
+    <h2>Scanned Amount:</h2>
+    <p>{{ scannedAmount }} JEDO</p>
+  </div>
+
+  <div *ngIf="scannedError">
+    <p>Error occured</p>
+    <p>{{ scannedError }}</p>
+  </div>
+
+  <p>Content of the tab_sending.page updated</p>
 </ion-content>

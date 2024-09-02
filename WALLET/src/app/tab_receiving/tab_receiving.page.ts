@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QRCodeModule } from 'angularx-qrcode';
 import { IonicModule, MenuController, ModalController } from '@ionic/angular';
@@ -21,7 +21,8 @@ import { AmountInputModal } from '../amount-input/amount-input.modal';
 
 export class TabReceivingPage {
   uuid: string | null = null;
-  amount: string | null = null;
+  amount: string | null = null; 
+  qrData: string | null = null; 
 
   constructor(
     private menu: MenuController, 
@@ -39,6 +40,11 @@ export class TabReceivingPage {
     } else {
       this.presentAmountInputModal(); 
     }
+
+    this.qrData = JSON.stringify({
+      uuid: this.uuid,
+      amount: this.amount
+    });
   }
 
   async openMenu() {
@@ -60,6 +66,11 @@ export class TabReceivingPage {
       if (result.data) {
         this.amount = result.data;
       }
+
+      this.qrData = JSON.stringify({
+        uuid: this.uuid,
+        amount: this.amount
+      });
     });
 
     return await modal.present();
