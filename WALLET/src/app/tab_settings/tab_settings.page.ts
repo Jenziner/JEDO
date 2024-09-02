@@ -6,9 +6,9 @@ import { Storage } from '@ionic/storage-angular';
 import { v4 as uuidv4 } from 'uuid';
 
 @Component({
-  selector: 'app-menu',
-  templateUrl: './menu.component.html',
-  styleUrls: ['./menu.component.scss'],
+  selector: 'app-tab-settings',
+  templateUrl: 'tab_settings.page.html',
+  styleUrls: ['tab_settings.page.scss'],
   standalone: true,
   imports: [
     CommonModule,
@@ -18,7 +18,7 @@ import { v4 as uuidv4 } from 'uuid';
   providers: [Storage],
 })
 
-export class MenuComponent  implements OnInit {
+export class TabSettingsPage {
   uuid: string | null = null;
   password: string | null = null;
   isGenerated: boolean = false;
@@ -75,4 +75,3 @@ export class MenuComponent  implements OnInit {
   }
 
 }
-

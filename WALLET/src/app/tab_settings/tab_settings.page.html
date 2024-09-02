@@ -1,0 +1,52 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title color="primary" style="text-align: center;">
+      JEDO - Settings
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title color="primary" size="large" style="text-align: center;">JEDO - Settings</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-list>
+    <ion-item>
+      <ion-label position="stacked">UUID</ion-label>
+      <ion-input
+        [(ngModel)]="uuid"
+        [readonly]="!isImportMode"
+        placeholder="Keine UUID"
+      ></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">Password</ion-label>
+      <ion-input
+        [(ngModel)]="password"
+        [readonly]="!isImportMode"
+        placeholder="Kein Passwort"
+        type="password"
+      ></ion-input>
+    </ion-item>
+  </ion-list>
+
+  <ion-button expand="block" (click)="generateCredentials()" [disabled]="isGenerated">
+    Generate
+  </ion-button>
+
+  <ion-button expand="block" (click)="enableImportMode()" [disabled]="isImportMode || isGenerated">
+    Import
+  </ion-button>
+
+  <ion-button expand="block" (click)="saveImportedData()" *ngIf="isImportMode">
+    Save Imported Data
+  </ion-button>
+
+  <ion-button expand="block" color="danger" (click)="deleteData()">
+    Delete (Debug)
+  </ion-button>
+</ion-content>

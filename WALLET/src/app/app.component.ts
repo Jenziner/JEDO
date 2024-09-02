@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { Storage } from '@ionic/storage-angular';
-import { MenuComponent } from './menu/menu.component';
 import { TabSendingPage } from './tab_sending/tab_sending.page';
 
 @Component({
@@ -12,7 +11,6 @@ import { TabSendingPage } from './tab_sending/tab_sending.page';
   imports: [
     CommonModule,
     IonicModule,
-    MenuComponent,
     TabSendingPage
   ],
   providers: [Storage]

@@ -1,9 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QRCodeModule } from 'angularx-qrcode';
-import { IonicModule, MenuController, ModalController } from '@ionic/angular';
+import { IonicModule, NavController } from '@ionic/angular';
 import { Storage } from '@ionic/storage-angular';
-import { AmountInputModal } from '../amount-input/amount-input.modal';
 
 
 @Component({
@@ -21,13 +20,15 @@ import { AmountInputModal } from '../amount-input/amount-input.modal';
 
 export class TabReceivingPage {
   uuid: string | null = null;
+  qrData: string | null = null;
+  @Input() initialAmount: string = '0.00';  
   amount: string | null = null; 
-  qrData: string | null = null; 
+  isFirstInput: boolean = true;
+ 
 
   constructor(
-    private menu: MenuController, 
     private storage: Storage,
-    private modalController: ModalController,
+    private navController: NavController,
   ) {
     this.initializeApp();
   }
@@ -36,48 +37,56 @@ export class TabReceivingPage {
     this.uuid = await this.storage.get('uuid');
 
     if (!this.uuid) {
-      this.openMenu();
+      this.redirectToSettings();
     } else {
-      this.presentAmountInputModal(); 
+      this.amount = this.amount || this.initialAmount;
+      this.updateQrData();
     }
-
-    this.qrData = JSON.stringify({
-      uuid: this.uuid,
-      amount: this.amount
-    });
-  }
-
-  async openMenu() {
-    const isMenuOpen = await this.menu.isOpen('main-menu');
-    console.log('Is menu already open?', isMenuOpen);
-    if (!isMenuOpen) {
-      await this.menu.open('main-menu');
-      console.log('Menu should now be open');
-    }
-  }
-
-  async presentAmountInputModal() {
-    const modal = await this.modalController.create({
-      component: AmountInputModal,
-      componentProps: { initialAmount: this.amount }
-    });
-
-    modal.onDidDismiss().then((result) => {
-      if (result.data) {
-        this.amount = result.data;
-      }
-
-      this.qrData = JSON.stringify({
-        uuid: this.uuid,
-        amount: this.amount
-      });
-    });
-
-    return await modal.present();
   }
 
   async initializeApp() {
     await this.storage.create();
+  }
+
+  async redirectToSettings() {
+    await this.navController.navigateRoot('/tabs/tab_settings');
+  }
+
+  addNumber(num: string) {
+    const currentAmount = this.amount || this.initialAmount;
+
+    if (this.isFirstInput) {
+      if (num === '.') {
+        this.amount = '0.'; // Wenn der Benutzer mit einem Punkt beginnt, füge "0." ein
+      } else {
+        this.amount = num; // Leert den Betrag und fügt die erste Zahl hinzu
+      }
+      this.isFirstInput = false; // Setzt das Flag zurück, damit weitere Zahlen angehängt werden
+    } else {
+      if (num === '.' && currentAmount.includes('.')) {
+        return; // Ignoriere den Punkt, wenn bereits ein Punkt vorhanden ist
+      }
+      this.amount += num; // Füge die Zahl oder den Punkt hinzu
+    }
+    this.updateQrData();
+  }
+
+  removeLast() {
+    const currentAmount = this.amount || this.initialAmount;
+    
+    this.amount = currentAmount.slice(0, -1);    
+    if (this.amount.length === 0) {
+      this.amount = this.initialAmount; 
+      this.isFirstInput = true; 
+    }  
+    this.updateQrData();
+  }
+
+  updateQrData() {
+    this.qrData = JSON.stringify({
+      uuid: this.uuid,
+      amount: this.amount
+    });
   }
 
 }

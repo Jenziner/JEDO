@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 
+
 @Component({
   selector: 'app-tab-sending',
   templateUrl: 'tab_sending.page.html',

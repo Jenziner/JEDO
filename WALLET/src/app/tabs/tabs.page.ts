@@ -1,7 +1,7 @@
 import { Component, EnvironmentInjector, inject, OnInit } from '@angular/core';
 import { IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { settings, wallet, send, triangle, ellipse } from 'ionicons/icons';
+import { settings, wallet, send, camera, backspace, triangle, ellipse } from 'ionicons/icons';
 import { QRCodeModule } from 'angularx-qrcode';
 
 @Component({
@@ -23,6 +23,6 @@ export class TabsPage {
   public environmentInjector = inject(EnvironmentInjector);
 
   constructor() {
-    addIcons({ settings, wallet, send, triangle, ellipse });
+    addIcons({ settings, wallet, send, camera, backspace, triangle, ellipse });
   }
 }

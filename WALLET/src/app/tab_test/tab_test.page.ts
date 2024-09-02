@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 
+
 // for Fabric API Test
 import { AssetService } from '../services/asset.service';
 import { CommonModule } from '@angular/common';

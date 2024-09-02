@@ -12,6 +12,11 @@ export const routes: Routes = [
           import('../tab_sending/tab_sending.page').then((m) => m.TabSendingPage),
       },
       {
+        path: 'tab_settings',
+        loadComponent: () =>
+          import('../tab_settings/tab_settings.page').then((m) => m.TabSettingsPage),
+      },
+      {
         path: 'tab_receiving',
         loadComponent: () =>
           import('../tab_receiving/tab_receiving.page').then((m) => m.TabReceivingPage),
