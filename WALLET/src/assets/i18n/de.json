@@ -7,5 +7,6 @@
     "SAVE": "Importierte Daten speichern",
     "DELETE": "Löschen (Debug-Version)",
     "SENDING": "Senden",
-    "RECEIVING": "Empfangen"
+    "RECEIVING": "Empfangen",
+    "CHANGE_LANGUAGE": "Sprachen"
   }

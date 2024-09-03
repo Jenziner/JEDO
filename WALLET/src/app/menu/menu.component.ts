@@ -5,6 +5,10 @@ import { FormsModule } from '@angular/forms';
 import { Storage } from '@ionic/storage-angular';
 import { v4 as uuidv4 } from 'uuid';
 import { TranslateService, TranslateModule } from '@ngx-translate/core';
+import { ModalController } from '@ionic/angular';
+import { LanguageSelectorComponent } from '../language-selector/language-selector.component';
+
+
 
 //used in DEBUG to open other tabs not shown in the tabs
 import { TabsPage } from '../tabs/tabs.page';
@@ -45,9 +49,18 @@ export class MenuComponent  implements OnInit {
     private storage: Storage, 
     private translate: TranslateService,
     private tabsPage: TabsPage,
+    private modalCtrl: ModalController
   ) { 
     this.init();
     translate.setDefaultLang('en');
+  }
+
+  async openLanguageSelector() {
+    const modal = await this.modalCtrl.create({
+      component: LanguageSelectorComponent
+    });
+
+    return await modal.present();
   }
 
   async init() {
@@ -96,9 +109,6 @@ export class MenuComponent  implements OnInit {
     this.isGenerated = false;
   }
 
-  changeLanguage(lang: string) {
-    this.translate.use(lang);
-  }
 
     //used in DEBUG to open other tabs not shown in the tabs
     navigateToTab(tabName: string) {

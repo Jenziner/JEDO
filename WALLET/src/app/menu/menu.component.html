@@ -26,25 +26,26 @@
         </ion-item>
       </ion-list>
 
-      <ion-button expand="full" (click)="generateCredentials()" [disabled]="isGenerated">
+      <ion-button expand="block" (click)="generateCredentials()" [disabled]="isGenerated">
         {{ 'GENERATE' | translate }}
       </ion-button>
 
-      <ion-button expand="full" (click)="enableImportMode()" [disabled]="isImportMode || isGenerated">
+      <ion-button expand="block" (click)="enableImportMode()" [disabled]="isImportMode || isGenerated">
         {{ 'IMPORT' | translate }}
       </ion-button>
 
-      <ion-button expand="full" (click)="saveImportedData()" *ngIf="isImportMode">
+      <ion-button expand="block" (click)="saveImportedData()" *ngIf="isImportMode">
         {{ 'SAFE' | translate }}
       </ion-button>
 
-      <ion-button expand="full" color="danger" (click)="deleteData()">
+      <ion-button expand="block" color="danger" (click)="deleteData()">
         {{ 'DELETE' | translate }}
       </ion-button>
 
       <ion-list>
-        <ion-item (click)="changeLanguage('en')">English</ion-item>
-        <ion-item (click)="changeLanguage('de')">Deutsch</ion-item>
+        <ion-button expand="block" (click)="openLanguageSelector()">
+          {{ 'CHANGE_LANGUAGE' | translate }}
+        </ion-button>        
       </ion-list>
 
     <ion-button (click)="navigateToTab('tab_test')">
@@ -55,5 +56,7 @@
       Tab ASSET
     </ion-button>
 
-  </ion-content>
+
+
+</ion-content>
 </ion-menu>
