@@ -30,7 +30,11 @@ $colors: (
     --ion-text-color-step-600: #9f760a; // Dunklere Schriftfarbe
   }
 
-
+.centered-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
 
 /*  :root {
     --ion-background-color: #545454;

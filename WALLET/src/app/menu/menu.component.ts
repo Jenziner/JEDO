@@ -1,10 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonMenu, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonMenuButton, IonIcon, IonGrid, IonRow, IonCol, NavController } from '@ionic/angular/standalone';
+import { IonMenu, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonMenuButton, IonIcon } from '@ionic/angular/standalone';
 import { FormsModule } from '@angular/forms';
 import { Storage } from '@ionic/storage-angular';
 import { v4 as uuidv4 } from 'uuid';
 import { TranslateService, TranslateModule } from '@ngx-translate/core';
+
+//used in DEBUG to open other tabs not shown in the tabs
+import { TabsPage } from '../tabs/tabs.page';
 
 @Component({
   selector: 'app-menu',
@@ -29,7 +32,7 @@ import { TranslateService, TranslateModule } from '@ngx-translate/core';
     FormsModule,
     TranslateModule,
   ],
-  providers: [Storage],
+  providers: [Storage, TabsPage,],
 })
 
 export class MenuComponent  implements OnInit {
@@ -41,6 +44,7 @@ export class MenuComponent  implements OnInit {
   constructor(
     private storage: Storage, 
     private translate: TranslateService,
+    private tabsPage: TabsPage,
   ) { 
     this.init();
     translate.setDefaultLang('en');
@@ -95,4 +99,10 @@ export class MenuComponent  implements OnInit {
   changeLanguage(lang: string) {
     this.translate.use(lang);
   }
+
+    //used in DEBUG to open other tabs not shown in the tabs
+    navigateToTab(tabName: string) {
+      this.tabsPage.goToTab(tabName);
+    }
+  
 }

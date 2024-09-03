@@ -42,8 +42,18 @@
         {{ 'DELETE' | translate }}
       </ion-button>
 
-      <ion-item (click)="changeLanguage('en')">English</ion-item>
-      <ion-item (click)="changeLanguage('de')">Deutsch</ion-item>
-    </ion-content>
+      <ion-list>
+        <ion-item (click)="changeLanguage('en')">English</ion-item>
+        <ion-item (click)="changeLanguage('de')">Deutsch</ion-item>
+      </ion-list>
 
-  </ion-menu>
+    <ion-button (click)="navigateToTab('tab_test')">
+      Tab-TEST
+    </ion-button>
+    
+    <ion-button (click)="navigateToTab('tab_assets')">
+      Tab ASSET
+    </ion-button>
+
+  </ion-content>
+</ion-menu>
