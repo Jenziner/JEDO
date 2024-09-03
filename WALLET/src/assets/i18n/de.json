@@ -8,5 +8,6 @@
     "DELETE": "Löschen (Debug-Version)",
     "SENDING": "Senden",
     "RECEIVING": "Empfangen",
-    "CHANGE_LANGUAGE": "Sprachen"
+    "CHANGE_LANGUAGE": "Sprachen",
+    "ERROR_UUID": "UUID nicht gefunden. Menu öffnen."
   }

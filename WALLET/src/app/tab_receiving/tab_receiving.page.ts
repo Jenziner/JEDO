@@ -1,7 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { QRCodeModule } from 'angularx-qrcode';
-import { IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonMenuButton, IonIcon, IonGrid, IonRow, IonCol, NavController } from '@ionic/angular/standalone';
+import { IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonMenuButton, IonIcon, IonGrid, IonRow, IonCol, MenuController } from '@ionic/angular/standalone';
 import { TranslateService, TranslateModule } from '@ngx-translate/core';
 import { Storage } from '@ionic/storage-angular';
 
@@ -45,7 +45,7 @@ export class TabReceivingPage {
 
   constructor(
     private storage: Storage,
-    private navController: NavController,
+    private menuController: MenuController,
     private translate: TranslateService,
   ) {
     this.initializeApp();
@@ -55,7 +55,7 @@ export class TabReceivingPage {
     this.uuid = await this.storage.get('uuid');
 
     if (!this.uuid) {
-      this.redirectToSettings();
+      this.redirectToMenu();
     } else {
       this.amount = this.amount || this.initialAmount;
       this.updateQrData();
@@ -66,12 +66,16 @@ export class TabReceivingPage {
     await this.storage.create();
   }
 
-  async redirectToSettings() {
-    await this.navController.navigateRoot('/tabs/tab_settings');
+  async redirectToMenu() {
+    await this.menuController.open();
   }
 
   addNumber(num: string) {
     const currentAmount = this.amount || this.initialAmount;
+
+    if (!this.uuid) {
+      this.redirectToMenu();
+    }
 
     if (this.isFirstInput) {
       if (num === '.') {
@@ -91,6 +95,10 @@ export class TabReceivingPage {
 
   removeLast() {
     const currentAmount = this.amount || this.initialAmount;
+
+    if (!this.uuid) {
+      this.redirectToMenu();
+    }
     
     this.amount = currentAmount.slice(0, -1);    
     if (this.amount.length === 0) {
