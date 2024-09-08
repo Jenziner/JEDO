@@ -1,0 +1,212 @@
+################################################################################
+#
+#   Section: Organizations
+#
+################################################################################
+Organizations:
+  - &OrdererOrg
+    Name: Orderer
+    ID: OrdererMSP
+    MSPDir: ../crypto-config/ordererOrganizations/test.jedo.btc/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.admin')"
+      BlockValidation:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+    OrdererEndpoints:
+      - 192.168.0.13:7050
+  - &AlpsOrg
+    Name: AlpsMSP
+    ID: AlpsMSP
+    MSPDir: ../crypto-config/peerOrganizations/alps.test.jedo.btc/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('AlpsMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('AlpsMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('AlpsMSP.admin')"
+  - &MediterraneanOrg
+    Name: MediterraneanMSP
+    ID: MediterraneanMSP
+    MSPDir: ../crypto-config/peerOrganizations/mediterranean.test.jedo.btc/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('MediterraneanMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('MediterraneanMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('MediterraneanMSP.admin')"
+
+################################################################################
+#
+#   SECTION: Capabilities
+#
+################################################################################
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_5: true
+
+################################################################################
+#
+#   SECTION: Application
+#
+################################################################################
+Application: &ApplicationDefaults
+  Organizations: []
+  Policies:
+    Readers:
+      Type: Signature
+      Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
+    Writers:
+      Type: Signature
+      Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
+    Admins:
+      Type: Signature
+      Rule: "OR('AlpsMSP.admin', 'MediterraneanMSP.admin')"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+################################################################################
+#
+#   SECTION: Orderer
+#
+################################################################################
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses:
+    - 192.168.0.13:7050
+  EtcdRaft:
+    Consenters:
+      - Host: 192.168.0.13
+        Port: 7050
+        ClientTLSCert: ../crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
+        ServerTLSCert: ../crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 kB
+  Organizations:
+      - *OrdererOrg
+  Policies:
+    Readers:
+      Type: Signature
+      Rule: "OR('OrdererMSP.member')"
+    Writers:
+      Type: Signature
+      Rule: "OR('OrdererMSP.member')"
+    Admins:
+      Type: Signature
+      Rule: "OR('OrdererMSP.admin')"
+    BlockValidation:
+      Type: Signature
+      Rule: "OR('OrdererMSP.member')"
+  Capabilities:
+    V2_0: true
+
+################################################################################
+#
+#   CHANNEL
+#
+################################################################################
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: Signature
+      Rule: "OR('OrdererMSP.member', 'AlpsMSP.member', 'MediterraneanMSP.member')"
+    Writers:
+      Type: Signature
+      Rule: "OR('OrdererMSP.member', 'AlpsMSP.member', 'MediterraneanMSP.member')"
+    Admins:
+      Type: Signature
+      Rule: "OR('OrdererMSP.admin', 'AlpsMSP.admin', 'MediterraneanMSP.admin')"
+  Capabilities:
+#      <<: *ChannelCapabilities
+    V2_0: true
+
+
+################################################################################
+#
+#   Profile
+#
+################################################################################
+Profiles:
+  JedoOrdererGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Addresses:
+        - 192.168.0.13:7050
+    Consortiums:
+      JedoConsortium:
+        Organizations:
+          - *AlpsOrg
+          - *MediterraneanOrg
+
+  JedoChannel:
+    <<: *ChannelDefaults
+    Consortium: JedoConsortium
+    Orderer:
+      <<: *OrdererDefaults
+      OrdererType: etcdraft
+      EtcdRaft:
+        Consenters:
+          - Host: 192.168.0.13
+            Port: 7050
+            ClientTLSCert: ../crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
+            ServerTLSCert: ../crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
+      Organizations:
+        - *OrdererOrg
+      Capabilities: *OrdererCapabilities
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *AlpsOrg
+        - *MediterraneanOrg
+      Capabilities: *ApplicationCapabilities
+
+
+  
+#    Consortium: JedoConsortium
+#    Application:
+#      <<: *ApplicationDefaults
+#      Organizations:
+#        - *AlpsOrg
+#        - *MediterraneanOrg
+#      Policies:
+#        Readers:
+#          Type: Signature
+#          Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
+#        Writers:
+#          Type: Signature
+#          Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
+#        Admins:
+#          Type: Signature
+#          Rule: "OR('AlpsMSP.admin', 'MediterraneanMSP.admin')"
+#      Capabilities:
+#        V2_0: true
