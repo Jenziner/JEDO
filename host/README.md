@@ -53,7 +53,7 @@ docker run -d \
   -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp:/etc/hyperledger/orderer/msp \
   -v /mnt/user/appdata/fabric/jedo-network/ledger:/var/hyperledger/production \
   -p 7050:7050 \
-  hyperledger/fabric-orderer:2.5
+  hyperledger/fabric-orderer:latest
 
 PEERS
 -----
