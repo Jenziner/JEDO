@@ -5,8 +5,8 @@
 ################################################################################
 Organizations:
   - &OrdererOrg
-    Name: Orderer
-    ID: OrdererMSP
+    Name: JedoOrderer
+    ID: JedoOrdererMSP
     MSPDir: ../crypto-config/ordererOrganizations/test.jedo.btc/msp
     Policies:
       Readers:
@@ -37,6 +37,9 @@ Organizations:
       Admins:
         Type: Signature
         Rule: "OR('AlpsMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('AlpsMSP.admin')"
   - &MediterraneanOrg
     Name: MediterraneanMSP
     ID: MediterraneanMSP
@@ -51,6 +54,9 @@ Organizations:
       Admins:
         Type: Signature
         Rule: "OR('MediterraneanMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('AlpsMSP.admin')"
 
 ################################################################################
 #
@@ -71,7 +77,7 @@ Capabilities:
 #
 ################################################################################
 Application: &ApplicationDefaults
-  Organizations: []
+  Organizations:
   Policies:
     Readers:
       Type: Signature
@@ -97,9 +103,9 @@ Application: &ApplicationDefaults
 #
 ################################################################################
 Orderer: &OrdererDefaults
-  OrdererType: etcdraft
   Addresses:
     - 192.168.0.13:7050
+  OrdererType: etcdraft
   EtcdRaft:
     Consenters:
       - Host: 192.168.0.13
@@ -115,17 +121,17 @@ Orderer: &OrdererDefaults
       - *OrdererOrg
   Policies:
     Readers:
-      Type: Signature
-      Rule: "OR('OrdererMSP.member')"
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
     Writers:
-      Type: Signature
-      Rule: "OR('OrdererMSP.member')"
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
     Admins:
-      Type: Signature
-      Rule: "OR('OrdererMSP.admin')"
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
     BlockValidation:
-      Type: Signature
-      Rule: "OR('OrdererMSP.member')"
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
   Capabilities:
     V2_0: true
 
@@ -160,8 +166,13 @@ Profiles:
     <<: *ChannelDefaults
     Orderer:
       <<: *OrdererDefaults
-      Addresses:
-        - 192.168.0.13:7050
+      Capabilities: *OrdererCapabilities
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *AlpsOrg
+        - *MediterraneanOrg
+      Capabilities: *ApplicationCapabilities
     Consortiums:
       JedoConsortium:
         Organizations:
@@ -173,15 +184,6 @@ Profiles:
     Consortium: JedoConsortium
     Orderer:
       <<: *OrdererDefaults
-      OrdererType: etcdraft
-      EtcdRaft:
-        Consenters:
-          - Host: 192.168.0.13
-            Port: 7050
-            ClientTLSCert: ../crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
-            ServerTLSCert: ../crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
-      Organizations:
-        - *OrdererOrg
       Capabilities: *OrdererCapabilities
     Application:
       <<: *ApplicationDefaults

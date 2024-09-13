@@ -1,17 +1,7 @@
-# JEDO HOST - is a Linux app for HOST and MASTER. 
+# JEDO HOST - is the Blockchain Network holding the Ledger.
+This Document describes the setup of a Hyperledger Fabric (https://www.hyperledger.org/projects/fabric) Network for a test setup 
 
-It is used for
-- transaction processing
-- Conversion of Bitcoin to JEDO
-- Store of Bitcoin
-- Participation in voting in the JEDO ecosystem
-
-Based on Hyperledger Fabric (https://www.hyperledger.org/projects/fabric).
-
-
-
-JEDO-Test-Network
-=================
+# JEDO-Test-Network
 Domain: test.jedo.btc
 IP: 192.168.0.13
 Orderer:
@@ -24,36 +14,42 @@ Peers:
 - nik.mediterranean.test.jedo.btc
 Channel: eu.test.jedo.btc (also af, as, na, sa)
 
+# Setup Basics
+1. copy fabric **bin** & **config** to a **fabric** folder
+2. create folder **jedo-network** within *fabric* folder
+3. create folder **config** within *jedo-network*
+4. copy files to *config* folder:
+    - **crypto-config.yaml**
+    - **configtx.yaml**
+    - **orderer.yaml**
+    - **core.yaml**
+5. open terminal: `cd /mnt/user/appdata/fabric/jedo-network`
 
-Network Installation Steps
-==========================
-ORDERER
--------
-- copy fabric bin & config to a fabric folder
-- create folder 'jedo-network' within fabric folder
-- create folder 'config' within jedo-network
-- copy files to config folder:
-    - 'crypto-config.yaml'
-    - 'configtx.yaml' 
-    - 'orderer.yaml'
-    - 'core.yaml'
-- open terminal: cd /mnt/user/appdata/fabric/jedo-network
-- create certificates: ../bin/cryptogen generate --config=./config/crypto-config.yaml --output=./crypto-config/
-- add path: export FABRIC_CFG_PATH=./config
-- create genesis block: ../bin/configtxgen -profile JedoOrdererGenesis -channelID system-channel -outputBlock ./config/genesisblock
-- rename orderer signcerts: mv /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/signcerts/orderer.test.jedo.btc-cert.pem /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/signcerts/cert.pem
+# Create CryptoConfig
+1. create certificates `../bin/cryptogen generate --config=./config/crypto-config.yaml --output=./crypto-config/`
+2. rename orderer signcerts `mv /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/signcerts/orderer.test.jedo.btc-cert.pem /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/signcerts/cert.pem`
+3. correct permissions `chmod 644 /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.key`
+4. Double check generated structure and permission
 
-- start orderer: 
-docker run -d \
-  --name orderer.test.jedo.btc \
-  -e CORE_LOGGING_LEVEL=debug \
-  -v /mnt/user/appdata/fabric/jedo-network/config/orderer.yaml:/etc/hyperledger/orderer/config/orderer.yaml \
-  -v /mnt/user/appdata/fabric/jedo-network/config/genesisblock:/etc/hyperledger/fabric/genesisblock \
-  -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls:/etc/hyperledger/orderer/tls \
-  -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp:/etc/hyperledger/orderer/msp \
-  -v /mnt/user/appdata/fabric/jedo-network/ledger:/var/hyperledger/production \
-  -p 7050:7050 \
-  hyperledger/fabric-orderer:latest
+# Setup Orderer
+1. add path `export FABRIC_CFG_PATH=./config`
+2. create genesis block `../bin/configtxgen -profile JedoOrdererGenesis -channelID system-channel -outputBlock ./config/genesisblock`
+3. start orderer
+```
+    docker run -d \
+    --name orderer.test.jedo.btc \
+    -v /mnt/user/appdata/fabric/jedo-network/config/orderer.yaml:/etc/hyperledger/fabric/orderer.yaml \
+    -v /mnt/user/appdata/fabric/jedo-network/config/genesisblock:/etc/hyperledger/fabric/genesisblock \
+    -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls:/etc/hyperledger/orderer/tls \
+    -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp:/etc/hyperledger/orderer/msp \
+    -v /mnt/user/appdata/fabric/jedo-network/ledger:/var/hyperledger/production \
+    -p 7050:7050 \
+    hyperledger/fabric-orderer:latest
+```
+4. check Logs `docker logs orderer.test.jedo.btc`
+
+# Setup CouchDB for a Peer
+
 
 PEERS
 -----
@@ -76,7 +72,7 @@ docker run -d \
 #######
 - dubug until running:
 -e CORE_LOGGING_LEVEL=debug \
-    - docker logs orderer.test.jedo.btc
+    - 
     - docker logs peer0.alps.test.jedo.btc
     - docker logs peer0.mediterranean.test.jedo.btc
     - docker ps
@@ -87,12 +83,12 @@ docker run -d \
 - Infinit run:
 docker run -d \
   --name orderer.test.jedo.btc \
-  -v /mnt/user/appdata/fabric/jedo-network/config/orderer.yaml:/etc/hyperledger/orderer/config/orderer.yaml \
+  -v /mnt/user/appdata/fabric/jedo-network/config/orderer.yaml:/etc/hyperledger/fabric/orderer.yaml \
   -v /mnt/user/appdata/fabric/jedo-network/config/genesisblock:/etc/hyperledger/fabric/genesisblock \
   -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls:/etc/hyperledger/orderer/tls \
   -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp:/etc/hyperledger/orderer/msp \
   -v /mnt/user/appdata/fabric/jedo-network/ledger:/var/hyperledger/production \
-  hyperledger/fabric-orderer:2.5 \
+  hyperledger/fabric-orderer:latest
   /bin/sh -c "while true; do sleep 1000; done"
 - shell starten:
 docker exec -it orderer.test.jedo.btc /bin/sh
