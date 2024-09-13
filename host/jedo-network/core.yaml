@@ -16,7 +16,7 @@ peer:
 
     # The networkId allows for logical separation of networks and is used when
     # naming docker resources.
-    networkId: dev
+    networkId: test
 
     # The Address at local network interface this Peer will listen on.
     # By default, it will listen on all network interfaces
@@ -273,7 +273,7 @@ peer:
     # TLS Settings
     tls:
         # Require server-side TLS
-        enabled:  false
+        enabled:  true
         # Require client certificates / mutual TLS for inbound connections.
         # Note that clients that are not configured to use a certificate will
         # fail to connect to the peer.
@@ -317,7 +317,7 @@ peer:
     # location must be access control protected to prevent unintended
     # modification that might corrupt the peer operations.
     # The path may be relative to FABRIC_CFG_PATH or an absolute path.
-    fileSystemPath: /var/hyperledger/production
+    fileSystemPath:
 
     # BCCSP (Blockchain crypto provider): Select which crypto implementation or
     # library to use
@@ -351,7 +351,7 @@ peer:
 
     # Path on the file system where peer will find MSP local configurations
     # The path may be relative to FABRIC_CFG_PATH or an absolute path.
-    mspConfigPath: msp
+    mspConfigPath: /etc/hyperledger/peer/msp
 
     # Identifier of the local MSP
     # ----!!!!IMPORTANT!!!-!!!IMPORTANT!!!-!!!IMPORTANT!!!!----
@@ -666,7 +666,7 @@ ledger:
     # stateDatabase - options are "goleveldb", "CouchDB"
     # goleveldb - default state database stored in goleveldb.
     # CouchDB - store state database in CouchDB
-    stateDatabase: goleveldb
+    stateDatabase: CouchDB
     # Limit on the number of records to return per query
     totalQueryLimit: 100000
     couchDBConfig:
