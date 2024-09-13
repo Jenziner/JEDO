@@ -33,7 +33,7 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 
 # Setup Orderer
 1. add path `export FABRIC_CFG_PATH=./config`
-2. create genesis block ```../bin/configtxgen -profile JedoOrdererGenesis -channelID system-channel -outputBlock ./config/genesisblock```
+2. create genesis block `../bin/configtxgen -profile JedoOrdererGenesis -channelID system-channel -outputBlock ./config/genesisblock`
 3. start orderer
 ```
     docker run -d \
