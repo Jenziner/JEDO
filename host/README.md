@@ -15,22 +15,20 @@ Peers:
 - nik.mediterranean.test.jedo.btc
 Channel: eu.test.jedo.btc (also af, as, na, sa)
 
-# Setup Basics
-1. copy fabric **bin** & **config** to a `fabric` folder
-2. create folder `jedo-network` within *fabric* folder
-3. create folder `config` and `src` within *jedo-network*
-4. copy files from config to *config* folder:
+# Setup Basics for UNRAID
+1. open terminal in UNRAID
+2. download hyperledger fabric samples `wget https://github.com/hyperledger/fabric/releases/download/v2.5.0/hyperledger-fabric-linux-amd64-2.5.0.tar.gz`
+3. extract files `tar -xvzf hyperledger-fabric-linux-amd64-2.5.0.tar.gz`
+4. create folder `mkdir -p /mnt/user/appdata/fabric/jedo-network/config`
+5. move binaries from fabric `mv bin /mnt/user/appdata/fabric/` and `mv config /mnt/user/appdata/fabric/`
+7. copy files from [config](https://github.com/Jenziner/JEDO/tree/main/host/jedo-network/config) to *config* folder:
     - **crypto-config.yaml**
     - **configtx.yaml**
     - **orderer.yaml**
     - **core.yaml**
-5. copy files from src to *src* folder:
-    - **fabric_logo.png**
-    - **hyperledger_logo.png**
-6. open terminal `cd /mnt/user/appdata/fabric/jedo-network`
-7. create icon directory `mkdir /boot/config/plugins/icons/`
-8. copy logo `cp /mnt/user/appdata/fabric/jedo-network/src/fabric_logo.png /boot/config/plugins/icons/fabric_logo.png`
-9. create docker network `docker network create fabric-network`
+5. goto jedo-network `cd /mnt/user/appdata/fabric/jedo-network`
+6. create docker network `docker network create fabric-network`
+7. inspect Network `docker network inspect fabric-network`
 
 # Create CryptoConfig
 1. create certificates `../bin/cryptogen generate --config=./config/crypto-config.yaml --output=./crypto-config/`
