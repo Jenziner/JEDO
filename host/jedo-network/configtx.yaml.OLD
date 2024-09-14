@@ -19,8 +19,8 @@ Organizations:
         Type: Signature
         Rule: "OR('OrdererMSP.admin')"
       BlockValidation:
-        Type: ImplicitMeta
-        Rule: "ANY Writers"
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
     OrdererEndpoints:
       - 192.168.0.13:7050
   - &AlpsOrg
@@ -78,8 +78,6 @@ Capabilities:
 ################################################################################
 Application: &ApplicationDefaults
   Organizations:
-    - *AlpsOrg
-    - *MediterraneanOrg
   Policies:
     Readers:
       Type: Signature
@@ -88,8 +86,8 @@ Application: &ApplicationDefaults
       Type: Signature
       Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
     Admins:
-      Type: ImplicitMeta
-      Rule: "MAJORITY Admins"
+      Type: Signature
+      Rule: "OR('AlpsMSP.admin', 'MediterraneanMSP.admin')"
     LifecycleEndorsement:
       Type: ImplicitMeta
       Rule: "MAJORITY Endorsement"
@@ -143,21 +141,19 @@ Orderer: &OrdererDefaults
 #
 ################################################################################
 Channel: &ChannelDefaults
-    Policies:
-        # Who may invoke the 'Deliver' API
-        Readers:
-            Type: ImplicitMeta
-            Rule: "ANY Readers"
-        # Who may invoke the 'Broadcast' API
-        Writers:
-            Type: ImplicitMeta
-            Rule: "ANY Writers"
-        # By default, who may modify elements at this config level
-        Admins:
-            Type: ImplicitMeta
-            Rule: "MAJORITY Admins"
-    Capabilities:
-      <<: *ChannelCapabilities
+  Policies:
+    Readers:
+      Type: Signature
+      Rule: "OR('OrdererMSP.member', 'AlpsMSP.member', 'MediterraneanMSP.member')"
+    Writers:
+      Type: Signature
+      Rule: "OR('OrdererMSP.member', 'AlpsMSP.member', 'MediterraneanMSP.member')"
+    Admins:
+      Type: Signature
+      Rule: "OR('OrdererMSP.admin', 'AlpsMSP.admin', 'MediterraneanMSP.admin')"
+  Capabilities:
+#      <<: *ChannelCapabilities
+    V2_0: true
 
 
 ################################################################################
@@ -186,10 +182,33 @@ Profiles:
   JedoChannel:
     <<: *ChannelDefaults
     Consortium: JedoConsortium
+    Orderer:
+      <<: *OrdererDefaults
+      Capabilities: *OrdererCapabilities
     Application:
       <<: *ApplicationDefaults
       Organizations:
         - *AlpsOrg
         - *MediterraneanOrg
-      Capabilities: 
-        <<: *ApplicationCapabilities
+      Capabilities: *ApplicationCapabilities
+
+
+  
+#    Consortium: JedoConsortium
+#    Application:
+#      <<: *ApplicationDefaults
+#      Organizations:
+#        - *AlpsOrg
+#        - *MediterraneanOrg
+#      Policies:
+#        Readers:
+#          Type: Signature
+#          Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
+#        Writers:
+#          Type: Signature
+#          Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
+#        Admins:
+#          Type: Signature
+#          Rule: "OR('AlpsMSP.admin', 'MediterraneanMSP.admin')"
+#      Capabilities:
+#        V2_0: true

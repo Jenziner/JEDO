@@ -23,8 +23,12 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
     - **configtx.yaml**
     - **orderer.yaml**
     - **core.yaml**
+    - **fabric_logo.png**
+    - **hyperledger_logo.png**
 5. open terminal `cd /mnt/user/appdata/fabric/jedo-network`
-6. create docker network `docker network create fabric-network`
+6. create icon directory `mkdir /boot/config/plugins/icons/`
+7. copy logo `cp /mnt/user/appdata/fabric/jedo-network/config/fabric.png /boot/config/plugins/icons/fabric_logo.png`
+8. create docker network `docker network create fabric-network`
 
 # Create CryptoConfig
 1. create certificates `../bin/cryptogen generate --config=./config/crypto-config.yaml --output=./crypto-config/`
@@ -35,7 +39,7 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 
 # Setup Orderer
 1. setup variables
--  `export FABRIC_CFG_PATH=./config`
+  -  `export FABRIC_CFG_PATH=./config`
 2. create genesis block `../bin/configtxgen -profile JedoOrdererGenesis -channelID system-channel -outputBlock ./config/genesisblock`
 3. start orderer
 ```
@@ -52,20 +56,20 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 ```
 3. set docker network `docker network connect fabric-network orderer.test.jedo.btc`
 4. restart docker `docker restart orderer.test.jedo.btc`
-4. check Logs `docker logs orderer.test.jedo.btc`
+5. check Logs `docker logs orderer.test.jedo.btc`
 
 # Setup CouchDB for a Peer
 1. Install couchDB 
-- use xx84 as Port, according to the desired port for the peer)
-- use a spare path for data and config
-- add variables for user (`COUCHDB_USER`, name according peer) and password (`COUCHDB_PASSWORD`, for test its *fabric*))
+  - use xx84 as Port, according to the desired port for the peer)
+  - use a spare path for data and config
+  - add variables for user (`COUCHDB_USER`, name according peer) and password (`COUCHDB_PASSWORD`, for test its *fabric*))
 2. set docker network `docker network connect fabric-network CouchDB-ALPS` or `docker network connect fabric-network CouchDB-MEDITERRANEAN`
 3. check Container, goto `http://192.168.0.13:8054/_utils/` and log in with user / pw
 
 
 # Setup Peer ALPS
 1. setup variables
-- `export FABRIC_CFG_PATH=./config`
+  - `export FABRIC_CFG_PATH=./config`
 2. start peer
 ```
     docker run -d \
@@ -89,6 +93,8 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/peer0.alps.test.jedo.btc/msp:/etc/hyperledger/peer/msp \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/peer0.alps.test.jedo.btc/tls:/etc/hyperledger/fabric/tls \
     -v /mnt/user/appdata/fabric/jedo-network/alps:/var/hyperledger/production \
+    -p 8051:8051 \
+    -p 8052:8052 \
     hyperledger/fabric-peer:latest
 ```
 3. set docker network `docker network connect fabric-network peer0.alps.test.jedo.btc`
@@ -97,7 +103,7 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 
 # Setup Peer MEDITERRANEAN
 1. setup variables
-- `export FABRIC_CFG_PATH=./config`
+  - `export FABRIC_CFG_PATH=./config`
 2. start peer
 ```
     docker run -d \
@@ -121,19 +127,86 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/peers/peer0.mediterranean.test.jedo.btc/msp:/etc/hyperledger/peer/msp \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/peers/peer0.mediterranean.test.jedo.btc/tls:/etc/hyperledger/fabric/tls \
     -v /mnt/user/appdata/fabric/jedo-network/mediterranean:/var/hyperledger/production \
+    -p 9051:9051 \
+    -p 9052:9052 \
     hyperledger/fabric-peer:latest
 ```
 3. set docker network `docker network connect fabric-network peer0.mediterranean.test.jedo.btc`
 4. restart docker `docker restart peer0.mediterranean.test.jedo.btc`
 5. check Logs `docker logs peer0.mediterranean.test.jedo.btc`
 
+# Setup a Channel
+1. setup variables
+  - 
+```
+    export FABRIC_CFG_PATH=./config \
+    CORE_PEER_LOCALMSPID="AlpsMSP" \
+    CORE_PEER_TLS_ROOTCERT_FILE=/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/peer0.alps.test.jedo.btc/tls/ca.crt \
+    CORE_PEER_MSPCONFIGPATH=/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp \
+    CORE_PEER_ADDRESS=localhost:8051 \
+    FABRIC_LOGGING_SPEC=DEBUG
 
-- create channel config: ../bin/configtxgen -profile JedoChannel -outputCreateChannelTx ./eu.tx -channelID eu
-- create channel: ../bin/peer channel create -o orderer.test.jedo.btc:7050 -c eu -f ./eu.tx --tls --cafile /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/ca.crt
+```
+2. create channel config `../bin/configtxgen -profile JedoChannel -outputCreateChannelTx ./config/eu.tx -channelID eu`
+3. copy admin certificates Alps `cp /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem \
+/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/msp/admincerts/`
+4. cp /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem \
+/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/msp/admincerts/
+
+5. copy admin certificates Mediterranean `cp /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/signcerts/Admin@mediterranean.test.jedo.btc-cert.pem \
+/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/msp/admincerts/`
+6. cp /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/signcerts/Admin@mediterranean.test.jedo.btc-cert.pem \
+/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/msp/admincerts/
+7. cp crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem \
+   crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/admincerts/
+8. cp crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/signcerts/Admin@mediterranean.test.jedo.btc-cert.pem \
+   crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/admincerts/  
+9. cp crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem \
+   crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/admincerts/
+10. cp crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/signcerts/Admin@mediterranean.test.jedo.btc-cert.pem \
+   crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/admincerts/
+    
+
+7. create channel `../bin/peer channel create -o localhost:7050 --ordererTLSHostnameOverride orderer.test.jedo.btc -c eu -f ./config/eu.tx --outputBlock ./eu.block --tls --cafile "/mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/tlscacerts/tlsca.test.jedo.btc-cert.pem"`
+
+8. Set permission: `chmod -R 755 crypto-config/`
+
+Alternate:
+../bin/peer channel create -o localhost:7050 --ordererTLSHostnameOverride orderer.test.jedo.btc -c eu -f ./config/eu.tx --outputBlock ./eu.block --tls --cafile "/mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/tlscacerts/tlsca.test.jedo.btc-cert.pem" --certfile /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/tls/client.crt --keyfile /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/tls/client.key
+
+
+# Test certificates
+cat crypto-config/ordererOrganizations/test.jedo.btc/users/Admin@test.jedo.btc/msp/admincerts/Admin@test.jedo.btc-cert.pem
+cat crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/admincerts/Admin@alps.test.jedo.btc-cert.pem
+cat crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/admincerts/Admin@mediterranean.test.jedo.btc-cert.pem
+openssl x509 -in crypto-config/ordererOrganizations/test.jedo.btc/users/Admin@test.jedo.btc/msp/admincerts/Admin@test.jedo.btc-cert.pem -text -noout
+openssl x509 -in crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/admincerts/Admin@alps.test.jedo.btc-cert.pem -text -noout
+openssl x509 -in crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/admincerts/Admin@mediterranean.test.jedo.btc-cert.pem -text -noout
+
+
+
+
+
+Test:
+export CORE_PEER_LOCALMSPID="AlpsMSP"
+export CORE_PEER_MSPCONFIGPATH=crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp
+peer channel fetch config -o localhost:7050 -c eu --tls --cafile crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/tlscacerts/tlsca.test.jedo.btc-cert.pem
+
+
+
+
+export CORE_PEER_MSPCONFIGPATH=/tmp/hyperledger/org1/admin/msp
+peer channel create -c mychannel -f /tmp/hyperledger/org1/peer1/assets/channel.tx -o orderer1-org0:7050 --outputBlock /tmp/hyperledger/org1/peer1/assets/mychannel.block --tls --cafile /tmp/hyperledger/org1/peer1/tls-msp/tlscacerts/tls-0-0-0-0-7052.pem
+
+
+
+
+peer channel create -o localhost:7050  --ordererTLSHostnameOverride orderer.example.com -c channel1 -f ./channel-artifacts/channel1.tx --outputBlock ./channel-artifacts/channel1.block --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
 
 - create channel: 
 ../bin/peer channel create -o orderer.test.jedo.btc:7050 -c eu -f ./eu.tx --outputBlock ./eu.block
 ../bin/peer channel create -o 192.168.0.13:7050 -c eu -f ./eu.tx --outputBlock ./eu.block
+
 
 
 

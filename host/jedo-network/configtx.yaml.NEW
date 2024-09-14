@@ -78,24 +78,22 @@ Capabilities:
 ################################################################################
 Application: &ApplicationDefaults
   Organizations:
-    - *AlpsOrg
-    - *MediterraneanOrg
-  Policies:
-    Readers:
-      Type: Signature
-      Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
-    Writers:
-      Type: Signature
-      Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
-    Admins:
-      Type: ImplicitMeta
-      Rule: "MAJORITY Admins"
-    LifecycleEndorsement:
-      Type: ImplicitMeta
-      Rule: "MAJORITY Endorsement"
-    Endorsement:
-      Type: ImplicitMeta
-      Rule: "MAJORITY Endorsement"
+    Policies:
+        LifecycleEndorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+        Endorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
   Capabilities:
     <<: *ApplicationCapabilities
 
@@ -135,7 +133,7 @@ Orderer: &OrdererDefaults
       Type: ImplicitMeta
       Rule: "ANY Writers"
   Capabilities:
-    V2_0: true
+    <<: *OrdererCapabilities
 
 ################################################################################
 #
@@ -158,6 +156,7 @@ Channel: &ChannelDefaults
             Rule: "MAJORITY Admins"
     Capabilities:
       <<: *ChannelCapabilities
+#    V2_0: true
 
 
 ################################################################################
@@ -186,10 +185,33 @@ Profiles:
   JedoChannel:
     <<: *ChannelDefaults
     Consortium: JedoConsortium
+    Orderer:
+      <<: *OrdererDefaults
+      Capabilities: *OrdererCapabilities
     Application:
       <<: *ApplicationDefaults
       Organizations:
         - *AlpsOrg
         - *MediterraneanOrg
-      Capabilities: 
-        <<: *ApplicationCapabilities
+      Capabilities: *ApplicationCapabilities
+
+
+  
+#    Consortium: JedoConsortium
+#    Application:
+#      <<: *ApplicationDefaults
+#      Organizations:
+#        - *AlpsOrg
+#        - *MediterraneanOrg
+#      Policies:
+#        Readers:
+#          Type: Signature
+#          Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
+#        Writers:
+#          Type: Signature
+#          Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
+#        Admins:
+#          Type: Signature
+#          Rule: "OR('AlpsMSP.admin', 'MediterraneanMSP.admin')"
+#      Capabilities:
+#        V2_0: true
