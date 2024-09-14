@@ -2,6 +2,7 @@
 This Document describes the setup of a Hyperledger Fabric (https://www.hyperledger.org/projects/fabric) Network for a test setup 
 
 # JEDO-Test-Network
+Schema: https://vectr.com/editor/f76ba3ed-411e-42fc-8524-4ba3539b23cd
 Domain: test.jedo.btc
 IP: 192.168.0.13
 Orderer:
@@ -15,20 +16,21 @@ Peers:
 Channel: eu.test.jedo.btc (also af, as, na, sa)
 
 # Setup Basics
-1. copy fabric **bin** & **config** to a **fabric** folder
-2. create folder **jedo-network** within *fabric* folder
-3. create folder **config** within *jedo-network*
-4. copy files to *config* folder:
+1. copy fabric **bin** & **config** to a `fabric` folder
+2. create folder `jedo-network` within *fabric* folder
+3. create folder `config` and `src` within *jedo-network*
+4. copy files from config to *config* folder:
     - **crypto-config.yaml**
     - **configtx.yaml**
     - **orderer.yaml**
     - **core.yaml**
+5. copy files from src to *src* folder:
     - **fabric_logo.png**
     - **hyperledger_logo.png**
-5. open terminal `cd /mnt/user/appdata/fabric/jedo-network`
-6. create icon directory `mkdir /boot/config/plugins/icons/`
-7. copy logo `cp /mnt/user/appdata/fabric/jedo-network/config/fabric.png /boot/config/plugins/icons/fabric_logo.png`
-8. create docker network `docker network create fabric-network`
+6. open terminal `cd /mnt/user/appdata/fabric/jedo-network`
+7. create icon directory `mkdir /boot/config/plugins/icons/`
+8. copy logo `cp /mnt/user/appdata/fabric/jedo-network/src/fabric_logo.png /boot/config/plugins/icons/fabric_logo.png`
+9. create docker network `docker network create fabric-network`
 
 # Create CryptoConfig
 1. create certificates `../bin/cryptogen generate --config=./config/crypto-config.yaml --output=./crypto-config/`
@@ -45,7 +47,7 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 ```
     docker run -d \
     --name orderer.test.jedo.btc \
-    --label net.unraid.docker.icon="/boot/config/plugins/icons/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/fabric_logo.png" \
     -v /mnt/user/appdata/fabric/jedo-network/config/orderer.yaml:/etc/hyperledger/fabric/orderer.yaml \
     -v /mnt/user/appdata/fabric/jedo-network/config/genesisblock:/etc/hyperledger/fabric/genesisblock \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls:/etc/hyperledger/orderer/tls \
@@ -73,7 +75,7 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 2. start peer
 ```
     docker run -d \
-    --name peer0.alps.test.jedo.btc \
+    --name nik.alps.test.jedo.btc \
     --label net.unraid.docker.icon="/boot/config/plugins/icons/fabric_logo.png" \
     -e CORE_PEER_ID=nik.alps.test.jedo.btc \
     -e CORE_PEER_LISTENADDRESS=0.0.0.0:8051 \
@@ -107,7 +109,7 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 2. start peer
 ```
     docker run -d \
-    --name peer0.mediterranean.test.jedo.btc \
+    --name luke.mediterranean.test.jedo.btc \
     --label net.unraid.docker.icon="/boot/config/plugins/icons/fabric_logo.png" \
     -e CORE_PEER_ID=luke.mediterranean.test.jedo.btc \
     -e CORE_PEER_LISTENADDRESS=0.0.0.0:9051 \

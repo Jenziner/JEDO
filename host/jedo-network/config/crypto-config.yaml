@@ -1,21 +1,23 @@
 OrdererOrgs:
-  - Name: Jedo
+  - Name: JedoOrg
     Domain: test.jedo.btc
     Specs:
       - Hostname: orderer
 
 PeerOrgs:
-  - Name: Alps
+  - Name: AlpsOrg
     Domain: alps.test.jedo.btc
     EnableNodeOUs: true
     Template:
       Count: 1
+      Hostname: nik
     Users:
       Count: 1
-  - Name: Mediterranean
+  - Name: MediterraneanOrg
     Domain: mediterranean.test.jedo.btc
     EnableNodeOUs: true
     Template:
       Count: 1
+      Hostname: luke
     Users:
       Count: 1
