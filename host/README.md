@@ -67,7 +67,7 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
     docker run -d \
     --name nik.alps.test.jedo.btc \
     --network fabric-network \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/src/fabric_logo.png" \
     -e CORE_PEER_ID=nik.alps.test.jedo.btc \
     -e CORE_PEER_LISTENADDRESS=0.0.0.0:8051 \
     -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052 \
@@ -104,7 +104,7 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
     docker run -d \
     --name luke.mediterranean.test.jedo.btc \
     --network fabric-network \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/src/fabric_logo.png" \
     -e CORE_PEER_ID=luke.mediterranean.test.jedo.btc \
     -e CORE_PEER_LISTENADDRESS=0.0.0.0:9051 \
     -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052 \
@@ -152,7 +152,7 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
     docker run -d \
     --name orderer.test.jedo.btc \
     --network fabric-network \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/src/fabric_logo.png" \
     -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
     -e ORDERER_GENERAL_GENESISMETHOD=file \
     -e ORDERER_GENERAL_GENESISFILE=/etc/hyperledger/fabric/genesis.block \
@@ -180,7 +180,7 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
     docker run -d \
     --name cli-nik \
     --network fabric-network \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/src/fabric_logo.png" \
     -e GOPATH=/opt/gopath \
     -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock \
     -e CORE_PEER_ID=cli-nik \
@@ -238,53 +238,14 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 ```
 
 
-
-
-
-
-
-
-openssl x509 -in /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/tls/ca.crt -text -noout
-
-/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/tls/server.crt
-
-
-
 Alternate:
 ../bin/peer channel create -o localhost:7050 --ordererTLSHostnameOverride orderer.test.jedo.btc -c eu -f ./config/eu.tx --outputBlock ./eu.block --tls --cafile "/mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/tlscacerts/tlsca.test.jedo.btc-cert.pem" --certfile /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/tls/client.crt --keyfile /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/tls/client.key
 
 
-# Test certificates
-cat crypto-config/ordererOrganizations/test.jedo.btc/users/Admin@test.jedo.btc/msp/admincerts/Admin@test.jedo.btc-cert.pem
-cat crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/admincerts/Admin@alps.test.jedo.btc-cert.pem
-cat crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/admincerts/Admin@mediterranean.test.jedo.btc-cert.pem
-openssl x509 -in crypto-config/ordererOrganizations/test.jedo.btc/users/Admin@test.jedo.btc/msp/admincerts/Admin@test.jedo.btc-cert.pem -text -noout
-openssl x509 -in crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/admincerts/Admin@alps.test.jedo.btc-cert.pem -text -noout
-openssl x509 -in crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/admincerts/Admin@mediterranean.test.jedo.btc-cert.pem -text -noout
-
-
-
-
-
-Test:
+Test Channel:
 export CORE_PEER_LOCALMSPID="AlpsMSP"
 export CORE_PEER_MSPCONFIGPATH=crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp
 peer channel fetch config -o localhost:7050 -c eu --tls --cafile crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/tlscacerts/tlsca.test.jedo.btc-cert.pem
-
-
-
-
-export CORE_PEER_MSPCONFIGPATH=/tmp/hyperledger/org1/admin/msp
-peer channel create -c mychannel -f /tmp/hyperledger/org1/peer1/assets/channel.tx -o orderer1-org0:7050 --outputBlock /tmp/hyperledger/org1/peer1/assets/mychannel.block --tls --cafile /tmp/hyperledger/org1/peer1/tls-msp/tlscacerts/tls-0-0-0-0-7052.pem
-
-
-
-
-peer channel create -o localhost:7050  --ordererTLSHostnameOverride orderer.example.com -c channel1 -f ./channel-artifacts/channel1.tx --outputBlock ./channel-artifacts/channel1.block --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
-
-- create channel: 
-../bin/peer channel create -o orderer.test.jedo.btc:7050 -c eu -f ./eu.tx --outputBlock ./eu.block
-../bin/peer channel create -o 192.168.0.13:7050 -c eu -f ./eu.tx --outputBlock ./eu.block
 
 
 
@@ -302,12 +263,19 @@ peer channel create -o localhost:7050  --ordererTLSHostnameOverride orderer.exam
     curl -X POST --data-binary @./configtx/genesis.block http://localhost:7059/protolator/decode/common.Block > genesis.json
     curl -X POST --data-binary @./configtx/eu.tx http://localhost:7059/protolator/decode/common.ConfigUpdate > channel_tx.json
     curl -X POST --data-binary @./configtx/eu.block http://localhost:7059/protolator/decode/common.Block > channel.json
-
 ```
 
+# Test certificates
+cat crypto-config/ordererOrganizations/test.jedo.btc/users/Admin@test.jedo.btc/msp/admincerts/Admin@test.jedo.btc-cert.pem
+cat crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/admincerts/Admin@alps.test.jedo.btc-cert.pem
+cat crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/admincerts/Admin@mediterranean.test.jedo.btc-cert.pem
+openssl x509 -in crypto-config/ordererOrganizations/test.jedo.btc/users/Admin@test.jedo.btc/msp/admincerts/Admin@test.jedo.btc-cert.pem -text -noout
+openssl x509 -in crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/admincerts/Admin@alps.test.jedo.btc-cert.pem -text -noout
+openssl x509 -in crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/admincerts/Admin@mediterranean.test.jedo.btc-cert.pem -text -noout
+openssl x509 -in /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/tls/ca.crt -text -noout
 
 
-
+# DIV
     `-e CORE_LOGGING_LEVEL=debug \`
 
     - Check logs

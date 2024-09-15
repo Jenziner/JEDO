@@ -1,0 +1,222 @@
+docker exec -it cli-nik peer channel create -c eu -f /tmp/jedo-network/configtx/eu.tx -o orderer.test.jedo.btc:7050 --outputBlock /tmp/jedo-network/configtx/eu.block --tls --cafile /etc/hyperledger/orderer/tls/ca.crt
+2024-09-15 19:18:17.028 UTC 0001 DEBU [bccsp] GetDefault -> Before using BCCSP, please call InitFactories(). Falling back to bootBCCSP.
+2024-09-15 19:18:17.028 UTC 0002 DEBU [bccsp] GetDefault -> Before using BCCSP, please call InitFactories(). Falling back to bootBCCSP.
+2024-09-15 19:18:17.032 UTC 0003 DEBU [bccsp] GetDefault -> Before using BCCSP, please call InitFactories(). Falling back to bootBCCSP.
+2024-09-15 19:18:17.034 UTC 0004 DEBU [bccsp_sw] openKeyStore -> KeyStore opened at [/etc/hyperledger/peer/msp/keystore]...done
+2024-09-15 19:18:17.034 UTC 0005 DEBU [msp] getPemMaterialFromDir -> Reading directory /etc/hyperledger/peer/msp/signcerts
+2024-09-15 19:18:17.035 UTC 0006 DEBU [msp] getPemMaterialFromDir -> Inspecting file /etc/hyperledger/peer/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem
+2024-09-15 19:18:17.035 UTC 0007 DEBU [msp] getPemMaterialFromDir -> Reading directory /etc/hyperledger/peer/msp/cacerts
+2024-09-15 19:18:17.036 UTC 0008 DEBU [msp] getPemMaterialFromDir -> Inspecting file /etc/hyperledger/peer/msp/cacerts/ca.alps.test.jedo.btc-cert.pem
+2024-09-15 19:18:17.036 UTC 0009 DEBU [msp] getPemMaterialFromDir -> Reading directory /etc/hyperledger/peer/msp/admincerts
+2024-09-15 19:18:17.036 UTC 000a DEBU [msp] getPemMaterialFromDir -> Reading directory /etc/hyperledger/peer/msp/intermediatecerts
+2024-09-15 19:18:17.036 UTC 000b DEBU [msp] getMspConfig -> Intermediate certs folder not found at [/etc/hyperledger/peer/msp/intermediatecerts]. Skipping. [stat /etc/hyperledger/peer/msp/intermediatecerts: no such file or directory]
+2024-09-15 19:18:17.037 UTC 000c DEBU [msp] getPemMaterialFromDir -> Reading directory /etc/hyperledger/peer/msp/tlscacerts
+2024-09-15 19:18:17.037 UTC 000d DEBU [msp] getPemMaterialFromDir -> Inspecting file /etc/hyperledger/peer/msp/tlscacerts/tlsca.alps.test.jedo.btc-cert.pem
+2024-09-15 19:18:17.037 UTC 000e DEBU [msp] getPemMaterialFromDir -> Reading directory /etc/hyperledger/peer/msp/tlsintermediatecerts
+2024-09-15 19:18:17.038 UTC 000f DEBU [msp] getMspConfig -> TLS intermediate certs folder not found at [/etc/hyperledger/peer/msp/tlsintermediatecerts]. Skipping. [stat /etc/hyperledger/peer/msp/tlsintermediatecerts: no such file or directory]
+2024-09-15 19:18:17.038 UTC 0010 DEBU [msp] getPemMaterialFromDir -> Reading directory /etc/hyperledger/peer/msp/crls
+2024-09-15 19:18:17.038 UTC 0011 DEBU [msp] getMspConfig -> crls folder not found at [/etc/hyperledger/peer/msp/crls]. Skipping. [stat /etc/hyperledger/peer/msp/crls: no such file or directory]
+2024-09-15 19:18:17.038 UTC 0012 DEBU [msp] getMspConfig -> Loading NodeOUs
+2024-09-15 19:18:17.040 UTC 0013 DEBU [msp] newBccspMsp -> Creating BCCSP-based MSP instance
+2024-09-15 19:18:17.040 UTC 0014 DEBU [msp] New -> Creating Cache-MSP instance
+2024-09-15 19:18:17.040 UTC 0015 DEBU [msp] loadLocalMSP -> Created new local MSP
+2024-09-15 19:18:17.040 UTC 0016 DEBU [msp] Setup -> Setting up MSP instance AlpsMSP
+2024-09-15 19:18:17.040 UTC 0017 DEBU [msp.identity] newIdentity -> Creating identity instance for cert -----BEGIN CERTIFICATE-----
+MIICWTCCAf+gAwIBAgIQaB2pO6StXsKZsPQJB0pMXzAKBggqhkjOPQQDAjB3MQsw
+CQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZy
+YW5jaXNjbzEbMBkGA1UEChMSYWxwcy50ZXN0LmplZG8uYnRjMR4wHAYDVQQDExVj
+YS5hbHBzLnRlc3QuamVkby5idGMwHhcNMjQwOTE0MTg0MzAwWhcNMzQwOTEyMTg0
+MzAwWjB3MQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UE
+BxMNU2FuIEZyYW5jaXNjbzEbMBkGA1UEChMSYWxwcy50ZXN0LmplZG8uYnRjMR4w
+HAYDVQQDExVjYS5hbHBzLnRlc3QuamVkby5idGMwWTATBgcqhkjOPQIBBggqhkjO
+PQMBBwNCAAQBAW02rFd/K+vlpX+Dd1gtGLGIh06ahLFLLU/6V+iuicdKbifI9hf/
+YcgknvWTRJbqBKLFj/zIkfoXEdL2CgIFo20wazAOBgNVHQ8BAf8EBAMCAaYwHQYD
+VR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMA8GA1UdEwEB/wQFMAMBAf8wKQYD
+VR0OBCIEIOjS/bYR3NuSI3ccRRzcgURyXROfBQbHLSkAPEC0A1PSMAoGCCqGSM49
+BAMCA0gAMEUCIH2xXgcEtPOYNuBCw4ct0wCZfJGiVx0PpOxmEakcKXmRAiEAvxxh
+/eokT6KgdTplPmTAc0mgANyyH9b8tsENHl6oKYA=
+-----END CERTIFICATE-----
+2024-09-15 19:18:17.041 UTC 0018 DEBU [msp.identity] newIdentity -> Creating identity instance for cert -----BEGIN CERTIFICATE-----
+MIICLzCCAdagAwIBAgIRAJ/i56O+2NEyH02hROvRP50wCgYIKoZIzj0EAwIwdzEL
+MAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBG
+cmFuY2lzY28xGzAZBgNVBAoTEmFscHMudGVzdC5qZWRvLmJ0YzEeMBwGA1UEAxMV
+Y2EuYWxwcy50ZXN0LmplZG8uYnRjMB4XDTI0MDkxNDE4NDMwMFoXDTM0MDkxMjE4
+NDMwMFowbTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNV
+BAcTDVNhbiBGcmFuY2lzY28xDjAMBgNVBAsTBWFkbWluMSEwHwYDVQQDDBhBZG1p
+bkBhbHBzLnRlc3QuamVkby5idGMwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARp
+dR2UeOdvpn+duK8OWYoT+weL6lJxkPz2r3hJsg1XOo5rZ9RPcUu0yDP8wY9FPsnA
+mvY31AECz40UEqFuhb4+o00wSzAOBgNVHQ8BAf8EBAMCB4AwDAYDVR0TAQH/BAIw
+ADArBgNVHSMEJDAigCDo0v22EdzbkiN3HEUc3IFEcl0TnwUGxy0pADxAtANT0jAK
+BggqhkjOPQQDAgNHADBEAiB0X7D4/+dbF7xvxsLW7jUtep/aXsMzp+pKOllXLHIY
+5AIgDPLCwDWhLFrGzbqNmFTnmUWQbVAMopP5Bida6+y7GXs=
+-----END CERTIFICATE-----
+2024-09-15 19:18:17.042 UTC 0019 DEBU [msp.identity] newIdentity -> Creating identity instance for cert -----BEGIN CERTIFICATE-----
+MIICLzCCAdagAwIBAgIRAJ/i56O+2NEyH02hROvRP50wCgYIKoZIzj0EAwIwdzEL
+MAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBG
+cmFuY2lzY28xGzAZBgNVBAoTEmFscHMudGVzdC5qZWRvLmJ0YzEeMBwGA1UEAxMV
+Y2EuYWxwcy50ZXN0LmplZG8uYnRjMB4XDTI0MDkxNDE4NDMwMFoXDTM0MDkxMjE4
+NDMwMFowbTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNV
+BAcTDVNhbiBGcmFuY2lzY28xDjAMBgNVBAsTBWFkbWluMSEwHwYDVQQDDBhBZG1p
+bkBhbHBzLnRlc3QuamVkby5idGMwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARp
+dR2UeOdvpn+duK8OWYoT+weL6lJxkPz2r3hJsg1XOo5rZ9RPcUu0yDP8wY9FPsnA
+mvY31AECz40UEqFuhb4+o00wSzAOBgNVHQ8BAf8EBAMCB4AwDAYDVR0TAQH/BAIw
+ADArBgNVHSMEJDAigCDo0v22EdzbkiN3HEUc3IFEcl0TnwUGxy0pADxAtANT0jAK
+BggqhkjOPQQDAgNHADBEAiB0X7D4/+dbF7xvxsLW7jUtep/aXsMzp+pKOllXLHIY
+5AIgDPLCwDWhLFrGzbqNmFTnmUWQbVAMopP5Bida6+y7GXs=
+-----END CERTIFICATE-----
+2024-09-15 19:18:17.043 UTC 001a DEBU [msp] setupSigningIdentity -> Signing identity expires at 2034-09-12 18:43:00 +0000 UTC
+2024-09-15 19:18:17.044 UTC 001b DEBU [msp] GetDefaultSigningIdentity -> Obtaining default signing identity
+2024-09-15 19:18:17.045 UTC 001c DEBU [grpc] WarningDepth -> [core] Adjusting keepalive ping interval to minimum period of 10s
+2024-09-15 19:18:17.045 UTC 001d DEBU [grpc] InfoDepth -> [core] [Channel #1] Channel created
+2024-09-15 19:18:17.045 UTC 001e DEBU [grpc] InfoDepth -> [core] [Channel #1] original dial target is: "orderer.test.jedo.btc:7050"
+2024-09-15 19:18:17.045 UTC 001f DEBU [grpc] InfoDepth -> [core] [Channel #1] parsed dial target is: resolver.Target{URL:url.URL{Scheme:"orderer.test.jedo.btc", Opaque:"7050", User:(*url.Userinfo)(nil), Host:"", Path:"", RawPath:"", OmitHost:false, ForceQuery:false, RawQuery:"", Fragment:"", RawFragment:""}}
+2024-09-15 19:18:17.045 UTC 0020 DEBU [grpc] InfoDepth -> [core] [Channel #1] fallback to scheme "passthrough"
+2024-09-15 19:18:17.045 UTC 0021 DEBU [grpc] InfoDepth -> [core] [Channel #1] parsed dial target is: passthrough:///orderer.test.jedo.btc:7050
+2024-09-15 19:18:17.045 UTC 0022 DEBU [grpc] InfoDepth -> [core] [Channel #1] Channel authority set to "orderer.test.jedo.btc:7050"
+2024-09-15 19:18:17.045 UTC 0023 DEBU [grpc] InfoDepth -> [core] [Channel #1] Resolver state updated: {
+  "Addresses": [
+    {
+      "Addr": "orderer.test.jedo.btc:7050",
+      "ServerName": "",
+      "Attributes": null,
+      "BalancerAttributes": null,
+      "Metadata": null
+    }
+  ],
+  "Endpoints": [
+    {
+      "Addresses": [
+        {
+          "Addr": "orderer.test.jedo.btc:7050",
+          "ServerName": "",
+          "Attributes": null,
+          "BalancerAttributes": null,
+          "Metadata": null
+        }
+      ],
+      "Attributes": null
+    }
+  ],
+  "ServiceConfig": null,
+  "Attributes": null
+} (resolver returned new addresses)
+2024-09-15 19:18:17.046 UTC 0024 DEBU [grpc] InfoDepth -> [core] [Channel #1] Channel switches to new LB policy "pick_first"
+2024-09-15 19:18:17.046 UTC 0025 DEBU [grpc] InfoDepth -> [core] [pick-first-lb 0xc00027af00] Received new config {
+  "shuffleAddressList": false
+}, resolver state {
+  "Addresses": [
+    {
+      "Addr": "orderer.test.jedo.btc:7050",
+      "ServerName": "",
+      "Attributes": null,
+      "BalancerAttributes": null,
+      "Metadata": null
+    }
+  ],
+  "Endpoints": [
+    {
+      "Addresses": [
+        {
+          "Addr": "orderer.test.jedo.btc:7050",
+          "ServerName": "",
+          "Attributes": null,
+          "BalancerAttributes": null,
+          "Metadata": null
+        }
+      ],
+      "Attributes": null
+    }
+  ],
+  "ServiceConfig": null,
+  "Attributes": null
+}
+2024-09-15 19:18:17.046 UTC 0026 DEBU [grpc] InfoDepth -> [core] [Channel #1 SubChannel #2] Subchannel created
+2024-09-15 19:18:17.046 UTC 0027 DEBU [grpc] InfoDepth -> [core] [Channel #1] Channel Connectivity change to CONNECTING
+2024-09-15 19:18:17.046 UTC 0028 DEBU [grpc] InfoDepth -> [core] [Channel #1] Channel exiting idle mode
+2024-09-15 19:18:17.046 UTC 0029 DEBU [grpc] InfoDepth -> [core] [Channel #1 SubChannel #2] Subchannel Connectivity change to CONNECTING
+2024-09-15 19:18:17.046 UTC 002a DEBU [grpc] InfoDepth -> [core] [Channel #1 SubChannel #2] Subchannel picks a new address "orderer.test.jedo.btc:7050" to connect
+2024-09-15 19:18:17.046 UTC 002b DEBU [grpc] InfoDepth -> [core] [pick-first-lb 0xc00027af00] Received SubConn state update: 0xc00027b080, {ConnectivityState:CONNECTING ConnectionError:<nil>}
+2024-09-15 19:18:17.051 UTC 002c DEBU [comm.tls] ClientHandshake -> Client TLS handshake completed in 2.812642ms remoteaddress=172.18.0.6:7050
+2024-09-15 19:18:17.052 UTC 002d DEBU [grpc] InfoDepth -> [core] [Channel #1 SubChannel #2] Subchannel Connectivity change to READY
+2024-09-15 19:18:17.053 UTC 002e DEBU [grpc] InfoDepth -> [core] [pick-first-lb 0xc00027af00] Received SubConn state update: 0xc00027b080, {ConnectivityState:READY ConnectionError:<nil>}
+2024-09-15 19:18:17.053 UTC 002f DEBU [grpc] InfoDepth -> [core] [Channel #1] Channel Connectivity change to READY
+2024-09-15 19:18:17.054 UTC 0030 INFO [channelCmd] InitCmdFactory -> Endorser and orderer connections initialized
+2024-09-15 19:18:17.055 UTC 0031 DEBU [msp.identity] Sign -> Sign: plaintext: 0ABE060A07416C70734D535012B2062D...7469756D120A12080A064A65646F4555 
+2024-09-15 19:18:17.056 UTC 0032 DEBU [msp.identity] Sign -> Sign: digest: 8813227C81CBC38A468C8B2C51014280E09DC1F6B03EAD29EDBF7A427DF6E897 
+2024-09-15 19:18:17.056 UTC 0033 DEBU [msp.identity] Sign -> Sign: plaintext: 0AEE060A0E08021A0608F9E59CB70622...36333040CF9540F1BC8A3E514AC8C916 
+2024-09-15 19:18:17.056 UTC 0034 DEBU [msp.identity] Sign -> Sign: digest: 7FC46184BB352A9E572CDA2194EFFFF3E9C06A96397E37C60063AA4F1A2ECB2C 
+2024-09-15 19:18:17.057 UTC 0035 DEBU [grpc] WarningDepth -> [core] Adjusting keepalive ping interval to minimum period of 10s
+2024-09-15 19:18:17.057 UTC 0036 DEBU [grpc] InfoDepth -> [core] [Channel #4] Channel created
+2024-09-15 19:18:17.057 UTC 0037 DEBU [grpc] InfoDepth -> [core] [Channel #4] original dial target is: "orderer.test.jedo.btc:7050"
+2024-09-15 19:18:17.057 UTC 0038 DEBU [grpc] InfoDepth -> [core] [Channel #4] parsed dial target is: resolver.Target{URL:url.URL{Scheme:"orderer.test.jedo.btc", Opaque:"7050", User:(*url.Userinfo)(nil), Host:"", Path:"", RawPath:"", OmitHost:false, ForceQuery:false, RawQuery:"", Fragment:"", RawFragment:""}}
+2024-09-15 19:18:17.057 UTC 0039 DEBU [grpc] InfoDepth -> [core] [Channel #4] fallback to scheme "passthrough"
+2024-09-15 19:18:17.058 UTC 003a DEBU [grpc] InfoDepth -> [core] [Channel #4] parsed dial target is: passthrough:///orderer.test.jedo.btc:7050
+2024-09-15 19:18:17.058 UTC 003b DEBU [grpc] InfoDepth -> [core] [Channel #4] Channel authority set to "orderer.test.jedo.btc:7050"
+2024-09-15 19:18:17.058 UTC 003c DEBU [grpc] InfoDepth -> [core] [Channel #4] Resolver state updated: {
+  "Addresses": [
+    {
+      "Addr": "orderer.test.jedo.btc:7050",
+      "ServerName": "",
+      "Attributes": null,
+      "BalancerAttributes": null,
+      "Metadata": null
+    }
+  ],
+  "Endpoints": [
+    {
+      "Addresses": [
+        {
+          "Addr": "orderer.test.jedo.btc:7050",
+          "ServerName": "",
+          "Attributes": null,
+          "BalancerAttributes": null,
+          "Metadata": null
+        }
+      ],
+      "Attributes": null
+    }
+  ],
+  "ServiceConfig": null,
+  "Attributes": null
+} (resolver returned new addresses)
+2024-09-15 19:18:17.058 UTC 003d DEBU [grpc] InfoDepth -> [core] [Channel #4] Channel switches to new LB policy "pick_first"
+2024-09-15 19:18:17.058 UTC 003e DEBU [grpc] InfoDepth -> [core] [pick-first-lb 0xc00002f7d0] Received new config {
+  "shuffleAddressList": false
+}, resolver state {
+  "Addresses": [
+    {
+      "Addr": "orderer.test.jedo.btc:7050",
+      "ServerName": "",
+      "Attributes": null,
+      "BalancerAttributes": null,
+      "Metadata": null
+    }
+  ],
+  "Endpoints": [
+    {
+      "Addresses": [
+        {
+          "Addr": "orderer.test.jedo.btc:7050",
+          "ServerName": "",
+          "Attributes": null,
+          "BalancerAttributes": null,
+          "Metadata": null
+        }
+      ],
+      "Attributes": null
+    }
+  ],
+  "ServiceConfig": null,
+  "Attributes": null
+}
+2024-09-15 19:18:17.059 UTC 003f DEBU [grpc] InfoDepth -> [core] [Channel #4 SubChannel #5] Subchannel created
+2024-09-15 19:18:17.059 UTC 0040 DEBU [grpc] InfoDepth -> [core] [Channel #4] Channel Connectivity change to CONNECTING
+2024-09-15 19:18:17.059 UTC 0041 DEBU [grpc] InfoDepth -> [core] [Channel #4] Channel exiting idle mode
+2024-09-15 19:18:17.059 UTC 0042 DEBU [grpc] InfoDepth -> [core] [Channel #4 SubChannel #5] Subchannel Connectivity change to CONNECTING
+2024-09-15 19:18:17.060 UTC 0043 DEBU [grpc] InfoDepth -> [core] [Channel #4 SubChannel #5] Subchannel picks a new address "orderer.test.jedo.btc:7050" to connect
+2024-09-15 19:18:17.060 UTC 0044 DEBU [grpc] InfoDepth -> [core] [pick-first-lb 0xc00002f7d0] Received SubConn state update: 0xc00002f860, {ConnectivityState:CONNECTING ConnectionError:<nil>}
+2024-09-15 19:18:17.063 UTC 0045 DEBU [comm.tls] ClientHandshake -> Client TLS handshake completed in 2.287388ms remoteaddress=172.18.0.6:7050
+2024-09-15 19:18:17.064 UTC 0046 DEBU [grpc] InfoDepth -> [core] [Channel #4 SubChannel #5] Subchannel Connectivity change to READY
+2024-09-15 19:18:17.064 UTC 0047 DEBU [grpc] InfoDepth -> [core] [pick-first-lb 0xc00002f7d0] Received SubConn state update: 0xc00002f860, {ConnectivityState:READY ConnectionError:<nil>}
+2024-09-15 19:18:17.064 UTC 0048 DEBU [grpc] InfoDepth -> [core] [Channel #4] Channel Connectivity change to READY
+Error: got unexpected status: BAD_REQUEST -- Unknown consortium name: JedoEU
