@@ -5,58 +5,58 @@
 ################################################################################
 Organizations:
   - &OrdererOrg
-    Name: JedoOrderer
-    ID: JedoOrdererMSP
+    Name: JedoOrg
+    ID: JedoOrgMSP
     MSPDir: ../crypto-config/ordererOrganizations/test.jedo.btc/msp
     Policies:
       Readers:
         Type: Signature
-        Rule: "OR('OrdererMSP.member')"
+        Rule: "OR('JedoOrgMSP.member')"
       Writers:
         Type: Signature
-        Rule: "OR('OrdererMSP.member')"
+        Rule: "OR('JedoOrgMSP.member')"
       Admins:
         Type: Signature
-        Rule: "OR('OrdererMSP.admin')"
+        Rule: "OR('JedoOrgMSP.admin')"
       BlockValidation:
         Type: ImplicitMeta
         Rule: "ANY Writers"
     OrdererEndpoints:
-      - 192.168.0.13:7050
+      - orderer.test.jedo.btc:7050
   - &AlpsOrg
-    Name: AlpsMSP
-    ID: AlpsMSP
+    Name: AlpsOrg
+    ID: AlpsOrgMSP
     MSPDir: ../crypto-config/peerOrganizations/alps.test.jedo.btc/msp
     Policies:
       Readers:
         Type: Signature
-        Rule: "OR('AlpsMSP.member')"
+        Rule: "OR('AlpsOrgMSP.member')"
       Writers:
         Type: Signature
-        Rule: "OR('AlpsMSP.member')"
+        Rule: "OR('AlpsOrgMSP.member')"
       Admins:
         Type: Signature
-        Rule: "OR('AlpsMSP.admin')"
+        Rule: "OR('AlpsOrgMSP.admin')"
       Endorsement:
         Type: Signature
-        Rule: "OR('AlpsMSP.admin')"
+        Rule: "OR('AlpsOrgMSP.admin')"
   - &MediterraneanOrg
-    Name: MediterraneanMSP
-    ID: MediterraneanMSP
+    Name: MediterraneanOrg
+    ID: MediterraneanOrgMSP
     MSPDir: ../crypto-config/peerOrganizations/mediterranean.test.jedo.btc/msp
     Policies:
       Readers:
         Type: Signature
-        Rule: "OR('MediterraneanMSP.member')"
+        Rule: "OR('MediterraneanOrgMSP.member')"
       Writers:
         Type: Signature
-        Rule: "OR('MediterraneanMSP.member')"
+        Rule: "OR('MediterraneanOrgMSP.member')"
       Admins:
         Type: Signature
-        Rule: "OR('MediterraneanMSP.admin')"
+        Rule: "OR('MediterraneanOrgMSP.admin')"
       Endorsement:
         Type: Signature
-        Rule: "OR('AlpsMSP.admin')"
+        Rule: "OR('MediterraneanOrgMSP.admin')"
 
 ################################################################################
 #
@@ -83,10 +83,10 @@ Application: &ApplicationDefaults
   Policies:
     Readers:
       Type: Signature
-      Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
+      Rule: "OR('AlpsOrgMSP.member', 'MediterraneanOrgMSP.member')"
     Writers:
       Type: Signature
-      Rule: "OR('AlpsMSP.member', 'MediterraneanMSP.member')"
+      Rule: "OR('AlpsOrgMSP.member', 'MediterraneanOrgMSP.member')"
     Admins:
       Type: ImplicitMeta
       Rule: "MAJORITY Admins"
@@ -106,11 +106,11 @@ Application: &ApplicationDefaults
 ################################################################################
 Orderer: &OrdererDefaults
   Addresses:
-    - 192.168.0.13:7050
+    - orderer.test.jedo.btc:7050
   OrdererType: etcdraft
   EtcdRaft:
     Consenters:
-      - Host: 192.168.0.13
+      - Host: orderer.test.jedo.btc
         Port: 7050
         ClientTLSCert: ../crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
         ServerTLSCert: ../crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
@@ -171,12 +171,12 @@ Profiles:
     Orderer:
       <<: *OrdererDefaults
       Capabilities: *OrdererCapabilities
-    Application:
-      <<: *ApplicationDefaults
-      Organizations:
-        - *AlpsOrg
-        - *MediterraneanOrg
-      Capabilities: *ApplicationCapabilities
+#    Application:
+#      <<: *ApplicationDefaults
+#      Organizations:
+#        - *AlpsOrg
+#        - *MediterraneanOrg
+#      Capabilities: *ApplicationCapabilities
     Consortiums:
       JedoConsortium:
         Organizations:

@@ -21,33 +21,109 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 3. extract files `tar -xvzf hyperledger-fabric-linux-amd64-2.5.0.tar.gz`
 4. create folder `mkdir -p /mnt/user/appdata/fabric/jedo-network/config`
 5. move binaries from fabric `mv bin /mnt/user/appdata/fabric/` and `mv config /mnt/user/appdata/fabric/`
-7. copy files from [config](https://github.com/Jenziner/JEDO/tree/main/host/jedo-network/config) to *config* folder:
+6. copy files from [config](https://github.com/Jenziner/JEDO/tree/main/host/jedo-network/config) to *config* folder:
     - **crypto-config.yaml**
     - **configtx.yaml**
     - **orderer.yaml**
     - **core.yaml**
-5. goto jedo-network `cd /mnt/user/appdata/fabric/jedo-network`
-6. create docker network `docker network create fabric-network`
-7. inspect Network `docker network inspect fabric-network`
+7. goto jedo-network `cd /mnt/user/appdata/fabric/jedo-network`
+8. create docker network `docker network create fabric-network`
+9. inspect Network `docker network inspect fabric-network`
 
 # Create CryptoConfig
 1. create certificates `../bin/cryptogen generate --config=./config/crypto-config.yaml --output=./crypto-config/`
-2. rename orderer signcerts `mv /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/signcerts/orderer.test.jedo.btc-cert.pem /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/signcerts/cert.pem`
-3. rename peer alps signcerts `mv /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/peer0.alps.test.jedo.btc/msp/signcerts/peer0.alps.test.jedo.btc-cert.pem /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/peer0.alps.test.jedo.btc/msp/signcerts/cert.pem`
-4. correct permissions `chmod 644 /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.key`
-5. double check generated structure and permission
+2. double check generated structure and permission
+
+# Setup CouchDB for a Peer (repeat for others)
+1. Install couchDB 
+  - use xx84 as Port, according to the desired port for the peer)
+  - use a spare path for data and config
+  - add variables for user (`COUCHDB_USER`, name according peer) and password (`COUCHDB_PASSWORD`, for test its *fabric*))
+2. set docker network `docker network connect fabric-network CouchDB-ALPS` or `docker network connect fabric-network CouchDB-MEDITERRANEAN`
+3. check Container, goto `http://192.168.0.13:8084/_utils/` and log in with user / pw
+
+
+# Setup Peer ALPS
+1. setup variables
+  - `export FABRIC_CFG_PATH=./config`
+2. start peer
+```
+    docker run -d \
+    --name nik.alps.test.jedo.btc \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/fabric_logo.png" \
+    -e CORE_PEER_ID=nik.alps.test.jedo.btc \
+    -e CORE_PEER_LISTENADDRESS=0.0.0.0:8051 \
+    -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052 \
+    -e CORE_PEER_ADDRESS=nik.alps.test.jedo.btc:8051 \
+    -e CORE_PEER_LOCALMSPID=AlpsMSP \
+    -e CORE_PEER_GOSSIP_BOOTSTRAP=127.0.0.1:8051 \
+    -e CORE_PEER_GOSSIP_ENDPOINT=0.0.0.0:8051 \
+    -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=0.0.0.0:8051 \
+    -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt \
+    -e CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt \
+    -e CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=192.168.0.13:8084 \
+    -e CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=nik.alps.test.jedo.btc \
+    -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=fabric \
+    -v /mnt/user/appdata/fabric/jedo-network/config/core.yaml:/etc/hyperledger/fabric/core.yaml \
+    -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/msp:/etc/hyperledger/peer/msp \
+    -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/tls:/etc/hyperledger/fabric/tls \
+    -v /mnt/user/appdata/fabric/jedo-network/alps:/var/hyperledger/production \
+    -p 8051:8051 \
+    -p 8052:8052 \
+    hyperledger/fabric-peer:latest
+```
+3. set docker network `docker network connect fabric-network nik.alps.test.jedo.btc`
+4. restart docker `docker restart nik.alps.test.jedo.btc`
+5. check Logs `docker logs nik.alps.test.jedo.btc`
+
+# Setup Peer MEDITERRANEAN
+1. setup variables
+  - `export FABRIC_CFG_PATH=./config`
+2. start peer
+```
+    docker run -d \
+    --name luke.mediterranean.test.jedo.btc \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/fabric_logo.png" \
+    -e CORE_PEER_ID=luke.mediterranean.test.jedo.btc \
+    -e CORE_PEER_LISTENADDRESS=0.0.0.0:9051 \
+    -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052 \
+    -e CORE_PEER_ADDRESS=luke.mediterranean.test.jedo.btc:9051 \
+    -e CORE_PEER_LOCALMSPID=MediterraneanMSP \
+    -e CORE_PEER_GOSSIP_BOOTSTRAP=127.0.0.1:9051 \
+    -e CORE_PEER_GOSSIP_ENDPOINT=0.0.0.0:9051 \
+    -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=0.0.0.0:9051 \
+    -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt \
+    -e CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt \
+    -e CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=192.168.0.13:9084 \
+    -e CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=luke.mediterranean.test.jedo.btc \
+    -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=fabric \
+    -v /mnt/user/appdata/fabric/jedo-network/config/core.yaml:/etc/hyperledger/fabric/core.yaml \
+    -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/peers/luke.mediterranean.test.jedo.btc/msp:/etc/hyperledger/peer/msp \
+    -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/peers/luke.mediterranean.test.jedo.btc/tls:/etc/hyperledger/fabric/tls \
+    -v /mnt/user/appdata/fabric/jedo-network/mediterranean:/var/hyperledger/production \
+    -p 9051:9051 \
+    -p 9052:9052 \
+    hyperledger/fabric-peer:latest
+```
+3. set docker network `docker network connect fabric-network luke.mediterranean.test.jedo.btc`
+4. restart docker `docker restart luke.mediterranean.test.jedo.btc`
+5. check Logs `docker logs luke.mediterranean.test.jedo.btc`
+
+
 
 # Setup Orderer
 1. setup variables
   -  `export FABRIC_CFG_PATH=./config`
-2. create genesis block `../bin/configtxgen -profile JedoOrdererGenesis -channelID system-channel -outputBlock ./config/genesisblock`
+2. create genesis block `../bin/configtxgen -profile JedoOrdererGenesis -channelID system-channel -outputBlock ./configtx/genesisblock`
 3. start orderer
 ```
     docker run -d \
     --name orderer.test.jedo.btc \
     --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/fabric_logo.png" \
     -v /mnt/user/appdata/fabric/jedo-network/config/orderer.yaml:/etc/hyperledger/fabric/orderer.yaml \
-    -v /mnt/user/appdata/fabric/jedo-network/config/genesisblock:/etc/hyperledger/fabric/genesisblock \
+    -v /mnt/user/appdata/fabric/jedo-network/configtx/genesisblock:/etc/hyperledger/fabric/genesisblock \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls:/etc/hyperledger/orderer/tls \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp:/etc/hyperledger/orderer/msp \
     -v /mnt/user/appdata/fabric/jedo-network/ledger:/var/hyperledger/production \
@@ -58,82 +134,6 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 4. restart docker `docker restart orderer.test.jedo.btc`
 5. check Logs `docker logs orderer.test.jedo.btc`
 
-# Setup CouchDB for a Peer
-1. Install couchDB 
-  - use xx84 as Port, according to the desired port for the peer)
-  - use a spare path for data and config
-  - add variables for user (`COUCHDB_USER`, name according peer) and password (`COUCHDB_PASSWORD`, for test its *fabric*))
-2. set docker network `docker network connect fabric-network CouchDB-ALPS` or `docker network connect fabric-network CouchDB-MEDITERRANEAN`
-3. check Container, goto `http://192.168.0.13:8054/_utils/` and log in with user / pw
-
-
-# Setup Peer ALPS
-1. setup variables
-  - `export FABRIC_CFG_PATH=./config`
-2. start peer
-```
-    docker run -d \
-    --name nik.alps.test.jedo.btc \
-    --label net.unraid.docker.icon="/boot/config/plugins/icons/fabric_logo.png" \
-    -e CORE_PEER_ID=nik.alps.test.jedo.btc \
-    -e CORE_PEER_LISTENADDRESS=0.0.0.0:8051 \
-    -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052 \
-    -e CORE_PEER_ADDRESS=192.168.0.13:8051 \
-    -e CORE_PEER_LOCALMSPID=AlpsMSP \
-    -e CORE_PEER_GOSSIP_BOOTSTRAP=127.0.0.1:8051 \
-    -e CORE_PEER_GOSSIP_ENDPOINT=0.0.0.0:8051 \
-    -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=0.0.0.0:8051 \
-    -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt \
-    -e CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key \
-    -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt \
-    -e CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=192.168.0.13:8084 \
-    -e CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=peer0.alps.test.jedo.btc \
-    -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=fabric \
-    -v /mnt/user/appdata/fabric/jedo-network/config/core.yaml:/etc/hyperledger/fabric/core.yaml \
-    -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/peer0.alps.test.jedo.btc/msp:/etc/hyperledger/peer/msp \
-    -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/peer0.alps.test.jedo.btc/tls:/etc/hyperledger/fabric/tls \
-    -v /mnt/user/appdata/fabric/jedo-network/alps:/var/hyperledger/production \
-    -p 8051:8051 \
-    -p 8052:8052 \
-    hyperledger/fabric-peer:latest
-```
-3. set docker network `docker network connect fabric-network peer0.alps.test.jedo.btc`
-4. restart docker `docker restart peer0.alps.test.jedo.btc`
-5. check Logs `docker logs peer0.alps.test.jedo.btc`
-
-# Setup Peer MEDITERRANEAN
-1. setup variables
-  - `export FABRIC_CFG_PATH=./config`
-2. start peer
-```
-    docker run -d \
-    --name luke.mediterranean.test.jedo.btc \
-    --label net.unraid.docker.icon="/boot/config/plugins/icons/fabric_logo.png" \
-    -e CORE_PEER_ID=luke.mediterranean.test.jedo.btc \
-    -e CORE_PEER_LISTENADDRESS=0.0.0.0:9051 \
-    -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052 \
-    -e CORE_PEER_ADDRESS=192.168.0.13:9051 \
-    -e CORE_PEER_LOCALMSPID=MediterraneanMSP \
-    -e CORE_PEER_GOSSIP_BOOTSTRAP=127.0.0.1:9051 \
-    -e CORE_PEER_GOSSIP_ENDPOINT=0.0.0.0:9051 \
-    -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=0.0.0.0:9051 \
-    -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt \
-    -e CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key \
-    -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt \
-    -e CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=192.168.0.13:9084 \
-    -e CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=peer0.mediterranean.test.jedo.btc \
-    -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=fabric \
-    -v /mnt/user/appdata/fabric/jedo-network/config/core.yaml:/etc/hyperledger/fabric/core.yaml \
-    -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/peers/peer0.mediterranean.test.jedo.btc/msp:/etc/hyperledger/peer/msp \
-    -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/peers/peer0.mediterranean.test.jedo.btc/tls:/etc/hyperledger/fabric/tls \
-    -v /mnt/user/appdata/fabric/jedo-network/mediterranean:/var/hyperledger/production \
-    -p 9051:9051 \
-    -p 9052:9052 \
-    hyperledger/fabric-peer:latest
-```
-3. set docker network `docker network connect fabric-network peer0.mediterranean.test.jedo.btc`
-4. restart docker `docker restart peer0.mediterranean.test.jedo.btc`
-5. check Logs `docker logs peer0.mediterranean.test.jedo.btc`
 
 # Setup a Channel
 1. setup variables
@@ -141,35 +141,22 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 ```
     export FABRIC_CFG_PATH=./config \
     CORE_PEER_LOCALMSPID="AlpsMSP" \
-    CORE_PEER_TLS_ROOTCERT_FILE=/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/peer0.alps.test.jedo.btc/tls/ca.crt \
+    CORE_PEER_TLS_ROOTCERT_FILE=/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/tls/server.crt \
     CORE_PEER_MSPCONFIGPATH=/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp \
-    CORE_PEER_ADDRESS=localhost:8051 \
+    CORE_PEER_ADDRESS=nik.alps.test.jedo.btc:8051 \
     FABRIC_LOGGING_SPEC=DEBUG
-
 ```
-2. create channel config `../bin/configtxgen -profile JedoChannel -outputCreateChannelTx ./config/eu.tx -channelID eu`
-3. copy admin certificates Alps `cp /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem \
-/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/msp/admincerts/`
-4. cp /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem \
-/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/msp/admincerts/
+2. create channel config `../bin/configtxgen -profile JedoChannel -outputCreateChannelTx ./configtx/eu.tx -channelID eu`
+3. create channel `../bin/peer channel create -o orderer.test.jedo.btc:7050 --ordererTLSHostnameOverride orderer.test.jedo.btc -c eu -f ./configtx/eu.tx --outputBlock ./configtx/eu.block --tls --cafile "/mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/tlscacerts/tlsca.test.jedo.btc-cert.pem"`
+4. join channel   `../bin/peer channel join   -o orderer.test.jedo.btc:7050 --ordererTLSHostnameOverride orderer.test.jedo.btc -b ./configtx/eu.block                                      --tls --cafile "/mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/ca.crt" `
 
-5. copy admin certificates Mediterranean `cp /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/signcerts/Admin@mediterranean.test.jedo.btc-cert.pem \
-/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/msp/admincerts/`
-6. cp /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/signcerts/Admin@mediterranean.test.jedo.btc-cert.pem \
-/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/msp/admincerts/
-7. cp crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem \
-   crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/admincerts/
-8. cp crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/signcerts/Admin@mediterranean.test.jedo.btc-cert.pem \
-   crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/admincerts/  
-9. cp crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem \
-   crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/admincerts/
-10. cp crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/signcerts/Admin@mediterranean.test.jedo.btc-cert.pem \
-   crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/admincerts/
-    
 
-7. create channel `../bin/peer channel create -o localhost:7050 --ordererTLSHostnameOverride orderer.test.jedo.btc -c eu -f ./config/eu.tx --outputBlock ./eu.block --tls --cafile "/mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/tlscacerts/tlsca.test.jedo.btc-cert.pem"`
 
-8. Set permission: `chmod -R 755 crypto-config/`
+openssl x509 -in /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/tls/ca.crt -text -noout
+
+/mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/tls/server.crt
+
+
 
 Alternate:
 ../bin/peer channel create -o localhost:7050 --ordererTLSHostnameOverride orderer.test.jedo.btc -c eu -f ./config/eu.tx --outputBlock ./eu.block --tls --cafile "/mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/tlscacerts/tlsca.test.jedo.btc-cert.pem" --certfile /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/tls/client.crt --keyfile /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/tls/client.key
