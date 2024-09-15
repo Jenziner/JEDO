@@ -137,7 +137,6 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
 
 # Setup a Channel
 1. setup variables
-  - 
 ```
     export FABRIC_CFG_PATH=./config \
     CORE_PEER_LOCALMSPID="AlpsMSP" \
@@ -146,8 +145,12 @@ Channel: eu.test.jedo.btc (also af, as, na, sa)
     CORE_PEER_ADDRESS=nik.alps.test.jedo.btc:8051 \
     FABRIC_LOGGING_SPEC=DEBUG
 ```
-2. create channel config `../bin/configtxgen -profile JedoChannel -outputCreateChannelTx ./configtx/eu.tx -channelID eu`
-3. create channel `../bin/peer channel create -o orderer.test.jedo.btc:7050 --ordererTLSHostnameOverride orderer.test.jedo.btc -c eu -f ./configtx/eu.tx --outputBlock ./configtx/eu.block --tls --cafile "/mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/tlscacerts/tlsca.test.jedo.btc-cert.pem"`
+2. create channel config 
+```
+    ../bin/configtxgen -profile JedoChannel -outputCreateChannelTx ./configtx/eu.tx -channelID eu
+```
+3. create channel 
+```../bin/peer channel create -o orderer.test.jedo.btc:7050 --ordererTLSHostnameOverride orderer.test.jedo.btc -c eu -f ./configtx/eu.tx --outputBlock ./configtx/eu.block --tls --cafile "/mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp/tlscacerts/tlsca.test.jedo.btc-cert.pem"```
 4. join channel   `../bin/peer channel join   -o orderer.test.jedo.btc:7050 --ordererTLSHostnameOverride orderer.test.jedo.btc -b ./configtx/eu.block                                      --tls --cafile "/mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/ca.crt" `
 
 
