@@ -7,21 +7,35 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 
 
 # JEDO-Test-Network
-Schema: https://vectr.com/editor/f76ba3ed-411e-42fc-8524-4ba3539b23cd
-Domain: test.jedo.btc
-IP: 192.168.0.13
-Orderer:
-- orderer.test.jedo.btc
-Org: 
-- alps.test.jedo.btc
-- mediterranean.test.jedo.btc
-Peers:
-- luke.alps.test.jedo.btc
-- nik.mediterranean.test.jedo.btc
-- Channel: eu.test.jedo.btc (also af, as, na, sa)
-CLI:
-- cli-nik
-- cli-luke
+- Schema: https://vectr.com/editor/f76ba3ed-411e-42fc-8524-4ba3539b23cd
+## Network 
+- Test - test.jedo.btc - 192.168.0.13
+- Production - jedo.btc
+## Channel
+- C1 - eu.test.jedo.btc | L1 - Ledger | CC EU - ChannelConfiguration
+- C2 - as.test.jedo.btc
+- C3 - af.test.jedo.btc
+- C4 - na.test.jedo.btc
+- C5 - sa.test.jedo.btc
+## Organisation
+- OU0 - OrdererOrg - orderer.test.jedo.btc
+- OU1 - AlpsOrg - alps.test.jedo.btc
+- OU2 - MediterraneanOrg - mediterranean.test.jedo.btc
+## Certification Authority
+- CA1 - alps
+- CA2 - mediterranean
+## Orderer
+- O - orderer.test.jedo.btc
+## Peers
+- P1 - nik.alps.test.jedo.btc
+- P2 - luke.mediterranean.test.jedo.btc
+## SmartContract
+- S1 - undefined
+## Application
+- A1 - undefined
+## CLI:
+- CLI1 - cli-nik
+- CLI2 - cli-luke
 
 
 # Setup Basics for UNRAID
