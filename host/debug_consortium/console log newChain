@@ -220,3 +220,15 @@ BggqhkjOPQQDAgNHADBEAiB0X7D4/+dbF7xvxsLW7jUtep/aXsMzp+pKOllXLHIY
 2024-09-15 19:18:17.064 UTC 0047 DEBU [grpc] InfoDepth -> [core] [pick-first-lb 0xc00002f7d0] Received SubConn state update: 0xc00002f860, {ConnectivityState:READY ConnectionError:<nil>}
 2024-09-15 19:18:17.064 UTC 0048 DEBU [grpc] InfoDepth -> [core] [Channel #4] Channel Connectivity change to READY
 Error: got unexpected status: BAD_REQUEST -- Unknown consortium name: JedoEU
+
+
+
+
+************
+*ORDERER LOG
+************
+2024-09-15 19:16:44.943 UTC 0025 INFO [orderer.consensus.etcdraft] run -> Start accepting requests as Raft leader at block [0] channel=system-channel node=1
+2024-09-15 19:18:17.065 UTC 0026 WARN [orderer.common.broadcast] ProcessMessage -> [channel: eu] Rejecting broadcast of config message from 172.18.0.7:44464 because of error: Unknown consortium name: JedoEU
+2024-09-15 19:18:17.065 UTC 0027 INFO [comm.grpc.server] 1 -> streaming call completed grpc.service=orderer.AtomicBroadcast grpc.method=Broadcast grpc.peer_address=172.18.0.7:44464 grpc.code=OK grpc.call_duration=704.768µs
+2024-09-15 19:18:17.069 UTC 0028 WARN [common.deliver] Handle -> Error reading from 172.18.0.7:44462: rpc error: code = Canceled desc = context canceled
+2024-09-15 19:18:17.069 UTC 0029 INFO [comm.grpc.server] 1 -> streaming call completed grpc.service=orderer.AtomicBroadcast grpc.method=Deliver grpc.peer_address=172.18.0.7:44462 error="rpc error: code = Canceled desc = context canceled" grpc.code=Canceled grpc.call_duration=15.142109ms

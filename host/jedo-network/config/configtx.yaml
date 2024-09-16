@@ -7,7 +7,7 @@ Organizations:
   - &OrdererOrg
     Name: JedoOrg
     ID: JedoOrgMSP
-    MSPDir: ../crypto-config/ordererOrganizations/test.jedo.btc/msp
+    MSPDir: /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/msp
     Policies:
       Readers:
         Type: Signature
@@ -26,7 +26,7 @@ Organizations:
   - &AlpsOrg
     Name: AlpsOrg
     ID: AlpsOrgMSP
-    MSPDir: ../crypto-config/peerOrganizations/alps.test.jedo.btc/msp
+    MSPDir: /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/msp
     Policies:
       Readers:
         Type: Signature
@@ -43,7 +43,7 @@ Organizations:
   - &MediterraneanOrg
     Name: MediterraneanOrg
     ID: MediterraneanOrgMSP
-    MSPDir: ../crypto-config/peerOrganizations/mediterranean.test.jedo.btc/msp
+    MSPDir: /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/msp
     Policies:
       Readers:
         Type: Signature
@@ -112,8 +112,8 @@ Orderer: &OrdererDefaults
     Consenters:
       - Host: orderer.test.jedo.btc
         Port: 7050
-        ClientTLSCert: ../crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
-        ServerTLSCert: ../crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
+        ClientTLSCert: /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
+        ServerTLSCert: /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls/server.crt
   BatchTimeout: 2s
   BatchSize:
     MaxMessageCount: 10
