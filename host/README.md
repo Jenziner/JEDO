@@ -18,7 +18,10 @@ Org:
 Peers:
 - luke.alps.test.jedo.btc
 - nik.mediterranean.test.jedo.btc
-Channel: eu.test.jedo.btc (also af, as, na, sa)
+- Channel: eu.test.jedo.btc (also af, as, na, sa)
+CLI:
+- cli-nik
+- cli-luke
 
 
 # Setup Basics for UNRAID
