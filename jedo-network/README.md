@@ -1,4 +1,4 @@
-# JEDO HOST - is the Blockchain Network holding the Ledger.
+# JEDO NETWORK - is the Blockchain Network Configuration of JEDO.
 This Document describes the setup of a Hyperledger Fabric (https://www.hyperledger.org/projects/fabric) Network for a test setup 
 
 # Basics
@@ -25,10 +25,12 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 - CA1 - alps
 - CA2 - mediterranean
 ## Orderer
-- O - orderer.test.jedo.btc
+- O - orderer.test.jedo.btc:7050
 ## Peers
-- P1 - nik.alps.test.jedo.btc
-- P2 - luke.mediterranean.test.jedo.btc
+- P1 - nik.alps.test.jedo.btc:8051/52
+- P2 - luke.mediterranean.test.jedo.btc:9050/52
+- DB1 - CouchDB-ALPS:8084
+- DB2 - CouchDB-MEDITERRANEAN:9084
 ## SmartContract
 - S1 - undefined
 ## Application
@@ -44,7 +46,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 3. extract files `tar -xvzf hyperledger-fabric-linux-amd64-2.5.0.tar.gz`
 4. create folder `mkdir -p /mnt/user/appdata/fabric/jedo-network/config`
 5. move binaries from fabric `mv bin /mnt/user/appdata/fabric/` and `mv config /mnt/user/appdata/fabric/`
-6. copy files from [config](https://github.com/Jenziner/JEDO/tree/main/host/jedo-network/config) to *config* folder:
+6. copy files from [config](https://github.com/Jenziner/JEDO/tree/main/jedo-network/config) to *config* folder:
     - **crypto-config.yaml**
     - **configtx.yaml**
 7. goto jedo-network `cd /mnt/user/appdata/fabric/jedo-network`
@@ -76,7 +78,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     docker run -d \
     --name nik.alps.test.jedo.btc \
     --network fabric-network \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/src/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
     -e CORE_PEER_ID=nik.alps.test.jedo.btc \
     -e CORE_PEER_LISTENADDRESS=0.0.0.0:8051 \
     -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052 \
@@ -107,7 +109,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     docker run -d \
     --name cli-nik \
     --network fabric-network \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/src/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
     -e GOPATH=/opt/gopath \
     -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock \
     -e CORE_PEER_ID=cli-nik \
@@ -141,7 +143,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     docker run -d \
     --name luke.mediterranean.test.jedo.btc \
     --network fabric-network \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/src/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
     -e CORE_PEER_ID=luke.mediterranean.test.jedo.btc \
     -e CORE_PEER_LISTENADDRESS=0.0.0.0:9051 \
     -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052 \
@@ -172,7 +174,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     docker run -d \
     --name cli-luke \
     --network fabric-network \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/src/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
     -e GOPATH=/opt/gopath \
     -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock \
     -e CORE_PEER_ID=cli-luke \
@@ -225,7 +227,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     docker run -d \
     --name orderer.test.jedo.btc \
     --network fabric-network \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/host/jedo-network/src/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
     -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
     -e ORDERER_GENERAL_GENESISMETHOD=file \
     -e ORDERER_GENERAL_GENESISFILE=/etc/hyperledger/fabric/genesis.block \
