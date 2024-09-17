@@ -1,0 +1,30 @@
+fabric:
+  organizations:
+    AlpsOrg:
+      mspid: AlpsOrgMSP
+      certificate: /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem
+      key: /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/keystore/priv_sk
+      peers:
+        - nik.alps.test.jedo.btc
+      orderers:
+        - orderer.test.jedo.btc
+    MediterraneanOrg:
+      mspid: MediterraneanOrgMSP
+      certificate: /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/signcerts/Admin@mediterranean.test.jedo.btc-cert.pem
+      key: /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/keystore/priv_sk
+      peers:
+        - luke.alps.test.jedo.btc
+      orderers:
+        - orderer.test.jedo.btc
+  peers:
+    nik.alps.test.jedo.btc:
+      url: grpcs://nik.alps.test.jedo.btc:8051
+    luke.mediterranean.test.jedo.btc:
+      url: grpcs://luke.mediterranean.test.jedo.btc:9051
+  orderers:
+    orderer.test.jedo.btc:
+      url: grpcs://orderer.test.jedo.btc:7050
+  channels:
+    eu:
+      chaincodes:
+        - mycc
