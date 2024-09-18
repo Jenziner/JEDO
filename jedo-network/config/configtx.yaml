@@ -39,7 +39,10 @@ Organizations:
         Rule: "OR('AlpsOrgMSP.admin')"
       Endorsement:
         Type: Signature
-        Rule: "OR('AlpsOrgMSP.admin')"
+        Rule: "OR('AlpsOrgMSP.peer')"
+    AnchorPeers:
+      - Host: nik.alps.test.jedo.btc
+        Port: 8051
   - &MediterraneanOrg
     Name: MediterraneanOrg
     ID: MediterraneanOrgMSP
@@ -56,7 +59,10 @@ Organizations:
         Rule: "OR('MediterraneanOrgMSP.admin')"
       Endorsement:
         Type: Signature
-        Rule: "OR('MediterraneanOrgMSP.admin')"
+        Rule: "OR('MediterraneanOrgMSP.peer')"
+    AnchorPeers:
+      - Host: luke.mediterranean.test.jedo.btc
+        Port: 9051
 
 ################################################################################
 #
@@ -88,14 +94,14 @@ Application: &ApplicationDefaults
       Type: Signature
       Rule: "OR('AlpsOrgMSP.member', 'MediterraneanOrgMSP.member')"
     Admins:
-      Type: ImplicitMeta
-      Rule: "MAJORITY Admins"
+      Type: Signature
+      Rule: "OR('AlpsOrgMSP.admin', 'MediterraneanOrgMSP.admin')"
     LifecycleEndorsement:
-      Type: ImplicitMeta
-      Rule: "MAJORITY Endorsement"
+      Type: Signature
+      Rule: "OR('AlpsOrgMSP.peer', 'MediterraneanOrgMSP.peer')"
     Endorsement:
-      Type: ImplicitMeta
-      Rule: "MAJORITY Endorsement"
+      Type: Signature
+      Rule: "OR('AlpsOrgMSP.peer', 'MediterraneanOrgMSP.peer')"
   Capabilities:
     <<: *ApplicationCapabilities
 
@@ -171,17 +177,21 @@ Profiles:
     Orderer:
       <<: *OrdererDefaults
       Capabilities: *OrdererCapabilities
-#    Application:
-#      <<: *ApplicationDefaults
-#      Organizations:
-#        - *AlpsOrg
-#        - *MediterraneanOrg
-#      Capabilities: *ApplicationCapabilities
     Consortiums:
       JedoEU:
         Organizations:
           - *AlpsOrg
           - *MediterraneanOrg
+    Policies:
+      Readers:
+        Type: ImplicitMeta
+        Rule: "ANY Readers"
+      Writers:
+        Type: ImplicitMeta
+        Rule: "ANY Writers"
+      Admins:
+        Type: ImplicitMeta
+        Rule: "MAJORITY Admins"
 
   JedoChannel:
     <<: *ChannelDefaults
@@ -193,3 +203,16 @@ Profiles:
         - *MediterraneanOrg
       Capabilities: 
         <<: *ApplicationCapabilities
+      Policies:
+        Readers:
+          Type: ImplicitMeta
+          Rule: "ANY Readers"
+        Writers:
+          Type: ImplicitMeta
+          Rule: "ANY Writers"
+        Admins:
+          Type: ImplicitMeta
+          Rule: "MAJORITY Admins"
+        Endorsement:
+          Type: ImplicitMeta
+          Rule: "MAJORITY Endorsement"      

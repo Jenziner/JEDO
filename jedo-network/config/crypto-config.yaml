@@ -1,6 +1,7 @@
 OrdererOrgs:
   - Name: JedoOrg
     Domain: test.jedo.btc
+    EnableNodeOUs: true
     Specs:
       - Hostname: orderer
 

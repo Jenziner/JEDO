@@ -79,6 +79,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     --name nik.alps.test.jedo.btc \
     --network fabric-network \
     --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
+    -e CORE_VM_ENDPOINT=unix:///var/run/docker.sock \
     -e CORE_PEER_ID=nik.alps.test.jedo.btc \
     -e CORE_PEER_LISTENADDRESS=0.0.0.0:8051 \
     -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052 \
@@ -98,7 +99,8 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     -v /mnt/user/appdata/fabric/config/core.yaml:/etc/hyperledger/fabric/core.yaml \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/msp:/etc/hyperledger/peer/msp \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/tls:/etc/hyperledger/fabric/tls \
-    -v /mnt/user/appdata/fabric/jedo-network/alps:/var/hyperledger/production \
+    -v /mnt/user/appdata/fabric/jedo-network/production/alps:/var/hyperledger/production \
+    -v /var/run/docker.sock:/var/run/docker.sock \
     -p 8051:8051 \
     -p 8052:8052 \
     hyperledger/fabric-peer:latest
@@ -111,7 +113,6 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     --network fabric-network \
     --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
     -e GOPATH=/opt/gopath \
-    -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock \
     -e CORE_PEER_ID=cli-nik \
     -e CORE_PEER_ADDRESS=nik.alps.test.jedo.btc:8051 \
     -e CORE_PEER_LOCALMSPID=AlpsOrgMSP \
@@ -124,9 +125,9 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp:/etc/hyperledger/peer/msp \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls:/etc/hyperledger/orderer/tls \
     -v /mnt/user/appdata/fabric/jedo-network/chaincode:/opt/gopath/src/github.com/hyperledger/fabric/chaincode \
-    -v /mnt/user/appdata/fabric/jedo-network/ledger:/var/hyperledger/production \
+    -v /mnt/user/appdata/fabric/jedo-network/production:/var/hyperledger/production \
     -v /mnt/user/appdata/fabric/jedo-network:/tmp/jedo-network \
-    -v /var/run/docker.sock:/host/var/run/docker.sock \
+    -v /var/run/docker.sock:/var/run/docker.sock \
     -w /opt/gopath/src/github.com/hyperledger/fabric \
     -it \
     hyperledger/fabric-tools:latest
@@ -144,6 +145,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     --name luke.mediterranean.test.jedo.btc \
     --network fabric-network \
     --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
+    -e CORE_VM_ENDPOINT=unix:///var/run/docker.sock \
     -e CORE_PEER_ID=luke.mediterranean.test.jedo.btc \
     -e CORE_PEER_LISTENADDRESS=0.0.0.0:9051 \
     -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052 \
@@ -163,7 +165,8 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     -v /mnt/user/appdata/fabric/config/core.yaml:/etc/hyperledger/fabric/core.yaml \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/peers/luke.mediterranean.test.jedo.btc/msp:/etc/hyperledger/peer/msp \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/peers/luke.mediterranean.test.jedo.btc/tls:/etc/hyperledger/fabric/tls \
-    -v /mnt/user/appdata/fabric/jedo-network/mediterranean:/var/hyperledger/production \
+    -v /mnt/user/appdata/fabric/jedo-network/production/mediterranean:/var/hyperledger/production \
+    -v /var/run/docker.sock:/var/run/docker.sock \
     -p 9051:9051 \
     -p 9052:9052 \
     hyperledger/fabric-peer:latest
@@ -176,7 +179,6 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     --network fabric-network \
     --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
     -e GOPATH=/opt/gopath \
-    -e CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock \
     -e CORE_PEER_ID=cli-luke \
     -e CORE_PEER_ADDRESS=luke.mediterranean.test.jedo.btc:9051 \
     -e CORE_PEER_LOCALMSPID=MediterraneanOrgMSP \
@@ -189,9 +191,9 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp:/etc/hyperledger/peer/msp \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls:/etc/hyperledger/orderer/tls \
     -v /mnt/user/appdata/fabric/jedo-network/chaincode:/opt/gopath/src/github.com/hyperledger/fabric/chaincode \
-    -v /mnt/user/appdata/fabric/jedo-network/ledger:/var/hyperledger/production \
+    -v /mnt/user/appdata/fabric/jedo-network/production:/var/hyperledger/production \
     -v /mnt/user/appdata/fabric/jedo-network:/tmp/jedo-network \
-    -v /var/run/docker.sock:/host/var/run/docker.sock \
+    -v /var/run/docker.sock:/var/run/docker.sock \
     -w /opt/gopath/src/github.com/hyperledger/fabric \
     -it \
     hyperledger/fabric-tools:latest
@@ -241,7 +243,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
     -v /mnt/user/appdata/fabric/jedo-network/configtx/genesis.block:/etc/hyperledger/fabric/genesis.block \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/tls:/etc/hyperledger/orderer/tls \
     -v /mnt/user/appdata/fabric/jedo-network/crypto-config/ordererOrganizations/test.jedo.btc/orderers/orderer.test.jedo.btc/msp:/etc/hyperledger/orderer/msp \
-    -v /mnt/user/appdata/fabric/jedo-network/ledger:/var/hyperledger/production \
+    -v /mnt/user/appdata/fabric/jedo-network/production:/var/hyperledger/production \
     -p 7050:7050 \
     hyperledger/fabric-orderer:latest
 ```
@@ -249,19 +251,157 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 
 
 # Setup a Channel with CLI
-1. create channel
+1. check UTF-8 compatibility
+```
+    iconv -f UTF-8 -t UTF-8 ./config/configtx.yaml -o ./config/configtx.yaml
+```
+2. create channel
 ```
     docker exec -it cli-nik peer channel create -c eu -f /tmp/jedo-network/configtx/eu.tx -o orderer.test.jedo.btc:7050 --outputBlock /tmp/jedo-network/configtx/eu.block --tls --cafile /etc/hyperledger/orderer/tls/ca.crt
 ```
-2. check Logs `docker logs orderer.test.jedo.btc`
-3. join channel as nik@alps
+3. check Logs `docker logs orderer.test.jedo.btc`
+4. join channel as nik@alps
 ```
     docker exec -it cli-nik peer channel join -b /tmp/jedo-network/configtx/eu.block -o orderer.test.jedo.btc:7050 --tls --cafile /etc/hyperledger/orderer/tls/ca.crt
 ```
-4. join channel as luke@mediterranean
+5. join channel as luke@mediterranean
 ```
     docker exec -it cli-luke peer channel join -b /tmp/jedo-network/configtx/eu.block -o orderer.test.jedo.btc:7050 --tls --cafile /etc/hyperledger/orderer/tls/ca.crt
 ```
+
+
+# Install Chaincode
+1. package chaincode on alps
+```
+    docker exec -it cli-nik peer lifecycle chaincode package nft_chaincode.tar.gz --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/nft_chaincode --label nft_chaincode_1
+```
+2. install chaincode on alps
+```
+    docker exec -it cli-nik peer lifecycle chaincode install nft_chaincode.tar.gz
+```
+3. package chaincode on mediterranean
+```
+    docker exec -it cli-luke peer lifecycle chaincode package nft_chaincode.tar.gz --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/nft_chaincode --label nft_chaincode_1
+```
+4. install chaincode on mediterranean
+```
+    docker exec -it cli-luke peer lifecycle chaincode install nft_chaincode.tar.gz
+```
+5. optional on any peer: query package ID
+```
+    docker exec -it cli-nik peer lifecycle chaincode queryinstalled
+```
+6. approve chaincode on alps
+```
+    docker exec -it cli-nik peer lifecycle chaincode approveformyorg \
+    --channelID eu \
+    --name nft_chaincode \
+    --version 1 \
+    --sequence 1 \
+    --package-id nft_chaincode_1:939752b1bc590ab464232edff8e170f1c9d711f1355ce3252c08580ce2dcf7bc \
+    --orderer orderer.test.jedo.btc:7050 \
+    --tls \
+    --cafile /etc/hyperledger/orderer/tls/ca.crt \
+    --peerAddresses nik.alps.test.jedo.btc:8051 --tlsRootCertFiles /etc/hyperledger/fabric/tls/ca.crt
+```
+7. approve chaincode on mediterranean
+```
+    docker exec -it cli-luke peer lifecycle chaincode approveformyorg \
+    --channelID eu \
+    --name nft_chaincode \
+    --version 1 \
+    --sequence 1 \
+    --package-id nft_chaincode_1:939752b1bc590ab464232edff8e170f1c9d711f1355ce3252c08580ce2dcf7bc \
+    --orderer orderer.test.jedo.btc:7050 \
+    --tls \
+    --cafile /etc/hyperledger/orderer/tls/ca.crt \
+    --peerAddresses luke.mediterranean.test.jedo.btc:9051 --tlsRootCertFiles /etc/hyperledger/fabric/tls/ca.crt
+```
+8. optional on any peer: check approval state
+```
+    docker exec -it cli-nik peer lifecycle chaincode checkcommitreadiness \
+    --channelID eu \
+    --name nft_chaincode \
+    --version 1 \
+    --sequence 1 \
+    --tls \
+    --cafile /etc/hyperledger/orderer/tls/ca.crt
+```
+9. commit chaincode
+```
+    docker exec -it cli-nik peer lifecycle chaincode commit \
+    --channelID eu \
+    --name nft_chaincode \
+    --version 1 \
+    --sequence 1 \
+    --orderer orderer.test.jedo.btc:7050 \
+    --tls \
+    --cafile /etc/hyperledger/orderer/tls/ca.crt \
+    --peerAddresses nik.alps.test.jedo.btc:8051 \
+    --tlsRootCertFiles /tmp/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/tls/ca.crt \
+    --peerAddresses luke.mediterranean.test.jedo.btc:9051 \
+    --tlsRootCertFiles /tmp/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/peers/luke.mediterranean.test.jedo.btc/tls/ca.crt
+```
+10. optional on any peer: query installation
+```
+    docker exec -it cli-nik peer lifecycle chaincode querycommitted --channelID eu --name nft_chaincode
+```
+11. test chaincode - write NFT
+```
+    docker exec -it cli-nik peer chaincode invoke \
+    --channelID eu \
+    --name nft_chaincode \
+    --orderer orderer.test.jedo.btc:7050 \
+    --tls \
+    --cafile /etc/hyperledger/orderer/tls/ca.crt \
+    --peerAddresses nik.alps.test.jedo.btc:8051 \
+    --tlsRootCertFiles /tmp/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/tls/ca.crt \
+    --peerAddresses luke.mediterranean.test.jedo.btc:9051 \
+    --tlsRootCertFiles /tmp/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/peers/luke.mediterranean.test.jedo.btc/tls/ca.crt \
+    -c '{"function":"CreateNFT","Args":["44297237-10f1-4a79-bf88-40a68e313a06", "Jenziner", "{\"balance\":1000, \"otp\":[\"123456\", \"456789\", \"789123\"]}"]}' \
+    --waitForEvent
+```
+12. test chaincode - read NFT
+```
+    docker exec -it cli-nik peer chaincode query \
+    --channelID eu \
+    --name nft_chaincode \
+    --peerAddresses nik.alps.test.jedo.btc:8051 \
+    --tlsRootCertFiles /tmp/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/peers/nik.alps.test.jedo.btc/tls/ca.crt \
+    -c '{"function":"ReadNFT","Args":["44297237-10f1-4a79-bf88-40a68e313a06"]}'
+```
+
+
+# Update Channel
+docker exec -it cli-nik peer channel fetch config config_block.pb -o orderer.test.jedo.btc:7050 -c eu --tls --cafile /etc/hyperledger/orderer/tls/ca.crt
+docker exec -it cli-nik configtxlator proto_decode --input config_block.pb --type common.Block --output config_block.json
+docker cp cli-nik:/opt/gopath/src/github.com/hyperledger/fabric/config_block.json /mnt/user/appdata/fabric/jedo-network/config_block.json
+jq .data.data[0].payload.data.config /mnt/user/appdata/fabric/jedo-network/config_block.json > /mnt/user/appdata/fabric/jedo-network/config.json
+do configtx.yaml changes in config.json
+docker cp /mnt/user/appdata/fabric/jedo-network/config.json cli-nik:/opt/gopath/src/github.com/hyperledger/fabric/config.json
+docker exec -it cli-nik configtxlator proto_encode --input config.json --type common.Config --output modified_config.pb
+docker exec -it cli-nik configtxlator compute_update --channel_id eu --original config_block.pb --updated modified_config.pb --output config_update.pb
+docker exec -it cli-nik configtxlator proto_decode --input config_update.pb --type common.ConfigUpdate --output config_update.json
+docker exec -it cli-nik bash
+echo '{"payload":{"header":{"channel_header":{"channel_id":"eu", "type":2}},"data":{"config_update":'$(cat config_update.json)'}}}' | jq . > config_update_in_envelope.json
+configtxlator proto_encode --input config_update_in_envelope.json --type common.Envelope --output config_update_in_envelope.pb
+Check: ls -l config_update_in_envelope.pb
+
+
+docker exec -it cli-nik peer channel update -f config_update_in_envelope.pb -c eu -o orderer.test.jedo.btc:7050 --tls --cafile /etc/hyperledger/orderer/tls/ca.crt
+docker exec -it cli-nik peer channel fetch config config_block.pb -o orderer.test.jedo.btc:7050 -c eu --tls --cafile /etc/hyperledger/orderer/tls/ca.crt
+docker exec -it cli-nik configtxlator proto_decode --input config_block.pb --type common.Block --output config_block.json
+
+
+
+docker cp cli-nik:/opt/gopath/src/github.com/hyperledger/fabric/config_update.json /mnt/user/appdata/fabric/jedo-network/config_update.json
+docker cp /mnt/user/appdata/fabric/jedo-network/config.json cli-nik:/opt/gopath/src/github.com/hyperledger/fabric/config.json
+
+
+
+
+
+
 
 
 # DEBUG
@@ -298,3 +438,15 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 ## Test network
 - `docker exec -it cli-nik peer channel list`
 - `docker exec -it cli-nik peer channel getinfo -c eu`
+
+## Remove Channel
+rm -f ./configtx/eu.tx ./configtx/eu.pb ./configtx/eu.block
+docker exec -it nik.alps.test.jedo.btc bash
+rm -rf /var/hyperledger/production/ledgersData/chains/chains/eu
+exit
+docker exec -it luke.mediterranean.test.jedo.btc bash
+rm -rf /var/hyperledger/production/ledgersData/chains/chains/eu
+exit
+docker exec -it orderer.test.jedo.btc bash
+rm -rf /var/hyperledger/production/orderer/chains/eu
+exit
