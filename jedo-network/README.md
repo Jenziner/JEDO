@@ -274,18 +274,23 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 1. package chaincode on alps
 ```
     docker exec -it cli-nik peer lifecycle chaincode package nft_chaincode.tar.gz --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/nft_chaincode --label nft_chaincode_1
+    docker exec -it cli-nik peer lifecycle chaincode package fab_sdk_tcc.tar.gz --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/fab_sdk_tcc --lang binary --label fab_sdk_tcc_1
+    docker exec -it cli-nik peer lifecycle chaincode package fab_sdk_tcc.tar.gz --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/fab_sdk_tcc --lang external --label fab_sdk_tcc_1
 ```
 2. install chaincode on alps
 ```
     docker exec -it cli-nik peer lifecycle chaincode install nft_chaincode.tar.gz
+    docker exec -it cli-nik peer lifecycle chaincode install fab_sdk_tcc.tar.gz
 ```
 3. package chaincode on mediterranean
 ```
     docker exec -it cli-luke peer lifecycle chaincode package nft_chaincode.tar.gz --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/nft_chaincode --label nft_chaincode_1
+    docker exec -it cli-luke peer lifecycle chaincode package fab_sdk_tcc.tar.gz --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/fab_sdk_tcc --label fab_sdk_tcc_1
 ```
 4. install chaincode on mediterranean
 ```
     docker exec -it cli-luke peer lifecycle chaincode install nft_chaincode.tar.gz
+    docker exec -it cli-luke peer lifecycle chaincode install fab_sdk_tcc.tar.gz
 ```
 5. optional on any peer: query package ID
 ```

@@ -15,3 +15,25 @@
 # DEBUG
 ## GO
 - clean go `go mod tidy`
+
+
+
+
+
+# Installation Token SDK Sample local
+Do prerequisites according https://github.com/hyperledger/fabric-samples/tree/main/token-sdk
+Install fabric 
+``` curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh 
+    ./install-fabric.sh docker binary
+```
+Install Tokengen `go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen@v0.3.0`
+Set path `export PATH=/home/jenziner/Entwicklung/fabric/fabric-samples/bin:$PATH`
+Check Version `fabric-ca-client version`
+Go to Token SDK `/home/jenziner/Entwicklung/fabric/fabric-samples/token-sdk`
+Quick start `./scripts/up.sh`
+Open GUI `http://localhost:8080`
+
+Quick del `./scripts/down.sh`
+
+
+
