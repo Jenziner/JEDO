@@ -7,8 +7,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 
 
 # JEDO-Test-Network
-- Schema: 
-https://github.com/Jenziner/JEDO/jedo-network/network.drawio.svg
+- ![Network-Schema](network.drawio.svg)
 ## Network 
 - Test - jedo.tst - 192.168.0.13
 - Production - jedo.me
