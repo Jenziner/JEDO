@@ -36,4 +36,14 @@ Open GUI `http://localhost:8080`
 Quick del `./scripts/down.sh`
 
 
-
+# tokengen
+echo $GOPATH
+ls ~/go/bin
+export PATH=$PATH:~/go/bin
+source ~/.bashrc
+tokengen -h
+cd /home/jenziner/Entwicklung/tokengen-output
+tokengen gen fabtoken -s /home/jenziner/Entwicklung/tokengen-output/nik --cc -o /home/jenziner/Entwicklung/tokengen-output
+cd /home/jenziner/Entwicklung/tokengen-output/fabric-smart-client
+export FAB_BINS=/home/jenziner/Entwicklung/tokengen-output/fabric-samples/bin
+tokengen artifacts -o /home/jenziner/Entwicklung/tokengen-output/testdata -t ./../fungible.yaml

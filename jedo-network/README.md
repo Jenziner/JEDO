@@ -7,37 +7,44 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 
 
 # JEDO-Test-Network
-- Schema: https://vectr.com/editor/f76ba3ed-411e-42fc-8524-4ba3539b23cd
+- Schema: 
+https://github.com/Jenziner/JEDO/jedo-network/network.drawio.svg
 ## Network 
-- Test - test.jedo.btc - 192.168.0.13
-- Production - jedo.btc
+- Test - jedo.tst - 192.168.0.13
+- Production - jedo.me
 ## Channel
-- C1 - eu.test.jedo.btc | L1 - Ledger | CC EU - ChannelConfiguration
-- C2 - as.test.jedo.btc
-- C3 - af.test.jedo.btc
-- C4 - na.test.jedo.btc
-- C5 - sa.test.jedo.btc
+- eu.jedo.me
+- as.jedo.me
+- af.jedo.me
+- na.jedo.me
+- sa.jedo.me
 ## Organisation
-- OU0 - OrdererOrg - orderer.test.jedo.btc
-- OU1 - AlpsOrg - alps.test.jedo.btc
-- OU2 - MediterraneanOrg - mediterranean.test.jedo.btc
+- JenzinerOrg - jenziner.jedo.me
 ## Certification Authority
 - CA1 - alps
 - CA2 - mediterranean
 ## Orderer
-- O - orderer.test.jedo.btc:7050
+- orderer.jenziner.jedo.me:7050
 ## Peers
-- P1 - nik.alps.test.jedo.btc:8051/52
-- P2 - luke.mediterranean.test.jedo.btc:9050/52
-- DB1 - CouchDB-ALPS:8084
-- DB2 - CouchDB-MEDITERRANEAN:9084
+- peer0.jenziner.jedo.me:8051/52 | peer0db:8084
+- peer1.jenziner.jedo.me:9050/52 | peer1db:9084
 ## SmartContract
-- S1 - undefined
+- Fabric Token SDK Chaincode
 ## Application
-- A1 - undefined
-## CLI:
-- CLI1 - cli-nik
-- CLI2 - cli-luke
+- JEDO-WALLET
+## CLI
+- cli.peer0.jenziner.jedo.me
+- cli.peer1.jenziner.jedo.me
+## Token-Network
+-           alps.eu.jedo.me (Token)
+-       aud.alps.eu.jedo.me (Auditor)
+-       iss.alps.eu.jedo.me (Issuer)
+-      worb.alps.eu.jedo.me (Owner)
+-   do@worb.alps.eu.jedo.me (User)
+-   ra@worb.alps.eu.jedo.me (User)
+-    biglen.alps.eu.jedo.me (Owner)
+- lu@biglen.alps.eu.jedo.me (User)
+- is@biglen.alps.eu.jedo.me (User)
 
 
 # Setup Basics for UNRAID
@@ -59,6 +66,43 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 2. copy admincerts for alps `cp /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/msp/admincerts/`
 3. copy admincerts for mediterranean `cp /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/users/Admin@mediterranean.test.jedo.btc/msp/signcerts/Admin@mediterranean.test.jedo.btc-cert.pem /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/mediterranean.test.jedo.btc/msp/admincerts/`
 4. double check generated structure and permission
+
+
+# ALT: Create Hyperledger Fabric CA
+1. create folder `mkdir -p /mnt/user/appdata/fabric-ca`
+2. get CA docker image `docker pull hyperledger/fabric-ca:latest`
+3. start CA
+```
+    docker run -d \
+    --name jedo-ca.jedo.btc \
+    --network fabric-network \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
+    -v /mnt/user/appdata/fabric-ca:/etc/hyperledger/fabric-ca \
+    -p 7054:7054 \
+    hyperledger/fabric-ca:latest \
+    sh -c 'fabric-ca-server start -b admin:Test1 -d'
+```
+4. check logs `docker logs jedo-ca.jedo.btc`
+5. start fabric-ca-client 
+```
+    docker run -it --network fabric-network \
+    --name jedo-ca-client \
+    -v /mnt/user/appdata/fabric-ca/crypto-config:/etc/hyperledger/fabric-ca-server \
+    hyperledger/fabric-ca:latest bash
+```
+6. do stuff:
+6.1. enroll an admin `fabric-ca-client enroll -u http://admin:Test1@jedo-ca.jedo.btc:7054`
+6.1. register new user `fabric-ca-client register --id.name nik --id.secret Test1 --id.type client -u http://jedo-ca.jedo.btc:7054`
+6.3. enroll new user `fabric-ca-client enroll -u http://nik:Test1@jedo-ca.jedo.btc:7054 -M /etc/hyperledger/fabric-ca-server/nik`
+6.4. in spare unraid terminal update permissions `chmod -R 755 /mnt/user/appdata/fabric-ca/crypto-config/nik`
+6.5. copy msp files for use as orderer
+6.5.1. copy root ca-cert `cp /etc/hyperledger/fabric-ca-server/nik/cacerts/jedo-ca-jedo-btc-7054.pem crypto-config/ordererOrganizations/example.com/orderers/orderer1.example.com/msp/cacerts/`
+6.5.2. copy private key `cp /etc/hyperledger/fabric-ca-server/nik/keystore/<private_key>.pem crypto-config/ordererOrganizations/example.com/orderers/orderer1.example.com/msp/keystore/`
+6.5.3. copy public key `cp /etc/hyperledger/fabric-ca-server/nik/signcerts/cert.pem crypto-config/ordererOrganizations/example.com/orderers/orderer1.example.com/msp/signcerts/`
+6.6. enroll tls `fabric-ca-client enroll -u http://orderer1:password@<tls-ca-url>:<tls-ca-port> --csr.hosts orderer1.example.com -M /etc/hyperledger/fabric-ca-server/tls/orderer1`
+6.6.1. copy TLS-cert `cp /etc/hyperledger/fabric-ca-server/tls/orderer1/signcerts/cert.pem crypto-config/ordererOrganizations/example.com/orderers/orderer1.example.com/tls/server.crt`
+6.6.2. copy private key `cp /etc/hyperledger/fabric-ca-server/tls/orderer1/keystore/<private_key>.pem crypto-config/ordererOrganizations/example.com/orderers/orderer1.example.com/tls/server.key`
+6.6.3. copy TLS-CA-root `cp /etc/hyperledger/fabric-ca-server/tls/orderer1/cacerts/<tls-root-cert>.pem crypto-config/ordererOrganizations/example.com/orderers/orderer1.example.com/tls/ca.crt`
 
 
 # Setup CouchDB for a Peer (repeat for others)
@@ -274,7 +318,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 1. package chaincode on alps
 ```
     docker exec -it cli-nik peer lifecycle chaincode package nft_chaincode.tar.gz --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/nft_chaincode --label nft_chaincode_1
-    docker exec -it cli-nik peer lifecycle chaincode package fab_sdk_tcc.tar.gz --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/fab_sdk_tcc --lang binary --label fab_sdk_tcc_1
+    docker exec -it cli-nik peer lifecycle chaincode package fab_sdk_tcc.tar.gz --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/fab_sdk_tcc --label fab_sdk_tcc_1
     docker exec -it cli-nik peer lifecycle chaincode package fab_sdk_tcc.tar.gz --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/fab_sdk_tcc --lang external --label fab_sdk_tcc_1
 ```
 2. install chaincode on alps
@@ -455,3 +499,9 @@ exit
 docker exec -it orderer.test.jedo.btc bash
 rm -rf /var/hyperledger/production/orderer/chains/eu
 exit
+
+
+
+# Fabric Token SDK
+- start swagger UI `docker run -p 8080:8080 -e URL=/swagger.yaml -v /home/jenziner/Entwicklung/fabric/fabric-samples/token-sdk/swagger.yaml:/usr/share/nginx/html/swagger.yaml swaggerapi/swagger-ui` --> http://localhost:8080
+
