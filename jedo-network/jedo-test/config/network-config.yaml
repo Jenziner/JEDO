@@ -1,0 +1,22 @@
+################################################################################
+#
+#   Section: 
+#
+################################################################################
+Fabric:
+  # path to fabric-folder where bin and config subfolders exist
+  Path: /mnt/user/appdata/fabric
+Docker:
+  Network:
+    Name: jedo-network
+  Container:
+    Wait: 20 # Max waiting time in seconds to start a docker container prior to exit
+    FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
+Network:
+  CA:
+    # Name: localhost
+    Name: ca.jenziner.jedo.test
+    Port: 7054
+    Admin:
+      Name: admin
+      Pass: Test1

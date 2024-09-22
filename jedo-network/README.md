@@ -7,9 +7,9 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 
 
 # JEDO-Test-Network
-- ![Network-Schema](network.drawio.svg)
+![Network-Schema](network.drawio.svg)
 ## Network 
-- Test - jedo.tst - 192.168.0.13
+- Test - jedo.test - 192.168.0.13
 - Production - jedo.me
 ## Channel
 - eu.jedo.me
@@ -20,8 +20,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 ## Organisation
 - JenzinerOrg - jenziner.jedo.me
 ## Certification Authority
-- CA1 - alps
-- CA2 - mediterranean
+- ca.jenziner.jedo.test:7054
 ## Orderer
 - orderer.jenziner.jedo.me:7050
 ## Peers
@@ -50,14 +49,11 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 1. open terminal in UNRAID
 2. download hyperledger fabric samples `wget https://github.com/hyperledger/fabric/releases/download/v2.5.0/hyperledger-fabric-linux-amd64-2.5.0.tar.gz`
 3. extract files `tar -xvzf hyperledger-fabric-linux-amd64-2.5.0.tar.gz`
-4. create folder `mkdir -p /mnt/user/appdata/fabric/jedo-network/config`
+4. create folder `mkdir -p /mnt/user/appdata/jedo-network`
 5. move binaries from fabric `mv bin /mnt/user/appdata/fabric/` and `mv config /mnt/user/appdata/fabric/`
-6. copy files from [config](https://github.com/Jenziner/JEDO/tree/main/jedo-network/config) to *config* folder:
-    - **crypto-config.yaml**
-    - **configtx.yaml**
-7. goto jedo-network `cd /mnt/user/appdata/fabric/jedo-network`
-8. create docker network `docker network create fabric-network`
-9. inspect Network `docker network inspect fabric-network`
+6. copy files from (https://github.com/Jenziner/JEDO/tree/main/jedo-network/jedo-test/) to /mnt/user/appdata/jedo-network
+7. goto jedo-network `cd /mnt/user/appdata/jedo-network`
+8. bring up jedo-network `./scripts/up.sh`
 
 
 # Create CryptoConfig
@@ -73,7 +69,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 3. start CA
 ```
     docker run -d \
-    --name jedo-ca.jedo.btc \
+    --name ca.jenziner.jedo.test \
     --network fabric-network \
     --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
     -v /mnt/user/appdata/fabric-ca:/etc/hyperledger/fabric-ca \
@@ -463,6 +459,14 @@ docker cp /mnt/user/appdata/fabric/jedo-network/config.json cli-nik:/opt/gopath/
 - test connection (cli to peer) `docker exec -it cli-nik curl -v nik.alps.test.jedo.btc:8051`
 
 
+## Fabric Tools CLI
+- run `docker run -v /mnt/user/appdata/jedo-network/tokengen:/root/config -it --name fabric-tools-container hyperledger/fabric-tools:latest /bin/bash`
+- safe `docker commit fabric-tools-container my-fabric-tools`
+- run safe `docker run -v /mnt/user/appdata/jedo-network/tokengen:/root/tokengen -v /mnt/user/appdata/jedo-network/keys:/root/keys -it --name fabric-tools-container my-fabric-tools /bin/bash`
+- restart `docker start -i fabric-tools-container`
+- use tokengen `tokengen gen dlog --base 300 --exponent 5 --issuers /root/keys/issuer/iss/msp --idemix /root/keys/owner1/wallet/alice --auditors /root/keys/auditor/aud/msp --output /root/tokengen`
+
+
 ## Configs
 - start configtxlator-service `../bin/configtxlator start &`
 - decode genesis block and channel configs
@@ -504,3 +508,7 @@ exit
 # Fabric Token SDK
 - start swagger UI `docker run -p 8080:8080 -e URL=/swagger.yaml -v /home/jenziner/Entwicklung/fabric/fabric-samples/token-sdk/swagger.yaml:/usr/share/nginx/html/swagger.yaml swaggerapi/swagger-ui` --> http://localhost:8080
 
+
+
+
+ 
