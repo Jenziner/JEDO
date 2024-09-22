@@ -39,5 +39,6 @@ docker network rm  $DOCKER_NETWORK_NAME
 ###############################################################
 echo "ScriptInfo: removing folders"
 rm -rf keys
+rm -rf tokengen
 #rm -rf data
 #rm tokenchaincode/zkatdlog_pp.json

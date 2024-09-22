@@ -19,6 +19,7 @@ ls scripts/up.sh || { echo "ScriptInfo: run this script from the root directory:
 CONFIG_FILE="./config/network-config.yaml"
 FABRIC_PATH=$(yq eval '.Fabric.Path' "$CONFIG_FILE")
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' "$CONFIG_FILE")
+DOCKER_NETWORK_SUBNET=$(yq eval '.Docker.Network.Subnet' "$CONFIG_FILE")
 DOCKER_CONTAINER_FABRICTOOLS=$(yq eval '.Docker.Container.FabricTools' "$CONFIG_FILE")
 
 
@@ -56,7 +57,7 @@ export TEST_NETWORK_HOME=\"$TEST_NETWORK_HOME\"
 
 # Check docker network and create
 if ! docker network ls --format '{{.Name}}' | grep -wq "$DOCKER_NETWORK_NAME"; then
-    docker network create "$DOCKER_NETWORK_NAME"
+    docker network create --subnet=$DOCKER_NETWORK_SUBNET "$DOCKER_NETWORK_NAME"
 fi
 docker network inspect "$DOCKER_NETWORK_NAME"
 
@@ -75,7 +76,7 @@ if [ ! "$(docker ps -q -f name=$DOCKER_CONTAINER_FABRICTOOLS)" ]; then
     docker run -v /mnt/user/appdata/jedo-network:/root \
       -itd --name $DOCKER_CONTAINER_FABRICTOOLS hyperledger/fabric-tools:latest
 fi
-echo"ToDo: create certificates for issuer, idemix, auditors"
+echo "ToDo: create certificates for issuer, idemix, auditors"
 exit 1
 
 docker exec $DOCKER_CONTAINER_FABRICTOOLS bash -c 'PATH=$PATH:/usr/local/go/bin && /root/go/bin/tokengen gen dlog \

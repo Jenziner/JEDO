@@ -17,6 +17,7 @@ CONFIG_FILE="./config/network-config.yaml"
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' "$CONFIG_FILE")
 DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' "$CONFIG_FILE")
 NETWORK_CA_NAME=$(yq eval '.Network.CA.Name' "$CONFIG_FILE")
+NETWORK_CA_IP=$(yq eval '.Network.CA.IP' "$CONFIG_FILE")
 NETWORK_CA_PORT=$(yq eval '.Network.CA.Port' "$CONFIG_FILE")
 NETWORK_CA_ADMIN_NAME=$(yq eval '.Network.CA.Admin.Name' "$CONFIG_FILE")
 NETWORK_CA_ADMIN_PASS=$(yq eval '.Network.CA.Admin.Pass' "$CONFIG_FILE")
@@ -36,8 +37,9 @@ fi
 echo "ScriptInfo: running $NETWORK_CA_NAME"
 docker pull hyperledger/fabric-ca:latest
 docker run -d \
-    --name $NETWORK_CA_NAME \
     --network $DOCKER_NETWORK_NAME \
+    --name $NETWORK_CA_NAME \
+    --ip $NETWORK_CA_IP \
     --restart=unless-stopped \
     --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
     -e FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server \

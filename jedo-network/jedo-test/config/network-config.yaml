@@ -9,14 +9,51 @@ Fabric:
 Docker:
   Network:
     Name: jedo-network
+    Subnet: 172.25.0.0/16
   Container:
     Wait: 20 # Max waiting time in seconds to start a docker container prior to exit
     FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
-Network:
+Network: # Make sure every server and ip is set in DNS or /etc/hosts
   CA:
     # Name: localhost
     Name: ca.jenziner.jedo.test
+    IP: 172.25.0.2
     Port: 7054
     Admin:
       Name: admin
       Pass: Test1
+  FSCs: # Names must be according Auditor, Issuers, Users
+    - Name: aud
+      Pass: Test1
+      Owner: auditor
+    - Name: iss
+      Pass: Test1
+      Owner: issuer
+    - Name: Worb
+      Pass: Test1
+      Owner: Worb
+    - Name: Biglen
+      Pass: Test1
+      Owner: Biglen
+  Auditors:
+    - Name: aud
+      Pass: Test1
+      Owner: auditor
+  Issuers:
+    - Name: iss
+      Pass: Test1
+      Owner: issuer
+  Users:
+    - Name: do
+      Pass: Test1
+      Owner: Worb
+    - Name: ra
+      Pass: Test1
+      Owner: Worb
+    - Name: lu
+      Pass: Test1
+      Owner: Biglen
+    - Name: is
+      Pass: Test1
+      Owner: Biglen
+  
