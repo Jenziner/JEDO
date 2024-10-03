@@ -19,30 +19,21 @@ Network: # Make sure every server and ip is set in DNS or /etc/hosts
     Name: ca.jenziner.jedo.test
     IP: 172.25.0.2
     Port: 7054
-    Admin:
-      Name: admin
-      Pass: Test1
+    Pass: Test1
+    Org: JenzinerOrg
   Orderers:
     - Name: orderer.jenziner.jedo.test
       IP: 172.25.0.11
       Port: 7050
-      Admin:
-        Name: admin
-        Pass: Test1
-        Org:
-          Name: JenzinerOrg
-          MSP: JenzinerOrg
+      Pass: Test1
+      Org: JenzinerOrg
   Peers:
     - Name: peer0.jenziner.jedo.test
       IP: 172.25.0.21
       Port1: 8051
       Port2: 8052
-      Admin:
-        Name: admin
-        Pass: Test1
-        Org: 
-          Name: JenzinerOrg
-          MSP: JenzinerOrgMSP
+      Pass: Test1
+      Org: JenzinerOrg
       DB: 
         Name: db0.jenziner.jedo.test
         IP: 172.25.0.22
@@ -55,12 +46,8 @@ Network: # Make sure every server and ip is set in DNS or /etc/hosts
       IP: 172.25.0.31
       Port1: 9051
       Port2: 9052
-      Admin:
-        Name: admin
-        Pass: Test1
-        Org:
-          Name: JenzinerOrg
-          MSP: JenzinerOrgMSP
+      Pass: Test1
+      Org: JenzinerOrg
       DB: 
         Name: db1.jenziner.jedo.test
         IP: 172.25.0.32
@@ -69,6 +56,8 @@ Network: # Make sure every server and ip is set in DNS or /etc/hosts
           Name: admin
           Pass: Test1
       CLI: true
+Ecosystem:
+  Name: eu.jedo.test
   FSCs: # Names must be according Auditor, Issuers, Users
     - Name: aud
       Pass: Test1

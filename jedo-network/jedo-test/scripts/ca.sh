@@ -19,8 +19,8 @@ DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' "$CONFIG_FILE")
 NETWORK_CA_NAME=$(yq eval '.Network.CA.Name' "$CONFIG_FILE")
 NETWORK_CA_IP=$(yq eval '.Network.CA.IP' "$CONFIG_FILE")
 NETWORK_CA_PORT=$(yq eval '.Network.CA.Port' "$CONFIG_FILE")
-NETWORK_CA_ADMIN_NAME=$(yq eval '.Network.CA.Admin.Name' "$CONFIG_FILE")
-NETWORK_CA_ADMIN_PASS=$(yq eval '.Network.CA.Admin.Pass' "$CONFIG_FILE")
+NETWORK_CA_PASS=$(yq eval '.Network.CA.Pass' "$CONFIG_FILE")
+NETWORK_CA_ORG=$(yq eval '.Network.CA.Org' "$CONFIG_FILE")
 
 
 ###############################################################
@@ -41,16 +41,16 @@ docker run -d \
     --name $NETWORK_CA_NAME \
     --ip $NETWORK_CA_IP \
     --restart=unless-stopped \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_ca_logo.png" \
     -e FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server \
     -e FABRIC_CA_SERVER_CA_NAME=$NETWORK_CA_NAME \
     -e FABRIC_CA_SERVER_TLS_ENABLED=false \
     -e FABRIC_CA_SERVER_PORT=$NETWORK_CA_PORT \
-    -v ${PWD}/../fabric-ca:/etc/hyperledger/fabric-ca \
-    -v ${PWD}/keys/ca:/etc/hyperledger/fabric-ca-server \
+    -v ${PWD}/keys:/etc/hyperledger/fabric-ca \
+    -v ${PWD}/keys/$NETWORK_CA_ORG/$NETWORK_CA_NAME:/etc/hyperledger/fabric-ca-server \
     -p $NETWORK_CA_PORT:$NETWORK_CA_PORT \
     hyperledger/fabric-ca:latest \
-    sh -c "fabric-ca-server start -b $NETWORK_CA_ADMIN_NAME:$NETWORK_CA_ADMIN_PASS --idemix.curve gurvy.Bn254 -d"
+    sh -c "fabric-ca-server start -b $NETWORK_CA_NAME:$NETWORK_CA_PASS --idemix.curve gurvy.Bn254 -d"
 
 # waiting startup
 while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
@@ -65,7 +65,7 @@ while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
 done
 
 if [ "$SUCCESS" = false ]; then
-    echo "ScriptError: $NETWORK_CA_NAME did not start within $MAX_WAIT seconds."
+    echo "ScriptError: $NETWORK_CA_NAME did not start."
     docker logs $NETWORK_CA_NAME
     exit 1
 fi

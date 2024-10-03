@@ -187,7 +187,7 @@ for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
     docker run -d \
     --name $PEER.cli \
     --network $DOCKER_NETWORK_NAME \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
+    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_cli_logo.png" \
     -e GOPATH=/opt/gopath \
     -e CORE_PEER_ID=$PEER.cli \
     -e CORE_PEER_ADDRESS=$PEER:$PEER_PORT1 \

@@ -32,6 +32,7 @@ NETWORK_CA_NAME=$(yq eval '.Network.CA.Name' "$CONFIG_FILE")
 echo "ScriptInfo: removing docker container and network"
 docker rm -f $NETWORK_CA_NAME
 # more to come
+echo "ScriptInfo: removing docker network"
 docker network rm  $DOCKER_NETWORK_NAME
 
 ###############################################################

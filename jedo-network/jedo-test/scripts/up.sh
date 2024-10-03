@@ -66,7 +66,6 @@ docker network inspect "$DOCKER_NETWORK_NAME"
 # Generate identities for the nodes, issuer, auditor and owner
 ###############################################################
 echo "ScriptInfo: run ca"
-mkdir -p keys/ca
 ./scripts/ca.sh
 
 echo "ScriptInfo: enroll certificates"
