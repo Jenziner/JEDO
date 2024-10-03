@@ -22,6 +22,53 @@ Network: # Make sure every server and ip is set in DNS or /etc/hosts
     Admin:
       Name: admin
       Pass: Test1
+  Orderers:
+    - Name: orderer.jenziner.jedo.test
+      IP: 172.25.0.11
+      Port: 7050
+      Admin:
+        Name: admin
+        Pass: Test1
+        Org:
+          Name: JenzinerOrg
+          MSP: JenzinerOrg
+  Peers:
+    - Name: peer0.jenziner.jedo.test
+      IP: 172.25.0.21
+      Port1: 8051
+      Port2: 8052
+      Admin:
+        Name: admin
+        Pass: Test1
+        Org: 
+          Name: JenzinerOrg
+          MSP: JenzinerOrgMSP
+      DB: 
+        Name: db0.jenziner.jedo.test
+        IP: 172.25.0.22
+        Port: 8084
+        Admin:
+          Name: admin
+          Pass: Test1
+      CLI: true # true, if CLI-Container should be installed
+    - Name: peer1.jenziner.jedo.test
+      IP: 172.25.0.31
+      Port1: 9051
+      Port2: 9052
+      Admin:
+        Name: admin
+        Pass: Test1
+        Org:
+          Name: JenzinerOrg
+          MSP: JenzinerOrgMSP
+      DB: 
+        Name: db1.jenziner.jedo.test
+        IP: 172.25.0.32
+        Port: 9084
+        Admin:
+          Name: admin
+          Pass: Test1
+      CLI: true
   FSCs: # Names must be according Auditor, Issuers, Users
     - Name: aud
       Pass: Test1

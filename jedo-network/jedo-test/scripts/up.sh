@@ -65,9 +65,13 @@ docker network inspect "$DOCKER_NETWORK_NAME"
 ###############################################################
 # Generate identities for the nodes, issuer, auditor and owner
 ###############################################################
+echo "ScriptInfo: run ca"
 mkdir -p keys/ca
 ./scripts/ca.sh
+
+echo "ScriptInfo: enroll certificates"
 ./scripts/enroll.sh
+
 echo "ScriptInfo: run tokengen"
 if [ ! "$(docker ps -q -f name=$DOCKER_CONTAINER_FABRICTOOLS)" ]; then
     if [ "$(docker ps -aq -f status=exited -f name=$DOCKER_CONTAINER_FABRICTOOLS)" ]; then
@@ -76,9 +80,8 @@ if [ ! "$(docker ps -q -f name=$DOCKER_CONTAINER_FABRICTOOLS)" ]; then
     docker run -v /mnt/user/appdata/jedo-network:/root \
       -itd --name $DOCKER_CONTAINER_FABRICTOOLS hyperledger/fabric-tools:latest
 fi
-echo "ToDo: create certificates for issuer, idemix, auditors"
-exit 1
 
+echo "ScriptInfo: run fabric tools"
 docker exec $DOCKER_CONTAINER_FABRICTOOLS bash -c 'PATH=$PATH:/usr/local/go/bin && /root/go/bin/tokengen gen dlog \
   --base 300 \
   --exponent 5 \
@@ -86,6 +89,12 @@ docker exec $DOCKER_CONTAINER_FABRICTOOLS bash -c 'PATH=$PATH:/usr/local/go/bin 
   --idemix /root/keys/owner1/wallet/alice \
   --auditors /root/keys/auditor/aud/msp \
   --output /root/tokengen'
+
+echo "ScriptInfo: run peer"
+./scripts/peer.sh
+
+echo "ToDo: create certificates for issuer, idemix, auditors"
+exit 1
 
 
 # Start Fabric network

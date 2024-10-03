@@ -25,7 +25,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 - orderer.jenziner.jedo.me:7050
 ## Peers
 - peer0.jenziner.jedo.me:8051/52 | peer0db:8084
-- peer1.jenziner.jedo.me:9050/52 | peer1db:9084
+- peer1.jenziner.jedo.me:9052/52 | peer1db:9084
 ## SmartContract
 - Fabric Token SDK Chaincode
 ## Application
@@ -56,6 +56,7 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 8. bring up jedo-network `./scripts/up.sh`
 
 
+# Manual OLD way
 # Create CryptoConfig
 1. create certificates `../bin/cryptogen generate --config=./config/crypto-config.yaml --output=./crypto-config/`
 2. copy admincerts for alps `cp /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/users/Admin@alps.test.jedo.btc/msp/signcerts/Admin@alps.test.jedo.btc-cert.pem /mnt/user/appdata/fabric/jedo-network/crypto-config/peerOrganizations/alps.test.jedo.btc/msp/admincerts/`

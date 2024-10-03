@@ -21,6 +21,10 @@ NETWORK_CA_NAME=$(yq eval '.Network.CA.Name' "$CONFIG_FILE")
 NETWORK_CA_PORT=$(yq eval '.Network.CA.Port' "$CONFIG_FILE")
 NETWORK_CA_ADMIN_NAME=$(yq eval '.Network.CA.Admin.Name' "$CONFIG_FILE")
 NETWORK_CA_ADMIN_PASS=$(yq eval '.Network.CA.Admin.Pass' "$CONFIG_FILE")
+PEERS=$(yq e '.Network.Peers[] | .Name' $CONFIG_FILE)
+PEERS_ADMIN=$(yq e '.Network.Peers[] | .Admin.Name' $CONFIG_FILE)
+PEERS_ADMIN_PASSWORD=$(yq e '.Network.Peers[] | .Admin.Pass' $CONFIG_FILE)
+PEERS_ADMIN_ORG=$(yq e '.Network.Peers[] | .Admin.Org.Name' $CONFIG_FILE)
 FSCS=$(yq e '.Network.FSCs[] | .Name' $CONFIG_FILE)
 FSCS_PASSWORD=$(yq e '.Network.FSCs[] | .Pass' $CONFIG_FILE)
 FSCS_OWNER=$(yq e '.Network.FSCs[] | .Owner' $CONFIG_FILE)
@@ -40,6 +44,23 @@ USERS_OWNER=$(yq e '.Network.Users[] | .Owner' $CONFIG_FILE)
 ###############################################################
 # enroll admin
 fabric-ca-client enroll -u http://$NETWORK_CA_ADMIN_NAME:$NETWORK_CA_ADMIN_PASS@$NETWORK_CA_NAME:$NETWORK_CA_PORT
+
+# Peer (non-anonymous)
+echo "ScriptInfo: register peers"
+for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
+  PEER=$(echo "$PEERS" | sed -n "$((index+1))p")
+  PEER_ADMIN=$(echo "$PEERS_ADMIN" | sed -n "$((index+1))p")
+  PEER_ADMIN_PASSWORD=$(echo "$PEERS_ADMIN_PASSWORD" | sed -n "$((index+1))p")
+  PEER_ADMIN_ORG=$(echo "$PEERS_ADMIN_ORG" | sed -n "$((index+1))p")
+  fabric-ca-client register -u http://$NETWORK_CA_NAME:$NETWORK_CA_PORT --id.name $PEER --id.secret $PEER_ADMIN_PASSWORD --id.type client
+  fabric-ca-client enroll -u http://$PEER_ADMIN:$PEER_ADMIN_PASSWORD@$NETWORK_CA_NAME:$NETWORK_CA_PORT -M "$(pwd)/keys/$PEER_ADMIN_ORG/$PEER/msp"
+done
+
+TODO: Read how to create peer ca
+
+chmod -R 777 ./keys
+echo "DEBUG END peer cert"
+exit 1
 
 # Fabric Smart Client node identities (identity of the node, used when talking to other nodes)
 echo "ScriptInfo: register fsc"
