@@ -511,5 +511,45 @@ exit
 
 
 
+# CouchDB Setup
+## Couch DB for peer0.alps.test.jedo.btc
+docker run
+  -d
+  --name='CouchDB-ALPS'
+  --net='bridge'
+  -e TZ="America/Los_Angeles"
+  -e HOST_OS="Unraid"
+  -e HOST_HOSTNAME="JenzinerUnraid"
+  -e HOST_CONTAINERNAME="CouchDB-ALPS"
+  -e 'test'='yes'
+  -e 'COUCHDB_USER'='peer0.alps.test.jedo.btc'
+  -e 'COUCHDB_PASSWORD'='fabric'
+  -l net.unraid.docker.managed=dockerman
+  -l net.unraid.docker.webui='http://[IP]:[PORT:5984]/_utils'
+  -l net.unraid.docker.icon='https://couchdb.apache.org/image/couch@2x.png'
+  -p '8084:5984/tcp'
+  -v '/mnt/user/appdata/couchdb/dataalps':'/opt/couchdb/data':'rw'
+  -v '/mnt/user/appdata/couchdb/configalps':'/usr/local/etc/couchdb':'rw' 'apache/couchdb'
+da56e8c88dc6e824fea272d78bffc94ad7bcb6b80df866c444f10e967c510998
 
+
+## Couch DB for peer0.mediterranean.test.jedo.btc
+docker run
+  -d
+  --name='CouchDB-MEDITERRANEAN'
+  --net='bridge'
+  -e TZ="America/Los_Angeles"
+  -e HOST_OS="Unraid"
+  -e HOST_HOSTNAME="JenzinerUnraid"
+  -e HOST_CONTAINERNAME="CouchDB-MEDITERRANEAN"
+  -e 'test'='yes'
+  -e 'COUCHDB_USER'='peer0.mediterranean.test.jedo.btc'
+  -e 'COUCHDB_PASSWORD'='fabric'
+  -l net.unraid.docker.managed=dockerman
+  -l net.unraid.docker.webui='http://[IP]:[PORT:5984]/_utils'
+  -l net.unraid.docker.icon='https://couchdb.apache.org/image/couch@2x.png'
+  -p '9084:5984/tcp'
+  -v '/mnt/user/appdata/couchdb/datamediterranean':'/opt/couchdb/data':'rw'
+  -v '/mnt/user/appdata/couchdb/configmediterranean':'/usr/local/etc/couchdb':'rw' 'apache/couchdb'
+f60af65b2dfaaf9f47d37ea985efc236dbb33154e52d5e601b116199af442af6
  
