@@ -31,7 +31,22 @@ NETWORK_CA_NAME=$(yq eval '.Network.CA.Name' "$CONFIG_FILE")
 ###############################################################
 echo "ScriptInfo: removing docker container and network"
 docker rm -f $NETWORK_CA_NAME
-# more to come
+# TODO: Remove all container
+#containers=$(docker ps -a --filter "name=.jedo.test" --format "{{.Names}}")
+
+# Überprüfe, ob Container gefunden wurden
+#if [ -z "$containers" ]; then
+#    echo "Keine Container gefunden, die auf '.jedo.test' enden."
+#else
+#    echo "Lösche folgende Container:"
+#    echo "$containers"
+#
+#    # Lösche alle gefundenen Container
+#    for container in $containers; do
+#        docker rm -f $container
+#        echo "Container $container gelöscht."
+#    done
+#fi
 echo "ScriptInfo: removing docker network"
 docker network rm  $DOCKER_NETWORK_NAME
 
@@ -41,5 +56,7 @@ docker network rm  $DOCKER_NETWORK_NAME
 echo "ScriptInfo: removing folders"
 rm -rf keys
 rm -rf tokengen
+rm -rf configtx #TODO: Check if still needed
+rm -rf production
 #rm -rf data
 #rm tokenchaincode/zkatdlog_pp.json

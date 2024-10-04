@@ -21,6 +21,10 @@ Network: # Make sure every server and ip is set in DNS or /etc/hosts
     Port: 7054
     Pass: Test1
     Org: JenzinerOrg
+  Admins:
+    - Name: admin.jenziner.jedo.test
+      Pass: Test1
+      Org: JenzinerOrg
   Orderers:
     - Name: orderer.jenziner.jedo.test
       IP: 172.25.0.11
@@ -41,7 +45,7 @@ Network: # Make sure every server and ip is set in DNS or /etc/hosts
         Admin:
           Name: admin
           Pass: Test1
-      CLI: true # true, if CLI-Container should be installed
+      CLI: 172.25.0.23 # IP, if CLI-Container should be installed
     - Name: peer1.jenziner.jedo.test
       IP: 172.25.0.31
       Port1: 9051
@@ -55,7 +59,7 @@ Network: # Make sure every server and ip is set in DNS or /etc/hosts
         Admin:
           Name: admin
           Pass: Test1
-      CLI: true
+      CLI: 172.25.0.33
 Ecosystem:
   Name: eu.jedo.test
   FSCs: # Names must be according Auditor, Issuers, Users
