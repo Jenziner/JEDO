@@ -18,6 +18,7 @@ ls scripts/node.sh || { echo "ScriptInfo: run this script from the root director
 ###############################################################
 CONFIG_FILE="./config/network-config.yaml"
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' "$CONFIG_FILE")
+DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' "$CONFIG_FILE")
 PEERS=$(yq e '.Network.Peers[] | .Name' $CONFIG_FILE)
 PEERS_IP=$(yq e '.Network.Peers[] | .IP' $CONFIG_FILE)
 PEERS_PORT1=$(yq e '.Network.Peers[] | .Port1' $CONFIG_FILE)
@@ -131,6 +132,8 @@ for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
     PEER_PORT2=$(echo "$PEERS_PORT2" | sed -n "$((index+1))p")
     PEER_ORG=$(echo "$PEERS_ORG" | sed -n "$((index+1))p")
     PEER_CLI=$(echo "$PEERS_CLI" | sed -n "$((index+1))p")
+    TLS_PRIVATE_KEY=$(basename $(ls $PWD/keys/$PEER_ORG/$PEER/tls/keystore/*_sk))
+    TLS_ROOTCERT=$(basename $(ls $PWD/keys/$PEER_ORG/$PEER/tls/tlscacerts/*))
     export FABRIC_CFG_PATH=./config
 
     echo "ScriptInfo: run peer $PEER"
@@ -149,13 +152,17 @@ for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
     -e CORE_PEER_GOSSIP_ENDPOINT=0.0.0.0:$PEER_PORT1 \
     -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=0.0.0.0:$PEER_PORT1 \
     -e CORE_PEER_TLS_ENABLED=true \
-    -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt \
-    -e CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key \
-    -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt \
+    -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/signcerts/cert.pem \
+    -e CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/keystore/$TLS_PRIVATE_KEY \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/tlscacerts/$TLS_ROOTCERT \
     -e CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp \
     -e CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=$PEER_DB_IP:$PEER_DB_PORT \
     -e CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=$PEER_DB_ADMIN \
     -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=$PEER_DB_ADMIN_PASS \
+    -e CORE_PEER_OPERATIONS_LISTENADDRESS=0.0.0.0:9443 \
+    -e CORE_PEER_OPERATIONS_TLS_ENABLED=true \
+    -e CORE_PEER_OPERATIONS_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+    -e CORE_PEER_OPERATIONS_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
     -v $PWD/../fabric/config/core.yaml:/etc/hyperledger/fabric/core.yaml \
     -v $PWD/keys/$PEER_ORG/$PEER/msp:/etc/hyperledger/peer/msp \
     -v $PWD/keys/$PEER_ORG/$PEER/tls:/etc/hyperledger/fabric/tls \
@@ -194,7 +201,6 @@ for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
         -it \
         hyperledger/fabric-tools:latest
     fi
-
 done
 
 
@@ -202,11 +208,15 @@ done
 # Orderers
 ###############################################################
 for index in $(seq 0 $(($(echo "$ORDERERS" | wc -l) - 1))); do
+    WAIT_TIME=0
+    SUCCESS=false
     # Run Peer
     ORDERER=$(echo "$ORDERERS" | sed -n "$((index+1))p")
     ORDERER_IP=$(echo "$ORDERERS_IP" | sed -n "$((index+1))p")
     ORDERER_PORT=$(echo "$ORDERERS_PORT" | sed -n "$((index+1))p")
     ORDERER_ORG=$(echo "$ORDERERS_ORG" | sed -n "$((index+1))p")
+    TLS_PRIVATE_KEY=$(basename $(ls $PWD/keys/$ORDERER_ORG/$ORDERER/tls/keystore/*_sk))
+    TLS_ROOTCERT=$(basename $(ls $PWD/keys/$ORDERER_ORG/$ORDERER/tls/tlscacerts/*))
     export FABRIC_CFG_PATH=./config
 
     echo "ScriptInfo: run orderer $ORDERER"
@@ -222,9 +232,13 @@ for index in $(seq 0 $(($(echo "$ORDERERS" | wc -l) - 1))); do
     -e ORDERER_GENERAL_LOCALMSPID=${ORDERER_ORG}MSP \
     -e ORDERER_GENERAL_LOCALMSPDIR=/etc/hyperledger/orderer/msp \
     -e ORDERER_GENERAL_TLS_ENABLED=true \
-    -e ORDERER_GENERAL_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/server.crt \
-    -e ORDERER_GENERAL_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/server.key \
-    -e ORDERER_GENERAL_TLS_ROOTCAS=[/etc/hyperledger/orderer/tls/ca.crt] \
+    -e ORDERER_GENERAL_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+    -e ORDERER_GENERAL_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
+    -e ORDERER_GENERAL_TLS_ROOTCAS=[/etc/hyperledger/orderer/tls/tlscacerts/$TLS_ROOTCERT] \
+    -e ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:9443 \
+    -e ORDERER_OPERATIONS_TLS_ENABLED=true \
+    -e ORDERER_OPERATIONS_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+    -e ORDERER_OPERATIONS_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
     -v $PWD/../fabric/config/orderer.yaml:/etc/hyperledger/fabric/orderer.yaml \
     -v $PWD/configtx/genesis.block:/etc/hyperledger/fabric/genesis.block \
     -v $PWD/keys/$ORDERER_ORG/$ORDERER/msp:/etc/hyperledger/orderer/msp \
@@ -232,6 +246,23 @@ for index in $(seq 0 $(($(echo "$ORDERERS" | wc -l) - 1))); do
     -v $PWD/production/$ORDERER:/var/hyperledger/production \
     -p $ORDERER_PORT:$ORDERER_PORT \
     hyperledger/fabric-orderer:latest
-    docker logs $ORDERER
+
+    # waiting startup
+    while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
+        if curl -k -s https://$ORDERER:9443/healthz > /dev/null; then
+            SUCCESS=true
+            echo "ScriptInfo: $ORDERER is up and running!"
+            break
+        fi
+        echo "Waiting for $ORDERER... ($WAIT_TIME seconds)"
+        sleep 2
+        WAIT_TIME=$((WAIT_TIME + 2))
+    done
+
+    if [ "$SUCCESS" = false ]; then
+        echo "ScriptError: $ORDERER did not start."
+        docker logs $ORDERER
+        exit 1
+    fi
 
 done

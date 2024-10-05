@@ -16,17 +16,18 @@ ls scripts/up.sh || { echo "ScriptInfo: run this script from the root directory:
 ###############################################################
 # Params - from ./config/network-config.yaml
 ###############################################################
-CONFIG_FILE="./config/network-config.yaml"
-FABRIC_PATH=$(yq eval '.Fabric.Path' "$CONFIG_FILE")
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' "$CONFIG_FILE")
-DOCKER_NETWORK_SUBNET=$(yq eval '.Docker.Network.Subnet' "$CONFIG_FILE")
-DOCKER_CONTAINER_FABRICTOOLS=$(yq eval '.Docker.Container.FabricTools' "$CONFIG_FILE")
-
-
-###############################################################
-# Checks
-###############################################################
+NETWORK_CONFIG_FILE="./config/network-config.yaml"
+FABRIC_PATH=$(yq eval '.Fabric.Path' $NETWORK_CONFIG_FILE)
+DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $NETWORK_CONFIG_FILE)
+DOCKER_NETWORK_SUBNET=$(yq eval '.Docker.Network.Subnet' $NETWORK_CONFIG_FILE)
+DOCKER_CONTAINER_FABRICTOOLS=$(yq eval '.Docker.Container.FabricTools' $NETWORK_CONFIG_FILE)
 export PATH=$PATH:$FABRIC_PATH/bin:$FABRIC_PATH/config
+export FABRIC_CFG_PATH=./config
+
+
+###############################################################
+# Checks and preparation
+###############################################################
 # Check prerequisites
 docker version
 git --version
@@ -36,25 +37,14 @@ peer version
 configtxgen --version
 configtxlator version
 cryptogen version
-# Check old data
-[ ! -d keys ] || { echo "ScriptInfo: remove previous installation (folders) before starting new, use ./scripts/down.sh"; exit 1; }
+
+# Shutdown previous installation
+./scripts/down.sh
 
 
-# --------------------------------------------------------------
-#TODO
-#tokengen version || { echo "ScriptInfo: install tokengen (see readme)"; exit 1; }
-# Check if old data exist
-# Check Network
-#TODO
-TEST_NETWORK_HOME="${TEST_NETWORK_HOME:-$(pwd)/}"
-ls "$TEST_NETWORK_HOME/config/configtx.yaml" 1> /dev/null || { echo "ScriptInfo: set the TEST_NETWORK_HOME environment variable to the directory of the jedo-network; e.g.:
-
-export TEST_NETWORK_HOME=\"$TEST_NETWORK_HOME\"
-"; exit 1; }
-# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-
+###############################################################
+# Generate identities for the nodes, issuer, auditor and owner
+###############################################################
 # Check docker network and create
 if ! docker network ls --format '{{.Name}}' | grep -wq "$DOCKER_NETWORK_NAME"; then
     docker network create --subnet=$DOCKER_NETWORK_SUBNET "$DOCKER_NETWORK_NAME"
@@ -62,14 +52,34 @@ fi
 docker network inspect "$DOCKER_NETWORK_NAME"
 
 
-###############################################################
-# Generate identities for the nodes, issuer, auditor and owner
-###############################################################
-echo "ScriptInfo: run ca"
+echo "ScriptInfo: Make sure, all Servers are reachable via DNS or hosts-File"
+# start all CA
 ./scripts/ca.sh
 
-echo "ScriptInfo: enroll certificates"
+# enroll all certificates
 ./scripts/enroll.sh
+
+# generate configuration (genesis block and channel configuration)
+./scripts/config.sh
+
+# start all nodes
+./scripts/node.sh
+
+echo "Temporary END of Script"
+exit 1
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 echo "ScriptInfo: run tokengen"
 if [ ! "$(docker ps -q -f name=$DOCKER_CONTAINER_FABRICTOOLS)" ]; then
@@ -89,10 +99,10 @@ docker exec $DOCKER_CONTAINER_FABRICTOOLS bash -c 'PATH=$PATH:/usr/local/go/bin 
   --auditors /root/keys/auditor/aud/msp \
   --output /root/tokengen'
 
-echo "ScriptInfo: run peer"
-./scripts/peer.sh
+echo "ScriptInfo: run nodes (peers and orderers)"
+./scripts/node.sh
 
-echo "ToDo: create certificates for issuer, idemix, auditors"
+echo "Temporary END of Script"
 exit 1
 
 

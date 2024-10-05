@@ -13,40 +13,39 @@ ls scripts/down.sh || { echo "ScriptInfo: run this script from the root director
 ###############################################################
 # Params - from ./config/network-config.yaml
 ###############################################################
-CONFIG_FILE="./config/network-config.yaml"
-FABRIC_PATH=$(yq eval '.Fabric.Path' "$CONFIG_FILE")
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' "$CONFIG_FILE")
-NETWORK_CA_NAME=$(yq eval '.Network.CA.Name' "$CONFIG_FILE")
-
-
-
-###############################################################
-# Checks
-###############################################################
-# Check script
+NETWORK_CONFIG_FILE="./config/network-config.yaml"
+FABRIC_PATH=$(yq eval ".Fabric.Path" "$NETWORK_CONFIG_FILE")
+DOCKER_NETWORK_NAME=$(yq eval ".Docker.Network.Name" "$NETWORK_CONFIG_FILE")
+ORGANIZATIONS=$(yq e ".FabricNetwork.Organizations[].Name" $NETWORK_CONFIG_FILE)
 
 
 ###############################################################
-# Stopping Docker-Container
+# Remove Docker-Stuff
 ###############################################################
-echo "ScriptInfo: removing docker container and network"
-docker rm -f $NETWORK_CA_NAME
-# TODO: Remove all container
-#containers=$(docker ps -a --filter "name=.jedo.test" --format "{{.Names}}")
+echo "ScriptInfo: removing docker container"
 
-# Überprüfe, ob Container gefunden wurden
-#if [ -z "$containers" ]; then
-#    echo "Keine Container gefunden, die auf '.jedo.test' enden."
-#else
-#    echo "Lösche folgende Container:"
-#    echo "$containers"
-#
-#    # Lösche alle gefundenen Container
-#    for container in $containers; do
-#        docker rm -f $container
-#        echo "Container $container gelöscht."
-#    done
-#fi
+for ORGANIZATION in $ORGANIZATIONS; do
+    CA=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $NETWORK_CONFIG_FILE)
+    ORDERERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
+    PEERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $NETWORK_CONFIG_FILE)
+
+    # remove CA
+    docker rm -f $CA
+
+    # remove peers
+    for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
+        PEER=$(echo "$PEERS" | sed -n "$((index+1))p")
+        docker rm -f ${PEER}
+        docker rm -f ${PEER}.cli
+    done
+
+    # remove orderers
+    for index in $(seq 0 $(($(echo "$ORDERERS" | wc -l) - 1))); do
+        ORDERER=$(echo "$ORDERERS" | sed -n "$((index+1))p")
+        docker rm -f $ORDERER
+    done
+done
+
 echo "ScriptInfo: removing docker network"
 docker network rm  $DOCKER_NETWORK_NAME
 
@@ -54,9 +53,10 @@ docker network rm  $DOCKER_NETWORK_NAME
 # Remove Folder
 ###############################################################
 echo "ScriptInfo: removing folders"
+rm -f ./config/configtx.yaml
+rm -f ./config/*.genesisblock
+rm -f ./config/*.tx
 rm -rf keys
 rm -rf tokengen
-rm -rf configtx #TODO: Check if still needed
 rm -rf production
-#rm -rf data
 #rm tokenchaincode/zkatdlog_pp.json

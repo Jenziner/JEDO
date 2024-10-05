@@ -13,54 +13,78 @@ Docker:
   Container:
     Wait: 20 # Max waiting time in seconds to start a docker container prior to exit
     FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
-Network: # Make sure every server and ip is set in DNS or /etc/hosts
-  CA:
-    # Name: localhost
-    Name: ca.jenziner.jedo.test
-    IP: 172.25.0.2
-    Port: 7054
-    Pass: Test1
-    Org: JenzinerOrg
-  Admins:
-    - Name: admin.jenziner.jedo.test
-      Pass: Test1
-      Org: JenzinerOrg
-  Orderers:
-    - Name: orderer.jenziner.jedo.test
-      IP: 172.25.0.11
-      Port: 7050
-      Pass: Test1
-      Org: JenzinerOrg
-  Peers:
-    - Name: peer0.jenziner.jedo.test
-      IP: 172.25.0.21
-      Port1: 8051
-      Port2: 8052
-      Pass: Test1
-      Org: JenzinerOrg
-      DB: 
-        Name: db0.jenziner.jedo.test
-        IP: 172.25.0.22
-        Port: 8084
-        Admin:
-          Name: admin
+FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
+  Channel: eu-jedo-test
+  Organizations:
+    - Name: JenzinerOrg
+      Consortium: JEDO # Name of consortium if member or null
+      CA:
+        Name: ca.jenziner.jedo.test
+        Pass: Test1
+        IP: 172.25.0.10
+        Port: 7054
+      Admin:
+        Name: admin.jenziner.jedo.test
+        Pass: Test1
+      Orderers:
+        - Name: orderer.jenziner.jedo.test
           Pass: Test1
-      CLI: 172.25.0.23 # IP, if CLI-Container should be installed
-    - Name: peer1.jenziner.jedo.test
-      IP: 172.25.0.31
-      Port1: 9051
-      Port2: 9052
-      Pass: Test1
-      Org: JenzinerOrg
-      DB: 
-        Name: db1.jenziner.jedo.test
-        IP: 172.25.0.32
-        Port: 9084
-        Admin:
-          Name: admin
+          IP: 172.25.0.11
+          Port: 7050
+      Peers: # first peer will be used as AnchorPeer
+        - Name: peer0.jenziner.jedo.test
           Pass: Test1
-      CLI: 172.25.0.33
-Ecosystem:
+          IP: 172.25.0.12
+          Port1: 7061
+          Port2: 7062
+          CLI: 172.25.0.14 # IP, if CLI-Container should be installed
+          DB: 
+            Name: db.peer0.jenziner.jedo.test
+            IP: 172.25.0.13
+            Port: 7064
+            Admin: admin
+            Pass: Test1
+        - Name: peer1.jenziner.jedo.test
+          Pass: Test1
+          IP: 172.25.0.15
+          Port1: 7071
+          Port2: 7072
+          CLI: 172.25.0.17
+          DB: 
+            Name: db.peer1.jenziner.jedo.test
+            IP: 172.25.0.16
+            Port: 7074
+            Admin: admin
+            Pass: Test1
+    - Name: LiebiwilerOrg
+      Consortium: # Name of consortium if member or null
+      CA:
+        Name: ca.liebiwiler.jedo.test
+        Pass: Test1
+        IP: 172.25.0.20
+        Port: 8054
+      Admin:
+        Name: admin.liebiwiler.jedo.test
+        Pass: Test1
+      Orderers:
+        - Name: orderer.liebiwiler.jedo.test
+          Pass: Test1
+          IP: 172.25.0.21
+          Port: 8050
+      Peers: # first peer will be used as AnchorPeer
+        - Name: peer0.liebiwiler.jedo.test
+          Pass: Test1
+          IP: 172.25.0.22
+          Port1: 8061
+          Port2: 8062
+          CLI: 172.25.0.24 # IP, if CLI-Container should be installed
+          DB: 
+            Name: db.peer0.jenziner.jedo.test
+            IP: 172.25.0.23
+            Port: 8064
+            Admin: admin
+            Pass: Test1
+TokenNetwork:
   Name: eu.jedo.test
   FSCs: # Names must be according Auditor, Issuers, Users
     - Name: aud

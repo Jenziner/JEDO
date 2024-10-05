@@ -13,63 +13,61 @@ set -Eeuo pipefail
 ###############################################################
 # Params - from ./config/network-config.yaml
 ###############################################################
-CONFIG_FILE="./config/network-config.yaml"
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' "$CONFIG_FILE")
-DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' "$CONFIG_FILE")
-NETWORK_CA_NAME=$(yq eval '.Network.CA.Name' "$CONFIG_FILE")
-NETWORK_CA_IP=$(yq eval '.Network.CA.IP' "$CONFIG_FILE")
-NETWORK_CA_PORT=$(yq eval '.Network.CA.Port' "$CONFIG_FILE")
-NETWORK_CA_PASS=$(yq eval '.Network.CA.Pass' "$CONFIG_FILE")
-NETWORK_CA_ORG=$(yq eval '.Network.CA.Org' "$CONFIG_FILE")
+NETWORK_CONFIG_FILE="./config/network-config.yaml"
+DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $NETWORK_CONFIG_FILE)
+DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $NETWORK_CONFIG_FILE)
+ORGANIZATIONS=$(yq e '.FabricNetwork.Organizations[].Name' $NETWORK_CONFIG_FILE)
 
 
 ###############################################################
 # Starting CA Docker-Container
 ###############################################################
-WAIT_TIME=0
-SUCCESS=false
-# Stop Docker Container if running
-if docker ps -a --filter "name=$NETWORK_CA_NAME" --format "{{.Names}}" | grep -q "$NETWORK_CA_NAME"; then
-  echo "ScriptInfo: $NETWORK_CA_NAME exists, will be removed"
-  docker rm -f $NETWORK_CA_NAME
-fi
-# Run Docker Container
-echo "ScriptInfo: running $NETWORK_CA_NAME"
+echo "ScriptInfo: pull docker image"
 docker pull hyperledger/fabric-ca:latest
-docker run -d \
-    --network $DOCKER_NETWORK_NAME \
-    --name $NETWORK_CA_NAME \
-    --ip $NETWORK_CA_IP \
-    --restart=unless-stopped \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_ca_logo.png" \
-    -e FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server \
-    -e FABRIC_CA_SERVER_CA_NAME=$NETWORK_CA_NAME \
-    -e FABRIC_CA_SERVER_TLS_ENABLED=false \
-    -e FABRIC_CA_SERVER_PORT=$NETWORK_CA_PORT \
-    -v ${PWD}/keys:/etc/hyperledger/fabric-ca \
-    -v ${PWD}/keys/$NETWORK_CA_ORG/$NETWORK_CA_NAME:/etc/hyperledger/fabric-ca-server \
-    -p $NETWORK_CA_PORT:$NETWORK_CA_PORT \
-    hyperledger/fabric-ca:latest \
-    sh -c "fabric-ca-server start -b $NETWORK_CA_NAME:$NETWORK_CA_PASS --idemix.curve gurvy.Bn254 -d"
+for ORGANIZATION in $ORGANIZATIONS; do
+    CA_NAME=$(yq eval ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $NETWORK_CONFIG_FILE)
+    CA_IP=$(yq eval ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.IP" $NETWORK_CONFIG_FILE)
+    CA_PORT=$(yq eval ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Port" $NETWORK_CONFIG_FILE)
+    CA_PASS=$(yq eval ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Pass" $NETWORK_CONFIG_FILE)
 
-# waiting startup
-while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
-    if curl -s http://$NETWORK_CA_NAME:$NETWORK_CA_PORT/cainfo > /dev/null; then
-        SUCCESS=true
-        echo "ScriptInfo: $NETWORK_CA_NAME is up and running!"
-        break
+    WAIT_TIME=0
+    SUCCESS=false
+
+    echo "ScriptInfo: running $CA_NAME"
+    docker run -d \
+        --network $DOCKER_NETWORK_NAME \
+        --name $CA_NAME \
+        --ip $CA_IP \
+        --restart=unless-stopped \
+        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_ca_logo.png" \
+        -e FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server \
+        -e FABRIC_CA_SERVER_CA_NAME=$CA_NAME \
+        -e FABRIC_CA_SERVER_TLS_ENABLED=false \
+        -e FABRIC_CA_SERVER_PORT=$CA_PORT \
+        -v ${PWD}/keys/$ORGANIZATION:/etc/hyperledger/fabric-ca \
+        -v ${PWD}/keys/$ORGANIZATION/$CA_NAME:/etc/hyperledger/fabric-ca-server \
+        -p $CA_PORT:$CA_PORT \
+        hyperledger/fabric-ca:latest \
+        sh -c "fabric-ca-server start -b $CA_NAME:$CA_PASS --idemix.curve gurvy.Bn254 -d"
+
+    # waiting startup
+    while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
+        if curl -s http://$CA_NAME:$CA_PORT/cainfo > /dev/null; then
+            SUCCESS=true
+            echo "ScriptInfo: $CA_NAME is up and running!"
+            break
+        fi
+        echo "Waiting for $CA_NAME... ($WAIT_TIME seconds)"
+        sleep 2
+        WAIT_TIME=$((WAIT_TIME + 2))
+    done
+
+    if [ "$SUCCESS" = false ]; then
+        echo "ScriptError: $CA_NAME did not start."
+        docker logs $CA_NAME
+        exit 1
     fi
-    echo "Waiting for $NETWORK_CA_NAME... ($WAIT_TIME seconds)"
-    sleep 2
-    WAIT_TIME=$((WAIT_TIME + 2))
 done
-
-if [ "$SUCCESS" = false ]; then
-    echo "ScriptError: $NETWORK_CA_NAME did not start."
-    docker logs $NETWORK_CA_NAME
-    exit 1
-fi
-
 # run ca-client
 #    docker run -it --network fabric-network \
 #    --name jedo-ca-client \
