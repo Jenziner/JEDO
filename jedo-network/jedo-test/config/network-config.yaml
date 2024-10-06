@@ -31,31 +31,33 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
           Pass: Test1
           IP: 172.25.0.11
           Port: 7050
+          OpPort: 7059
+          ClusterPort: 7051
       Peers: # first peer will be used as AnchorPeer
         - Name: peer0.jenziner.jedo.test
           Pass: Test1
           IP: 172.25.0.12
           Port1: 7061
           Port2: 7062
+          OpPort: 7069
           CLI: 172.25.0.14 # IP, if CLI-Container should be installed
           DB: 
             Name: db.peer0.jenziner.jedo.test
+            Pass: Test1
             IP: 172.25.0.13
             Port: 7064
-            Admin: admin
-            Pass: Test1
         - Name: peer1.jenziner.jedo.test
           Pass: Test1
           IP: 172.25.0.15
           Port1: 7071
           Port2: 7072
+          OpPort: 7079
           CLI: 172.25.0.17
           DB: 
             Name: db.peer1.jenziner.jedo.test
+            Pass: Test1
             IP: 172.25.0.16
             Port: 7074
-            Admin: admin
-            Pass: Test1
     - Name: LiebiwilerOrg
       Consortium: # Name of consortium if member or null
       CA:
@@ -71,19 +73,21 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
           Pass: Test1
           IP: 172.25.0.21
           Port: 8050
+          OpPort: 8059
+          ClusterPort: 8051
       Peers: # first peer will be used as AnchorPeer
         - Name: peer0.liebiwiler.jedo.test
           Pass: Test1
           IP: 172.25.0.22
           Port1: 8061
           Port2: 8062
+          OpPort: 8069
           CLI: 172.25.0.24 # IP, if CLI-Container should be installed
           DB: 
-            Name: db.peer0.jenziner.jedo.test
+            Name: db.peer0.liebiwiler.jedo.test
+            Pass: Test1
             IP: 172.25.0.23
             Port: 8064
-            Admin: admin
-            Pass: Test1
 TokenNetwork:
   Name: eu.jedo.test
   FSCs: # Names must be according Auditor, Issuers, Users

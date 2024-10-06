@@ -12,6 +12,19 @@
 set -Eeuo pipefail
 ls scripts/up.sh || { echo "ScriptInfo: run this script from the root directory: ./scripts/up.sh"; exit 1; }
 
+###############################################################
+# Function to echo in colors
+###############################################################
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+function echo_info() {
+    echo -e "${YELLOW}$1${NC}"
+}
+function echo_error() {
+    echo -e "${RED}$1${NC}"
+}
+
 
 ###############################################################
 # Params - from ./config/network-config.yaml
@@ -26,9 +39,9 @@ export FABRIC_CFG_PATH=./config
 
 
 ###############################################################
-# Checks and preparation
+# Checks
 ###############################################################
-# Check prerequisites
+echo_info "ScriptInfo: Checking prerequisites"
 docker version
 git --version
 go version
@@ -41,7 +54,6 @@ cryptogen version
 # Shutdown previous installation
 ./scripts/down.sh
 
-
 ###############################################################
 # Generate identities for the nodes, issuer, auditor and owner
 ###############################################################
@@ -52,7 +64,7 @@ fi
 docker network inspect "$DOCKER_NETWORK_NAME"
 
 
-echo "ScriptInfo: Make sure, all Servers are reachable via DNS or hosts-File"
+echo_error "ScriptInfo: Make sure, all Servers are reachable via DNS or hosts-File - starting $DOCKER_NETWORK_NAME"
 # start all CA
 ./scripts/ca.sh
 
@@ -65,7 +77,7 @@ echo "ScriptInfo: Make sure, all Servers are reachable via DNS or hosts-File"
 # start all nodes
 ./scripts/node.sh
 
-echo "Temporary END of Script"
+echo_error "Temporary END of Script"
 exit 1
 
 

@@ -14,6 +14,20 @@ ls scripts/config.sh || { echo "ScriptInfo: run this script from the root direct
 
 
 ###############################################################
+# Function to echo in colors
+###############################################################
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+function echo_info() {
+    echo -e "${YELLOW}$1${NC}"
+}
+function echo_error() {
+    echo -e "${RED}$1${NC}"
+}
+
+
+###############################################################
 # Definitions 
 ###############################################################
 export FABRIC_CFG_PATH=./config
@@ -26,7 +40,7 @@ ORGANIZATIONS=$(yq e '.FabricNetwork.Organizations[].Name' $NETWORK_CONFIG_FILE)
 ###############################################################
 # Start of configtx.yaml
 ###############################################################
-echo "ScriptInfo: generating $OUTPUT_CONFIGTX_FILE"
+echo_info "ScriptInfo: generating $OUTPUT_CONFIGTX_FILE"
 
 cat <<EOF > $OUTPUT_CONFIGTX_FILE
 ---
@@ -317,10 +331,10 @@ EOF
 ###############################################################
 CHANNEL=$(yq e '.FabricNetwork.Channel' $NETWORK_CONFIG_FILE)
 
-echo "ScriptInfo: generating $FABRIC_CFG_PATH/$CHANNEL.genesisblock"
+echo_info "ScriptInfo: generating $FABRIC_CFG_PATH/$CHANNEL.genesisblock"
 $FABRIC_PATH/bin/configtxgen -profile JedoGenesis -channelID system-channel -outputBlock $FABRIC_CFG_PATH/$CHANNEL.genesisblock
 
-echo "ScriptInfo: generating $FABRIC_CFG_PATH/$CHANNEL.tx"
+echo_info "ScriptInfo: generating $FABRIC_CFG_PATH/$CHANNEL.tx"
 $FABRIC_PATH/bin/configtxgen -profile JedoChannel -channelID $CHANNEL -outputCreateChannelTx $FABRIC_CFG_PATH/$CHANNEL.tx
 
 

@@ -11,6 +11,20 @@ set -Eeuo pipefail
 
 
 ###############################################################
+# Function to echo in colors
+###############################################################
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+function echo_info() {
+    echo -e "${YELLOW}$1${NC}"
+}
+function echo_error() {
+    echo -e "${RED}$1${NC}"
+}
+
+
+###############################################################
 # Params - from ./config/network-config.yaml
 ###############################################################
 NETWORK_CONFIG_FILE="./config/network-config.yaml"
@@ -22,8 +36,6 @@ ORGANIZATIONS=$(yq e '.FabricNetwork.Organizations[].Name' $NETWORK_CONFIG_FILE)
 ###############################################################
 # Starting CA Docker-Container
 ###############################################################
-echo "ScriptInfo: pull docker image"
-docker pull hyperledger/fabric-ca:latest
 for ORGANIZATION in $ORGANIZATIONS; do
     CA_NAME=$(yq eval ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $NETWORK_CONFIG_FILE)
     CA_IP=$(yq eval ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.IP" $NETWORK_CONFIG_FILE)
@@ -33,7 +45,7 @@ for ORGANIZATION in $ORGANIZATIONS; do
     WAIT_TIME=0
     SUCCESS=false
 
-    echo "ScriptInfo: running $CA_NAME"
+    echo_info "ScriptInfo: running $CA_NAME"
     docker run -d \
         --network $DOCKER_NETWORK_NAME \
         --name $CA_NAME \
@@ -47,14 +59,15 @@ for ORGANIZATION in $ORGANIZATIONS; do
         -v ${PWD}/keys/$ORGANIZATION:/etc/hyperledger/fabric-ca \
         -v ${PWD}/keys/$ORGANIZATION/$CA_NAME:/etc/hyperledger/fabric-ca-server \
         -p $CA_PORT:$CA_PORT \
+        --restart unless-stopped \
         hyperledger/fabric-ca:latest \
         sh -c "fabric-ca-server start -b $CA_NAME:$CA_PASS --idemix.curve gurvy.Bn254 -d"
 
-    # waiting startup
+    # waiting startup for CA
     while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
         if curl -s http://$CA_NAME:$CA_PORT/cainfo > /dev/null; then
             SUCCESS=true
-            echo "ScriptInfo: $CA_NAME is up and running!"
+            echo_info "ScriptInfo: $CA_NAME is up and running!"
             break
         fi
         echo "Waiting for $CA_NAME... ($WAIT_TIME seconds)"
@@ -63,7 +76,7 @@ for ORGANIZATION in $ORGANIZATIONS; do
     done
 
     if [ "$SUCCESS" = false ]; then
-        echo "ScriptError: $CA_NAME did not start."
+        echo_error "ScriptError: $CA_NAME did not start."
         docker logs $CA_NAME
         exit 1
     fi

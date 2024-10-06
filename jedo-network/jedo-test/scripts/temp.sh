@@ -1,66 +1,10 @@
-#!/bin/bash
 
-# Pfad zur network-config.yaml
-NETWORK_CONFIG_FILE="network-config.yaml"
+curl -k -s https://peer0.jenziner.jedo.test:7069/healthz
 
-# Pfad zur zu generierenden configtx.yaml
-OUTPUT_CONFIGTX_FILE="configtx.yaml"
+openssl x509 -in ./keys/JenzinerOrg/orderer.jenziner.jedo.test/tls/signcerts/cert.pem -text -noout
+openssl x509 -in ./keys/LiebiwilerOrg/orderer.liebiwiler.jedo.test/tls/signcerts/cert.pem -text -noout
 
-# Start der configtx.yaml
-cat <<EOF > $OUTPUT_CONFIGTX_FILE
----
-Organizations:
-EOF
-
-# Iteriere durch jede Organisation in der network-config.yaml
-ORG_COUNT=$(yq e '.Network.Organizations | length' $NETWORK_CONFIG_FILE)
-
-for i in $(seq 0 $(($ORG_COUNT - 1))); do
-    ORG_NAME=$(yq e ".Network.Organizations[$i].Name" $NETWORK_CONFIG_FILE)
-    MSP_DIR=$(yq e ".Network.Organizations[$i].MSPDir" $NETWORK_CONFIG_FILE)
-    
-    cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-  - &${ORG_NAME}
-    Name: ${ORG_NAME}
-    ID: ${ORG_NAME}MSP
-    MSPDir: ${MSP_DIR}
-EOF
-
-    # Iteriere durch die Orderer der aktuellen Organisation
-    ORDERER_COUNT=$(yq e ".Network.Organizations[$i].Orderers | length" $NETWORK_CONFIG_FILE)
-    for j in $(seq 0 $(($ORDERER_COUNT - 1))); do
-        ORDERER_NAME=$(yq e ".Network.Organizations[$i].Orderers[$j].Name" $NETWORK_CONFIG_FILE)
-        ORDERER_ADDRESS=$(yq e ".Network.Organizations[$i].Orderers[$j].Address" $NETWORK_CONFIG_FILE)
-        ORDERER_HOST=$(yq e ".Network.Organizations[$i].Orderers[$j].Host" $NETWORK_CONFIG_FILE)
-        ORDERER_PORT=$(yq e ".Network.Organizations[$i].Orderers[$j].Port" $NETWORK_CONFIG_FILE)
-
-        echo "ScriptInfo: Adding Orderer $ORDERER_NAME"
-
-        cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-      - Host: ${ORDERER_HOST}
-        Port: ${ORDERER_PORT}
-        ClientTLSCert: /path/to/tls/cert/${ORDERER_NAME}
-        ServerTLSCert: /path/to/tls/cert/${ORDERER_NAME}
-EOF
-    done
-
-    # Iteriere durch die Peers der aktuellen Organisation
-    PEER_COUNT=$(yq e ".Network.Organizations[$i].Peers | length" $NETWORK_CONFIG_FILE)
-    for k in $(seq 0 $(($PEER_COUNT - 1))); do
-        PEER_NAME=$(yq e ".Network.Organizations[$i].Peers[$k].Name" $NETWORK_CONFIG_FILE)
-        PEER_ADDRESS=$(yq e ".Network.Organizations[$i].Peers[$k].Address" $NETWORK_CONFIG_FILE)
-        PEER_HOST=$(yq e ".Network.Organizations[$i].Peers[$k].Host" $NETWORK_CONFIG_FILE)
-        PEER_PORT=$(yq e ".Network.Organizations[$i].Peers[$k].Port" $NETWORK_CONFIG_FILE)
-
-        echo "ScriptInfo: Adding Peer $PEER_NAME"
-        # Füge die Peers zur configtx.yaml hinzu, falls erforderlich
-        # Oder führe andere Aktionen durch
-    done
-done
-
-echo "ScriptInfo: configtx.yaml wurde erfolgreich generiert!"
-
-
+-e ORDERER_GENERAL_TLS_ROOTCAS=[/etc/hyperledger/orderer/tls/tlscacerts/$TLS_ROOTCERT] \
 
 
 keys/
@@ -79,4 +23,14 @@ keys/
         └── config.yaml    # Optional, NodeOUs Konfiguration
 
 
+PEER Operation:
+        -e CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:$PEER_OPPORT \
+        -e CORE_OPERATIONS_TLS_ENABLED=true \
+        -e CORE_OPERATIONS_TLS_CERTIFICATE=/etc/hyperledger/fabric/tls/signcerts/cert.pem \
+        -e CORE_OPERATIONS_TLS_PRIVATEKEY=/etc/hyperledger/fabric/tls/keystore/$TLS_PRIVATE_KEY \
 
+ORDERER Operation:
+        -e ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:$ORDERER_OPPORT \
+        -e ORDERER_OPERATIONS_TLS_ENABLED=true \
+        -e ORDERER_OPERATIONS_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+        -e ORDERER_OPERATIONS_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \

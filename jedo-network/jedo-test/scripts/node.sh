@@ -9,260 +9,294 @@
 #       - make it executable: chmod +x /usr/local/bin/yq
 #
 ###############################################################
-set -Exeuo pipefail
+set -Eeuo pipefail
 ls scripts/node.sh || { echo "ScriptInfo: run this script from the root directory: ./scripts/node.sh"; exit 1; }
+
+
+###############################################################
+# Function to echo in colors
+###############################################################
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+function echo_info() {
+    echo -e "${YELLOW}$1${NC}"
+}
+function echo_error() {
+    echo -e "${RED}$1${NC}"
+}
 
 
 ###############################################################
 # Params - from ./config/network-config.yaml
 ###############################################################
-CONFIG_FILE="./config/network-config.yaml"
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' "$CONFIG_FILE")
-DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' "$CONFIG_FILE")
-PEERS=$(yq e '.Network.Peers[] | .Name' $CONFIG_FILE)
-PEERS_IP=$(yq e '.Network.Peers[] | .IP' $CONFIG_FILE)
-PEERS_PORT1=$(yq e '.Network.Peers[] | .Port1' $CONFIG_FILE)
-PEERS_PORT2=$(yq e '.Network.Peers[] | .Port2' $CONFIG_FILE)
-PEERS_ORG=$(yq e '.Network.Peers[] | .Org' $CONFIG_FILE)
-PEERS_CLI=$(yq e '.Network.Peers[] | .CLI' $CONFIG_FILE)
-PEERS_DB_NAME=$(yq e '.Network.Peers[] | .DB.Name' $CONFIG_FILE)
-PEERS_DB_IP=$(yq e '.Network.Peers[] | .DB.IP' $CONFIG_FILE)
-PEERS_DB_PORT=$(yq e '.Network.Peers[] | .DB.Port' $CONFIG_FILE)
-PEERS_DB_ADMIN=$(yq e '.Network.Peers[] | .DB.Admin.Name' $CONFIG_FILE)
-PEERS_DB_ADMIN_PASS=$(yq e '.Network.Peers[] | .DB.Admin.Pass' $CONFIG_FILE)
-ORDERERS=$(yq e '.Network.Orderers[] | .Name' $CONFIG_FILE)
-ORDERERS_IP=$(yq e '.Network.Orderers[] | .IP' $CONFIG_FILE)
-ORDERERS_PORT=$(yq e '.Network.Orderers[] | .Port' $CONFIG_FILE)
-ORDERERS_ORG=$(yq e '.Network.Orderers[] | .Org' $CONFIG_FILE)
-FIRST_ORDERER=$(yq e '.Network.Orderers[0].Name' $CONFIG_FILE)
+export FABRIC_CFG_PATH=./config
+NETWORK_CONFIG_FILE="./config/network-config.yaml"
+DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' "$NETWORK_CONFIG_FILE")
+DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' "$NETWORK_CONFIG_FILE")
+ORGANIZATIONS=$(yq e '.FabricNetwork.Organizations[].Name' $NETWORK_CONFIG_FILE)
 
 
 ###############################################################
-# Function to test CouchDB
+# CouchDBs
 ###############################################################
-function ask_db() {
-    while true; do
-        container_status=$(docker ps -a --filter "name=$PEER_DB_NAME" --filter "status=running" --format "{{.Names}}")
+for ORGANIZATION in $ORGANIZATIONS; do
+    PEERS_DB_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].DB.Name" $NETWORK_CONFIG_FILE)
 
-        if [ "$container_status" == "$PEER_DB_NAME" ]; then
-            echo "ScriptInfo: Docker-Container '$PEER_DB_NAME' running."
+    for index in $(seq 0 $(($(echo "$PEERS_DB_NAME" | wc -l) - 1))); do
+        PEER_DB_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].DB.Name" $NETWORK_CONFIG_FILE)
+        PEER_DB_PASS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].DB.Pass" $NETWORK_CONFIG_FILE)
+        PEER_DB_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].DB.IP" $NETWORK_CONFIG_FILE)
+        PEER_DB_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].DB.Port" $NETWORK_CONFIG_FILE)
 
-            # Check network
-            container_network=$(docker inspect --format "{{json .NetworkSettings.Networks}}" "$PEER_DB_NAME" | jq -r "keys[] | select(. == \"$DOCKER_NETWORK_NAME\")")
+        WAIT_TIME=0
+        SUCCESS=false
 
-            if [ -z "$container_network" ]; then
-                # Container not in the network, try to connect
-                docker network connect "$DOCKER_NETWORK_NAME" "$PEER_DB_NAME"
-                # Check if successfull
-                if [ $? -ne 0 ]; then
-                    echo "ScriptError: Container '$PEER_DB_NAME' not in '$DOCKER_NETWORK_NAME' network."
-                    exit 1
-                fi
+        echo_info "ScriptInfo: run CouchDB $PEER_DB_NAME"
+        docker run -d \
+        --name $PEER_DB_NAME \
+        --network $DOCKER_NETWORK_NAME \
+        --ip $PEER_DB_IP \
+        --label net.unraid.docker.icon="https://raw.githubusercontent.com/apache/couchdb/main/branding/logo/CouchDB_Logo_192px.png" \
+        -e COUCHDB_USER=$PEER_DB_NAME \
+        -e COUCHDB_PASSWORD=$PEER_DB_PASS \
+        -v $PWD/production/couchdb/$PEER_DB_NAME:/opt/couchdb/data \
+        -v $PWD/config/couchdb/$PEER_DB_NAME:/opt/couchdb/etc/local.d \
+        -p $PEER_DB_PORT:5984 \
+        --restart unless-stopped \
+        couchdb:latest
+
+        # waiting startup for CouchDB
+        while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
+            if curl -s http://$PEER_DB_IP:5984 > /dev/null; then
+                SUCCESS=true
+                echo_info "ScriptInfo: CouchDB $PEER_DB_NAME is up and running!"
+                break
             fi
+            echo "Waiting for CouchDB $PEER_DB_NAME... ($WAIT_TIME seconds)"
+            sleep 2
+            WAIT_TIME=$((WAIT_TIME + 2))
+        done
 
-            # Standard port and custom port needs to be tested
-            couchdb_status_default_port=$(curl -s --connect-timeout 5 -u "$PEER_DB_ADMIN:$PEER_DB_ADMIN_PASS" "http://$PEER_DB_IP:5984/_up" || echo "")
-            couchdb_status_custom_port=$(curl -s --connect-timeout 5 -u "$PEER_DB_ADMIN:$PEER_DB_ADMIN_PASS" "http://$PEER_DB_IP:$PEER_DB_PORT/_up" || echo "")
-            couchdb_port=""
-
-            # Default port processing
-            if [[ -n "$couchdb_status_default_port" ]]; then
-                couchdb_status_default_port=$(echo "$couchdb_status_default_port" | jq -r '.status')
-                if [[ "$couchdb_status_default_port" == "ok" ]]; then
-                    couchdb_port="5984"
-                fi
-            fi
-
-            # Custom port processing
-            if [[ -n "$couchdb_status_custom_port" ]]; then
-                couchdb_status_custom_port=$(echo "$couchdb_status_custom_port" | jq -r '.status')
-                if [[ "$couchdb_status_custom_port" == "ok" ]]; then
-                    couchdb_port="$PEER_DB_PORT"
-                fi
-            fi
-
-            if [ "$couchdb_port" != "" ]; then
-                echo "ScriptInfo: CouchDB at '$PEER_DB_IP:$couchdb_port' up and running."
-                return 0
-            else
-                echo "ScriptError: CouchDB '$PEER_DB_IP' status is not ok"
-            fi
-        else
-            echo "ScriptError: Docker Container '$PEER_DB_NAME' not running"
-        fi
-    
-        # Instructions in case of any error
-        echo "Instruction to install CouchDB:"
-        echo
-        echo "Container-Name: $PEER_DB_NAME"
-        echo "Set docker network: $DOCKER_NETWORK_NAME"
-        echo "IP:Port: $PEER_DB_IP:$PEER_DB_PORT"
-        echo "Use spare data and config path for each DB (e.g. append DB name)."
-        echo "Add variables for admin-account COUCHDB_USER=$PEER_DB_ADMIN and COUCHDB_PASSWORD=$PEER_DB_ADMIN_PASS"
-        echo
-        echo "Check DB, goto http://$PEER_DB_IP:$PEER_DB_PORT/_utils/ and log in with user $PEER_DB_ADMIN and password $PEER_DB_ADMIN_PASS"
-        echo
-        read -p "Do you want to try again? (Y/n) [Y]: " exit_response
-        exit_response=${exit_response:-Y}
-        exit_response=$(echo "$exit_response" | tr '[:upper:]' '[:lower:]')
-
-        if [[ "$exit_response" != "y" ]]; then
+        if [ "$SUCCESS" = false ]; then
+            echo_error "ScriptError: CouchDB $PEER_DB_NAME did not start."
+            docker logs $PEER_DB_NAME
             exit 1
         fi
+
+        #create user-db
+        curl -X PUT http://$PEER_DB_IP:5984/_users -u $PEER_DB_NAME:$PEER_DB_PASS
     done
-}
+done
+
 
 ###############################################################
 # Peers
 ###############################################################
-for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
-    # Check CouchDB
-    PEER_DB_NAME=$(echo "$PEERS_DB_NAME" | sed -n "$((index+1))p")
-    PEER_DB_IP=$(echo "$PEERS_DB_IP" | sed -n "$((index+1))p")
-    PEER_DB_PORT=$(echo "$PEERS_DB_PORT" | sed -n "$((index+1))p")
-    PEER_DB_ADMIN=$(echo "$PEERS_DB_ADMIN" | sed -n "$((index+1))p")
-    PEER_DB_ADMIN_PASS=$(echo "$PEERS_DB_ADMIN_PASS" | sed -n "$((index+1))p")
-    echo "ScriptInfo: check CouchDB $PEER_DB_NAME"
-    ask_db
+for ORGANIZATION in $ORGANIZATIONS; do
+    PEERS_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $NETWORK_CONFIG_FILE)
 
-    # Run Peer
-    PEER=$(echo "$PEERS" | sed -n "$((index+1))p")
-    PEER_IP=$(echo "$PEERS_IP" | sed -n "$((index+1))p")
-    PEER_PORT1=$(echo "$PEERS_PORT1" | sed -n "$((index+1))p")
-    PEER_PORT2=$(echo "$PEERS_PORT2" | sed -n "$((index+1))p")
-    PEER_ORG=$(echo "$PEERS_ORG" | sed -n "$((index+1))p")
-    PEER_CLI=$(echo "$PEERS_CLI" | sed -n "$((index+1))p")
-    TLS_PRIVATE_KEY=$(basename $(ls $PWD/keys/$PEER_ORG/$PEER/tls/keystore/*_sk))
-    TLS_ROOTCERT=$(basename $(ls $PWD/keys/$PEER_ORG/$PEER/tls/tlscacerts/*))
-    export FABRIC_CFG_PATH=./config
+    for index in $(seq 0 $(($(echo "$PEERS_NAME" | wc -l) - 1))); do
+        PEER_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].Name" $NETWORK_CONFIG_FILE)
+        PEER_PASS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].Pass" $NETWORK_CONFIG_FILE)
+        PEER_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].IP" $NETWORK_CONFIG_FILE)
+        PEER_PORT1=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].Port1" $NETWORK_CONFIG_FILE)
+        PEER_PORT2=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].Port2" $NETWORK_CONFIG_FILE)
+        PEER_OPPORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].OpPort" $NETWORK_CONFIG_FILE)
+        PEER_CLI=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].CLI" $NETWORK_CONFIG_FILE)
+        PEER_DB_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].DB.Name" $NETWORK_CONFIG_FILE)
+        PEER_DB_PASS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].DB.Pass" $NETWORK_CONFIG_FILE)
+        PEER_DB_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].DB.IP" $NETWORK_CONFIG_FILE)
+        PEER_DB_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].DB.Port" $NETWORK_CONFIG_FILE)
+        FIRST_ORDERER=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Name" $NETWORK_CONFIG_FILE)
+        TLS_PRIVATE_KEY=$(basename $(ls $PWD/keys/$ORGANIZATION/$PEER_NAME/tls/keystore/*_sk))
+#        TLS_ROOTCERT=$(basename $(ls $PWD/keys/$ORGANIZATION/$PEER_NAME/tls/tlscacerts/*))
+#        TLS_ROOTCERTS=$(ls $PWD/keys/$ORGANIZATION/$PEER_NAME/tls/tlscacerts/*.pem | xargs -I {} basename {} | tr '\n' ',' | sed 's/,$//')
 
-    echo "ScriptInfo: run peer $PEER"
-    docker run -d \
-    --name $PEER \
-    --network $DOCKER_NETWORK_NAME \
-    --ip $PEER_IP \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
-    -e CORE_VM_ENDPOINT=unix:///var/run/docker.sock \
-    -e CORE_PEER_ID=$PEER \
-    -e CORE_PEER_LISTENADDRESS=0.0.0.0:$PEER_PORT1 \
-    -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:$PEER_PORT2 \
-    -e CORE_PEER_ADDRESS=$PEER:$PEER_PORT1 \
-    -e CORE_PEER_LOCALMSPID=${PEER_ORG}MSP \
-    -e CORE_PEER_GOSSIP_BOOTSTRAP=127.0.0.1:$PEER_PORT1 \
-    -e CORE_PEER_GOSSIP_ENDPOINT=0.0.0.0:$PEER_PORT1 \
-    -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=0.0.0.0:$PEER_PORT1 \
-    -e CORE_PEER_TLS_ENABLED=true \
-    -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/signcerts/cert.pem \
-    -e CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/keystore/$TLS_PRIVATE_KEY \
-    -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/tlscacerts/$TLS_ROOTCERT \
-    -e CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp \
-    -e CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=$PEER_DB_IP:$PEER_DB_PORT \
-    -e CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=$PEER_DB_ADMIN \
-    -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=$PEER_DB_ADMIN_PASS \
-    -e CORE_PEER_OPERATIONS_LISTENADDRESS=0.0.0.0:9443 \
-    -e CORE_PEER_OPERATIONS_TLS_ENABLED=true \
-    -e CORE_PEER_OPERATIONS_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
-    -e CORE_PEER_OPERATIONS_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
-    -v $PWD/../fabric/config/core.yaml:/etc/hyperledger/fabric/core.yaml \
-    -v $PWD/keys/$PEER_ORG/$PEER/msp:/etc/hyperledger/peer/msp \
-    -v $PWD/keys/$PEER_ORG/$PEER/tls:/etc/hyperledger/fabric/tls \
-    -v $PWD/production/$PEER:/var/hyperledger/production \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -p $PEER_PORT1:$PEER_PORT1 \
-    -p $PEER_PORT2:$PEER_PORT2 \
-    hyperledger/fabric-peer:latest
-    docker logs $PEER
+        WAIT_TIME=0
+        SUCCESS=false
 
-    # Run CLI only if IP is defined
-    if [ -n "$PEER_CLI" ]; then
-        echo "ScriptInfo: run cli $PEER"
+        echo_info "ScriptInfo: run Peer $PEER_NAME"
         docker run -d \
-        --name $PEER.cli \
+        --name $PEER_NAME \
         --network $DOCKER_NETWORK_NAME \
-        --ip $PEER_CLI \
-        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_cli_logo.png" \
-        -e GOPATH=/opt/gopath \
-        -e CORE_PEER_ID=$PEER.cli \
-        -e CORE_PEER_ADDRESS=$PEER:$PEER_PORT1 \
-        -e CORE_PEER_LOCALMSPID=${PEER_ORG}MSP \
+        --ip $PEER_IP \
+        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
+        -e CORE_VM_ENDPOINT=unix:///var/run/docker.sock \
+        -e CORE_PEER_ID=$PEER_NAME \
+        -e CORE_PEER_LISTENADDRESS=0.0.0.0:$PEER_PORT1 \
+        -e CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:$PEER_PORT2 \
+        -e CORE_PEER_ADDRESS=$PEER_NAME:$PEER_PORT1 \
+        -e CORE_PEER_LOCALMSPID=${ORGANIZATION}MSP \
+        -e CORE_PEER_GOSSIP_BOOTSTRAP=127.0.0.1:$PEER_PORT1 \
+        -e CORE_PEER_GOSSIP_ENDPOINT=0.0.0.0:$PEER_PORT1 \
+        -e CORE_PEER_GOSSIP_EXTERNALENDPOINT=0.0.0.0:$PEER_PORT1 \
         -e CORE_PEER_TLS_ENABLED=true \
-        -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt \
-        -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt \
+        -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/signcerts/cert.pem \
+        -e CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/keystore/$TLS_PRIVATE_KEY \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/tlscacerts/tls-combined-ca.pem \
         -e CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp \
-        -e FABRIC_LOGGING_SPEC=DEBUG \
-        -v $PWD/keys/$PEER_ORG/$PEER/msp:/etc/hyperledger/peer/msp \
-        -v $PWD/keys/$PEER_ORG/$PEER/tls:/etc/hyperledger/fabric/tls \
-        -v $PWD/keys/$PEER_ORG/$FIRST_ORDERER/tls:/etc/hyperledger/orderer/tls \
-        -v $PWD/production/$PEER:/var/hyperledger/production \
-        -v $PWD/chaincode/$PEER:/opt/gopath/src/github.com/hyperledger/fabric/chaincode \
-        -v $PWD:/tmp/jedo-network \
+        -e CORE_LEDGER_STATE_STATEDATABASE=CouchDB \
+        -e CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=$PEER_DB_IP:5984 \
+        -e CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=$PEER_DB_NAME \
+        -e CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=$PEER_DB_PASS \
+        -v $PWD/../fabric/config/core.yaml:/etc/hyperledger/fabric/core.yaml \
+        -v $PWD/keys/$ORGANIZATION/$PEER_NAME/msp:/etc/hyperledger/peer/msp \
+        -v $PWD/keys/$ORGANIZATION/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
+        -v $PWD/production/$PEER_NAME:/var/hyperledger/production \
         -v /var/run/docker.sock:/var/run/docker.sock \
-        -w /opt/gopath/src/github.com/hyperledger/fabric \
-        -it \
-        hyperledger/fabric-tools:latest
-    fi
+        -p $PEER_PORT1:$PEER_PORT1 \
+        -p $PEER_PORT2:$PEER_PORT2 \
+        -p $PEER_OPPORT:$PEER_OPPORT \
+        --restart unless-stopped \
+        hyperledger/fabric-peer:latest
+
+        # waiting startup
+        while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
+            if docker inspect -f '{{.State.Running}}' $PEER_NAME | grep true > /dev/null; then
+                SUCCESS=true
+                echo_info "ScriptInfo: $PEER_NAME is up and running!"
+                break
+            fi
+            echo "Waiting for $PEER_NAME... ($WAIT_TIME seconds)"
+            sleep 2
+            WAIT_TIME=$((WAIT_TIME + 2))
+        done
+
+        if [ "$SUCCESS" = false ]; then
+            echo_error "ScriptError: $PEER_NAME did not start."
+            docker logs $PEER_NAME
+            exit 1
+        fi
+
+        # Run CLI if IP defined
+        if [ -n "$PEER_CLI" ]; then
+            echo_info "ScriptInfo: run cli $PEER_NAME"
+            docker run -d \
+            --name cli.$PEER_NAME \
+            --network $DOCKER_NETWORK_NAME \
+            --ip $PEER_CLI \
+            --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_cli_logo.png" \
+            -e GOPATH=/opt/gopath \
+            -e CORE_PEER_ID=cli.$PEER_NAME \
+            -e CORE_PEER_ADDRESS=$PEER_NAME:$PEER_PORT1 \
+            -e CORE_PEER_LOCALMSPID=${ORGANIZATION}MSP \
+            -e CORE_PEER_TLS_ENABLED=true \
+            -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt \
+            -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt \
+            -e CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp \
+            -e FABRIC_LOGGING_SPEC=DEBUG \
+            -v $PWD/keys/$ORGANIZATION/$PEER_NAME/msp:/etc/hyperledger/peer/msp \
+            -v $PWD/keys/$ORGANIZATION/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
+            -v $PWD/keys/$ORGANIZATION/$FIRST_ORDERER/tls:/etc/hyperledger/orderer/tls \
+            -v $PWD/production/$PEER_NAME:/var/hyperledger/production \
+            -v $PWD/chaincode/$PEER_NAME:/opt/gopath/src/github.com/hyperledger/fabric/chaincode \
+            -v $PWD:/tmp/$DOCKER_NETWORK_NAME \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -w /opt/gopath/src/github.com/hyperledger/fabric \
+            -it \
+            --restart unless-stopped \
+            hyperledger/fabric-tools:latest
+        fi
+    done
 done
 
 
 ###############################################################
 # Orderers
 ###############################################################
-for index in $(seq 0 $(($(echo "$ORDERERS" | wc -l) - 1))); do
-    WAIT_TIME=0
-    SUCCESS=false
-    # Run Peer
-    ORDERER=$(echo "$ORDERERS" | sed -n "$((index+1))p")
-    ORDERER_IP=$(echo "$ORDERERS_IP" | sed -n "$((index+1))p")
-    ORDERER_PORT=$(echo "$ORDERERS_PORT" | sed -n "$((index+1))p")
-    ORDERER_ORG=$(echo "$ORDERERS_ORG" | sed -n "$((index+1))p")
-    TLS_PRIVATE_KEY=$(basename $(ls $PWD/keys/$ORDERER_ORG/$ORDERER/tls/keystore/*_sk))
-    TLS_ROOTCERT=$(basename $(ls $PWD/keys/$ORDERER_ORG/$ORDERER/tls/tlscacerts/*))
-    export FABRIC_CFG_PATH=./config
+CHANNEL=$(yq e '.FabricNetwork.Channel' $NETWORK_CONFIG_FILE)
+for ORGANIZATION in $ORGANIZATIONS; do
+    ORDERERS_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
 
-    echo "ScriptInfo: run orderer $ORDERER"
-    docker run -d \
-    --name $ORDERER \
-    --network $DOCKER_NETWORK_NAME \
-    --ip $ORDERER_IP \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
-    -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
-    -e ORDERER_GENERAL_LISTENPORT=$ORDERER_PORT \
-    -e ORDERER_GENERAL_GENESISMETHOD=file \
-    -e ORDERER_GENERAL_GENESISFILE=/etc/hyperledger/fabric/genesis.block \
-    -e ORDERER_GENERAL_LOCALMSPID=${ORDERER_ORG}MSP \
-    -e ORDERER_GENERAL_LOCALMSPDIR=/etc/hyperledger/orderer/msp \
-    -e ORDERER_GENERAL_TLS_ENABLED=true \
-    -e ORDERER_GENERAL_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
-    -e ORDERER_GENERAL_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
-    -e ORDERER_GENERAL_TLS_ROOTCAS=[/etc/hyperledger/orderer/tls/tlscacerts/$TLS_ROOTCERT] \
-    -e ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:9443 \
-    -e ORDERER_OPERATIONS_TLS_ENABLED=true \
-    -e ORDERER_OPERATIONS_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
-    -e ORDERER_OPERATIONS_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
-    -v $PWD/../fabric/config/orderer.yaml:/etc/hyperledger/fabric/orderer.yaml \
-    -v $PWD/configtx/genesis.block:/etc/hyperledger/fabric/genesis.block \
-    -v $PWD/keys/$ORDERER_ORG/$ORDERER/msp:/etc/hyperledger/orderer/msp \
-    -v $PWD/keys/$ORDERER_ORG/$ORDERER/tls:/etc/hyperledger/orderer/tls \
-    -v $PWD/production/$ORDERER:/var/hyperledger/production \
-    -p $ORDERER_PORT:$ORDERER_PORT \
-    hyperledger/fabric-orderer:latest
+    for index in $(seq 0 $(($(echo "$ORDERERS_NAME" | wc -l) - 1))); do
+        ORDERER_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].Name" $NETWORK_CONFIG_FILE)
+        ORDERER_PASS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].Pass" $NETWORK_CONFIG_FILE)
+        ORDERER_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].IP" $NETWORK_CONFIG_FILE)
+        ORDERER_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].Port" $NETWORK_CONFIG_FILE)
+        ORDERER_OPPORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].OpPort" $NETWORK_CONFIG_FILE)
+        ORDERER_CLUSTER_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].ClusterPort" $NETWORK_CONFIG_FILE) # Neu: Cluster-Port
+        TLS_PRIVATE_KEY=$(basename $(ls $PWD/keys/$ORGANIZATION/$ORDERER_NAME/tls/keystore/*_sk))
+        TLS_ROOTCERTS=$(ls $PWD/keys/$ORGANIZATION/$ORDERER_NAME/tls/tlscacerts/*.pem | xargs -n 1 basename | sed 's|^|/etc/hyperledger/orderer/tls/tlscacerts/|' | tr '\n' ',' | sed 's/,$//')
 
-    # waiting startup
-    while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
-        if curl -k -s https://$ORDERER:9443/healthz > /dev/null; then
-            SUCCESS=true
-            echo "ScriptInfo: $ORDERER is up and running!"
-            break
+        ORGS=$(yq e '.FabricNetwork.Organizations[].Name' $NETWORK_CONFIG_FILE)
+        CLUSTER_PEERS=""
+        for ORG in $ORGS; do
+            ORG_ORDERERS_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
+            ORG_ORDERERS_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].ClusterPort" $NETWORK_CONFIG_FILE)
+
+            for index in $(seq 0 $(($(echo "$ORG_ORDERERS_NAME" | wc -l) - 1))); do
+                ORG_ORDERER_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].Name" $NETWORK_CONFIG_FILE)
+                ORG_ORDERER_CLUSTER_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].ClusterPort" $NETWORK_CONFIG_FILE)
+
+                if [ "$ORG_ORDERER_NAME" != "$ORDERER_NAME" ]; then
+                    CLUSTER_PEERS+="$ORG_ORDERER_NAME:$ORG_ORDERER_CLUSTER_PORT,"
+                fi
+            done
+        done
+        CLUSTER_PEERS=$(echo $CLUSTER_PEERS | sed 's/,$//')
+
+        WAIT_TIME=0
+        SUCCESS=false
+
+        echo_info "ScriptInfo: run orderer $ORDERER_NAME"
+        docker run -d \
+        --name $ORDERER_NAME \
+        --network $DOCKER_NETWORK_NAME \
+        --ip $ORDERER_IP \
+        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
+        -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
+        -e ORDERER_GENERAL_LISTENPORT=$ORDERER_PORT \
+        -e ORDERER_GENERAL_GENESISMETHOD=file \
+        -e ORDERER_GENERAL_GENESISFILE=/etc/hyperledger/fabric/genesis.block \
+        -e ORDERER_GENERAL_LOCALMSPID=${ORGANIZATION}MSP \
+        -e ORDERER_GENERAL_LOCALMSPDIR=/etc/hyperledger/orderer/msp \
+        -e ORDERER_GENERAL_TLS_ENABLED=true \
+        -e ORDERER_GENERAL_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+        -e ORDERER_GENERAL_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
+        -e ORDERER_GENERAL_TLS_ROOTCAS=[$TLS_ROOTCERTS] \
+        -e ORDERER_GENERAL_TLS_CLIENTAUTHREQUIRED=true \
+        -e ORDERER_GENERAL_TLS_CLIENTROOTCAS=[$TLS_ROOTCERTS] \
+        -e ORDERER_GENERAL_CLUSTER_LISTENADDRESS=0.0.0.0 \
+        -e ORDERER_GENERAL_CLUSTER_LISTENPORT=$ORDERER_CLUSTER_PORT \
+        -e ORDERER_GENERAL_CLUSTER_PEERS=[$CLUSTER_PEERS] \
+        -e ORDERER_GENERAL_CLUSTER_SERVERCERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+        -e ORDERER_GENERAL_CLUSTER_SERVERPRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
+        -e ORDERER_GENERAL_CLUSTER_ROOTCAS=[$TLS_ROOTCERTS] \
+        -e ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+        -e ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
+        -e ORDERER_GENERAL_CLUSTER_DIALTIMEOUT=10s \
+        -e ORDERER_GENERAL_CLUSTER_RPCTIMEOUT=10s \
+        -e ORDERER_RAFT_ELECTIONTICK=20 \
+        -e ORDERER_RAFT_HEARBEATTICK=2 \
+        -e ORDERER_RAFT_SNAPSHOTINTERVALSIZE=20MB \
+        -v $PWD/../fabric/config/orderer.yaml:/etc/hyperledger/fabric/orderer.yaml \
+        -v $PWD/config/$CHANNEL.genesisblock:/etc/hyperledger/fabric/genesis.block \
+        -v $PWD/keys/$ORGANIZATION/$ORDERER_NAME/msp:/etc/hyperledger/orderer/msp \
+        -v $PWD/keys/$ORGANIZATION/$ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
+        -v $PWD/production/$ORDERER_NAME:/var/hyperledger/production \
+        -p $ORDERER_PORT:$ORDERER_PORT \
+        -p $ORDERER_OPPORT:$ORDERER_OPPORT \
+        -p $ORDERER_CLUSTER_PORT:$ORDERER_CLUSTER_PORT \
+        --restart unless-stopped \
+        hyperledger/fabric-orderer:latest
+
+        # waiting startup
+        while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
+            if docker inspect -f '{{.State.Running}}' $ORDERER_NAME | grep true > /dev/null; then
+                SUCCESS=true
+                echo_info "ScriptInfo: $ORDERER_NAME is up and running!"
+                break
+            fi
+            echo "Waiting for $ORDERER_NAME... ($WAIT_TIME seconds)"
+            sleep 2
+            WAIT_TIME=$((WAIT_TIME + 2))
+        done
+
+        if [ "$SUCCESS" = false ]; then
+            echo_error "ScriptError: $ORDERER_NAME did not start."
+            docker logs $ORDERER_NAME
+            exit 1
         fi
-        echo "Waiting for $ORDERER... ($WAIT_TIME seconds)"
-        sleep 2
-        WAIT_TIME=$((WAIT_TIME + 2))
     done
-
-    if [ "$SUCCESS" = false ]; then
-        echo "ScriptError: $ORDERER did not start."
-        docker logs $ORDERER
-        exit 1
-    fi
-
 done

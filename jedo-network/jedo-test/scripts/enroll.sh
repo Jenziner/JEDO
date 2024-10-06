@@ -9,8 +9,23 @@
 #       - make it executable: chmod +x /usr/local/bin/yq
 #
 ###############################################################
-set -Exeuo pipefail
+set -Eeuo pipefail
 ls scripts/enroll.sh || { echo "ScriptInfo: run this script from the root directory: ./scripts/enroll.sh"; exit 1; }
+
+
+###############################################################
+# Function to echo in colors
+###############################################################
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+function echo_info() {
+    echo -e "${YELLOW}$1${NC}"
+}
+function echo_error() {
+    echo -e "${RED}$1${NC}"
+}
+
 
 ###############################################################
 # Set variables
@@ -45,7 +60,7 @@ for ORGANIZATION in $ORGANIZATIONS; do
 ###############################################################
 # enroll admin
 ###############################################################
-  echo "ScriptInfo: enroll admin for $ORGANIZATION"
+  echo_info "ScriptInfo: enroll admin for $ORGANIZATION"
   CA_CERT_PATH="$FABRIC_CA_CLIENT_HOME/$CA_NAME/ca-cert.pem" 
 
   ADMIN_MSP_DIR=$FABRIC_CA_CLIENT_HOME/$ADMIN_NAME/msp
@@ -80,7 +95,7 @@ EOF
 ###############################################################
 # enroll orderers
 ###############################################################
-  echo "ScriptInfo: enroll orderers for $ORGANIZATION"
+  echo_info "ScriptInfo: enroll orderers for $ORGANIZATION"
   for index in $(seq 0 $(($(echo "$ORDERERS_NAME" | wc -l) - 1))); do
     ORDERER_NAME=$(echo "$ORDERERS_NAME" | sed -n "$((index+1))p")
     ORDERER_PASS=$(echo "$ORDERERS_PASS" | sed -n "$((index+1))p")
@@ -89,8 +104,8 @@ EOF
     ORDERER_TLS_DIR=$FABRIC_CA_CLIENT_HOME/$ORDERER_NAME/tls
 
     fabric-ca-client register -u http://$CA_NAME:$CA_PORT --id.name $ORDERER_NAME --id.secret $ORDERER_PASS --id.type orderer --id.affiliation $ORGANIZATION
-    fabric-ca-client enroll -u http://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT -M $ORDERER_MSP_DIR
-    fabric-ca-client enroll -u http://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT --enrollment.profile tls -M $ORDERER_TLS_DIR
+    fabric-ca-client enroll -u http://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT -M $ORDERER_MSP_DIR 
+    fabric-ca-client enroll -u http://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT --enrollment.profile tls -M $ORDERER_TLS_DIR --csr.hosts $ORDERER_NAME --csr.cn $ORDERER_NAME
 
     CA_CERT_FILE=$(ls $ORDERER_MSP_DIR/cacerts/*.pem)
     cat <<EOF > $ORDERER_MSP_DIR/config.yaml
@@ -115,7 +130,7 @@ EOF
 ###############################################################
 # enroll peers
 ###############################################################
-  echo "ScriptInfo: enroll peers for $ORGANIZATION"
+  echo_info "ScriptInfo: enroll peers for $ORGANIZATION"
   for index in $(seq 0 $(($(echo "$PEERS_NAME" | wc -l) - 1))); do
     PEER_NAME=$(echo "$PEERS_NAME" | sed -n "$((index+1))p")
     PEER_PASS=$(echo "$PEERS_PASS" | sed -n "$((index+1))p")
@@ -125,7 +140,7 @@ EOF
 
     fabric-ca-client register -u http://$CA_NAME:$CA_PORT --id.name $PEER_NAME --id.secret $PEER_PASS --id.type peer --id.affiliation $ORGANIZATION
     fabric-ca-client enroll -u http://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT -M $PEER_MSP_DIR
-    fabric-ca-client enroll -u http://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT --enrollment.profile tls -M $PEER_TLS_DIR
+    fabric-ca-client enroll -u http://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT --enrollment.profile tls -M $PEER_TLS_DIR --csr.hosts $PEER_NAME --csr.cn $PEER_NAME
 
     CA_CERT_FILE=$(ls $PEER_MSP_DIR/cacerts/*.pem)
     cat <<EOF > $PEER_MSP_DIR/config.yaml
@@ -151,26 +166,36 @@ done
 ###############################################################
 # Params for token network
 ###############################################################
-  export FABRIC_CA_CLIENT_HOME=$PWD/keys
-  TOKEN_NETWORK_NAME=$(yq eval '.TokenNetwork.Name' "$NETWORK_CONFIG_FILE")
-  FSCS_NAME=$(yq e '.TokenNetwork.FSCs[] | .Name' $NETWORK_CONFIG_FILE)
-  FSCS_PASS=$(yq e '.TokenNetwork.FSCs[] | .Pass' $NETWORK_CONFIG_FILE)
-  FSCS_OWNER=$(yq e '.TokenNetwork.FSCs[] | .Owner' $NETWORK_CONFIG_FILE)
-  AUDITORS_NAME=$(yq e '.TokenNetwork.Auditors[] | .Name' $NETWORK_CONFIG_FILE)
-  AUDITORS_PASS=$(yq e '.TokenNetwork.Auditors[] | .Pass' $NETWORK_CONFIG_FILE)
-  AUDITORS_OWNER=$(yq e '.TokenNetwork.Auditors[] | .Owner' $NETWORK_CONFIG_FILE)
-  ISSUERS_NAME=$(yq e '.TokenNetwork.Issuers[] | .Name' $NETWORK_CONFIG_FILE)
-  ISSUERS_PASS=$(yq e '.TokenNetwork.Issuers[] | .Pass' $NETWORK_CONFIG_FILE)
-  ISSUERS_OWNER=$(yq e '.TokenNetwork.Issuers[] | .Owner' $NETWORK_CONFIG_FILE)
-  USERS_NAME=$(yq e '.TokenNetwork.Users[] | .Name' $NETWORK_CONFIG_FILE)
-  USERS_PASS=$(yq e '.TokenNetwork.Users[] | .Pass' $NETWORK_CONFIG_FILE)
-  USERS_OWNER=$(yq e '.TokenNetwork.Users[] | .Owner' $NETWORK_CONFIG_FILE)
+export FABRIC_CA_CLIENT_HOME=$PWD/keys
+TOKEN_NETWORK_NAME=$(yq eval '.TokenNetwork.Name' "$NETWORK_CONFIG_FILE")
+FSCS_NAME=$(yq e '.TokenNetwork.FSCs[] | .Name' $NETWORK_CONFIG_FILE)
+FSCS_PASS=$(yq e '.TokenNetwork.FSCs[] | .Pass' $NETWORK_CONFIG_FILE)
+FSCS_OWNER=$(yq e '.TokenNetwork.FSCs[] | .Owner' $NETWORK_CONFIG_FILE)
+AUDITORS_NAME=$(yq e '.TokenNetwork.Auditors[] | .Name' $NETWORK_CONFIG_FILE)
+AUDITORS_PASS=$(yq e '.TokenNetwork.Auditors[] | .Pass' $NETWORK_CONFIG_FILE)
+AUDITORS_OWNER=$(yq e '.TokenNetwork.Auditors[] | .Owner' $NETWORK_CONFIG_FILE)
+ISSUERS_NAME=$(yq e '.TokenNetwork.Issuers[] | .Name' $NETWORK_CONFIG_FILE)
+ISSUERS_PASS=$(yq e '.TokenNetwork.Issuers[] | .Pass' $NETWORK_CONFIG_FILE)
+ISSUERS_OWNER=$(yq e '.TokenNetwork.Issuers[] | .Owner' $NETWORK_CONFIG_FILE)
+USERS_NAME=$(yq e '.TokenNetwork.Users[] | .Name' $NETWORK_CONFIG_FILE)
+USERS_PASS=$(yq e '.TokenNetwork.Users[] | .Pass' $NETWORK_CONFIG_FILE)
+USERS_OWNER=$(yq e '.TokenNetwork.Users[] | .Owner' $NETWORK_CONFIG_FILE)
+
+
+###############################################################
+# enroll client of first Organization
+###############################################################
+ORGANIZATION=$(yq e ".FabricNetwork.Organizations[0] | .Name" $NETWORK_CONFIG_FILE)
+CA_NAME=$(yq e ".FabricNetwork.Organizations[0] | .CA.Name" $NETWORK_CONFIG_FILE)
+CA_PASS=$(yq e ".FabricNetwork.Organizations[0] | .CA.Pass" $NETWORK_CONFIG_FILE)
+CA_PORT=$(yq e ".FabricNetwork.Organizations[0] | .CA.Port" $NETWORK_CONFIG_FILE)
+fabric-ca-client enroll -u http://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT -M $FABRIC_CA_CLIENT_HOME/$ORGANIZATION/Client
 
 
 ###############################################################
 # Fabric Smart Client node identities (identity of the node, used when talking to other nodes)
 ###############################################################
-echo "ScriptInfo: register fsc"
+echo_info "ScriptInfo: register fsc"
 for index in $(seq 0 $(($(echo "$FSCS_NAME" | wc -l) - 1))); do
   FSC_NAME=$(echo "$FSCS_NAME" | sed -n "$((index+1))p")
   FSC_PASS=$(echo "$FSCS_PASS" | sed -n "$((index+1))p")
@@ -185,7 +210,7 @@ done
 ###############################################################
 # Issuer and Auditor wallet users (non-anonymous)
 ###############################################################
-echo "ScriptInfo: register auditors"
+echo_info "ScriptInfo: register auditors"
 for index in $(seq 0 $(($(echo "$AUDITORS_NAME" | wc -l) - 1))); do
   AUDITOR_NAME=$(echo "$AUDITORS_NAME" | sed -n "$((index+1))p")
   AUDITOR_PASS=$(echo "$AUDITORS_PASS" | sed -n "$((index+1))p")
@@ -193,7 +218,7 @@ for index in $(seq 0 $(($(echo "$AUDITORS_NAME" | wc -l) - 1))); do
   fabric-ca-client register -u http://$CA_NAME:$CA_PORT --id.name $AUDITOR_NAME --id.secret $AUDITOR_PASS --id.type client
   fabric-ca-client enroll -u http://$AUDITOR_NAME:$AUDITOR_PASS@$CA_NAME:$CA_PORT -M $FABRIC_CA_CLIENT_HOME/$TOKEN_NETWORK_NAME/$AUDITOR_OWNER/$AUDITOR_NAME/msp
 done
-echo "ScriptInfo: register issuers"
+echo_info "ScriptInfo: register issuers"
 for index in $(seq 0 $(($(echo "$ISSUERS_NAME" | wc -l) - 1))); do
   ISSUER_NAME=$(echo "$ISSUERS_NAME" | sed -n "$((index+1))p")
   ISSUER_PASS=$(echo "$ISSUERS_PASS" | sed -n "$((index+1))p")
@@ -206,7 +231,7 @@ done
 ###############################################################
 # Owner wallet users (pseudonymous) on all owner nodes
 ###############################################################
-echo "ScriptInfo: register users"
+echo_info "ScriptInfo: register users"
 for index in $(seq 0 $(($(echo "$USERS_NAME" | wc -l) - 1))); do
   USER_NAME=$(echo "$USERS_NAME" | sed -n "$((index+1))p")
   USER_PASS=$(echo "$USERS_PASS" | sed -n "$((index+1))p")
@@ -217,6 +242,52 @@ done
 
 
 ###############################################################
+# collect and distribute tls-ca certificates
+###############################################################
+echo_info "ScriptInfo: collect and distribute tls-ca certificates"
+TLS_CACERTS_DIR="$PWD/keys/tlscacerts"
+mkdir -p "$TLS_CACERTS_DIR"
+
+# collect certs from all ca
+for ORGANIZATION in $ORGANIZATIONS; do
+  CA=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $NETWORK_CONFIG_FILE)
+  CA_NAME=$(echo "$CA" | tr '.' '-')
+  CA_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Port" $NETWORK_CONFIG_FILE)
+  TLS_CA_CERT_PATH="$PWD/keys/$ORGANIZATION/$CA/ca-cert.pem"
+
+  if [[ -f "$TLS_CA_CERT_PATH" ]]; then
+    cp "$TLS_CA_CERT_PATH" "$TLS_CACERTS_DIR/tls-$CA_NAME-$CA_PORT.pem"
+  fi
+done
+
+# distribute certs to all peers
+for ORGANIZATION in $ORGANIZATIONS; do
+  PEERS_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $NETWORK_CONFIG_FILE)
+
+  for index in $(seq 0 $(($(echo "$PEERS_NAME" | wc -l) - 1))); do
+    PEER_NAME=$(echo "$PEERS_NAME" | sed -n "$((index+1))p")
+    NODE_TLS_CACERTS_DIR="$PWD/keys/$ORGANIZATION/$PEER_NAME/tls/tlscacerts"
+    mkdir -p "$NODE_TLS_CACERTS_DIR"
+    cat "$TLS_CACERTS_DIR/"*.pem > "$NODE_TLS_CACERTS_DIR/tls-combined-ca.pem"
+#    cp "$TLS_CACERTS_DIR/"*.pem "$NODE_TLS_CACERTS_DIR/"
+  done
+done
+
+# distribute certs to all orderers
+for ORGANIZATION in $ORGANIZATIONS; do
+  ORDERERS_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
+
+  for index in $(seq 0 $(($(echo "$ORDERERS_NAME" | wc -l) - 1))); do
+    ORDERER_NAME=$(echo "$ORDERERS_NAME" | sed -n "$((index+1))p")
+    NODE_TLS_CACERTS_DIR="$PWD/keys/$ORGANIZATION/$ORDERER_NAME/tls/tlscacerts"
+    mkdir -p "$NODE_TLS_CACERTS_DIR"
+    cp "$TLS_CACERTS_DIR/"*.pem "$NODE_TLS_CACERTS_DIR/"
+  done
+done
+
+
+###############################################################
 # set permissions
 ###############################################################
+echo_info "ScriptInfo: set permissions for keys-folder"
 chmod -R 777 ./keys
