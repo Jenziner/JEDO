@@ -23,6 +23,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
         Pass: Test1
         IP: 172.25.0.10
         Port: 7054
+        Ext:
       Admin:
         Name: admin.jenziner.jedo.test
         Pass: Test1
@@ -40,7 +41,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
           Port1: 7061
           Port2: 7062
           OpPort: 7069
-          CLI: 172.25.0.14 # IP, if CLI-Container should be installed
+          CLI: 172.25.0.14
           DB: 
             Name: db.peer0.jenziner.jedo.test
             Pass: Test1
@@ -65,6 +66,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
         Pass: Test1
         IP: 172.25.0.20
         Port: 8054
+        Ext:
       Admin:
         Name: admin.liebiwiler.jedo.test
         Pass: Test1
@@ -82,12 +84,43 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
           Port1: 8061
           Port2: 8062
           OpPort: 8069
-          CLI: 172.25.0.24 # IP, if CLI-Container should be installed
+          CLI: 172.25.0.24
           DB: 
             Name: db.peer0.liebiwiler.jedo.test
             Pass: Test1
             IP: 172.25.0.23
             Port: 8064
+    - Name: BreitschiOrg
+      Consortium: # Name of consortium if member or null
+      CA:
+        Name:
+        Pass: 
+        IP:
+        Port:
+        Ext: ca.jenziner.jedo.test
+      Admin:
+        Name: admin.breitschi.jedo.test
+        Pass: Test1
+      Orderers:
+        - Name: orderer.breitschi.jedo.test
+          Pass: Test1
+          IP: 172.25.0.31
+          Port: 9050
+          OpPort: 9059
+          ClusterPort: 9051
+      Peers: # first peer will be used as AnchorPeer
+        - Name: peer0.breitschi.jedo.test
+          Pass: Test1
+          IP: 172.25.0.32
+          Port1: 9061
+          Port2: 9062
+          OpPort: 9069
+          CLI: 172.25.0.34
+          DB: 
+            Name: db.peer0.breitschi.jedo.test
+            Pass: Test1
+            IP: 172.25.0.33
+            Port: 9064
 TokenNetwork:
   Name: eu.jedo.test
   FSCs: # Names must be according Auditor, Issuers, Users

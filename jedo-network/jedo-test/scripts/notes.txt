@@ -1,0 +1,40 @@
+
+curl -k -s https://peer0.jenziner.jedo.test:7069/healthz
+
+openssl x509 -in ./keys/JenzinerOrg/orderer.jenziner.jedo.test/tls/signcerts/cert.pem -text -noout
+openssl x509 -in ./keys/LiebiwilerOrg/orderer.liebiwiler.jedo.test/tls/signcerts/cert.pem -text -noout
+
+-e ORDERER_GENERAL_TLS_ROOTCAS=[/etc/hyperledger/orderer/tls/tlscacerts/$TLS_ROOTCERT] \
+
+
+PEER Operation:
+        -e CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:$PEER_OPPORT \
+        -e CORE_OPERATIONS_TLS_ENABLED=true \
+        -e CORE_OPERATIONS_TLS_CERTIFICATE=/etc/hyperledger/fabric/tls/signcerts/cert.pem \
+        -e CORE_OPERATIONS_TLS_PRIVATEKEY=/etc/hyperledger/fabric/tls/keystore/$TLS_PRIVATE_KEY \
+
+ORDERER Operation:
+        -e ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:$ORDERER_OPPORT \
+        -e ORDERER_OPERATIONS_TLS_ENABLED=true \
+        -e ORDERER_OPERATIONS_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+        -e ORDERER_OPERATIONS_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
+
+
+
+openssl x509 -in "./keys/combined_tls_cacerts/tls-combined-ca.pem" -text -noout
+grep -c "BEGIN CERTIFICATE" "./keys/combined_tls_cacerts/tls-combined-ca.pem"
+openssl x509 -in "./keys/combined_tls_cacerts/tls-combined-ca.pem" -noout -text | grep "Subject:"
+
+docker exec -it cli.peer0.jenziner.jedo.test openssl s_client -connect orderer.jenziner.jedo.test:7050 -cert /etc/hyperledger/fabric/tls/signcerts/cert.pem -key /etc/hyperledger/fabric/tls/keystore/eacf9af51b5b1ae6887527e61476b91635a50cac0a83442f26f605499d8dfa33_sk -CAfile /etc/hyperledger/fabric/tls/tlscacerts/tls_ca_combined.pem
+
+docker exec -it cli.peer0.jenziner.jedo.test openssl s_client -connect orderer.jenziner.jedo.test:7050 -CAfile /etc/hyperledger/fabric/tls/tlscacerts/tls_ca_combined.pem
+
+
+docker exec -it cli.peer0.jenziner.jedo.test ls /etc/hyperledger/fabric/tls/signcerts/cert.pem
+
+docker exec -it orderer.jenziner.jedo.test cat /etc/hyperledger/fabric/tls/tlscacerts/tls_ca_combined.pem | openssl x509 -noout -text | grep "Issuer"
+
+openssl s_client -connect orderer.jenziner.jedo.test:7050 -cert ./keys/JenzinerOrg/peer0.jenziner.jedo.test/tls/signcerts/cert.pem -key ./keys/JenzinerOrg/peer0.jenziner.jedo.test/tls/keystore/e2922d5eabf6ad6a4babd696c0fa8e4688a77a4b413247572ef88f7e94062f85_sk -CAfile ./keys/tlscerts_collections/tls_ca_combined/tls_ca_combined.pem
+
+
+openssl s_client -connect orderer.jenziner.jedo.test:7050 -cert /etc/hyperledger/fabric/tls/signcerts/cert.pem -key /etc/hyperledger/fabric/tls/keystore/e2922d5eabf6ad6a4babd696c0fa8e4688a77a4b413247572ef88f7e94062f85_sk -CAfile /etc/hyperledger/fabric/tls/tlscacerts/tls_ca_combined.pem

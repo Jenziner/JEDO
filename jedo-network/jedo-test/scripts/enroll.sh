@@ -8,9 +8,31 @@
 #       - installation: sudo wget https://github.com/mikefarah/yq/releases/download/v4.6.3/yq_linux_amd64 -O /usr/local/bin/yq
 #       - make it executable: chmod +x /usr/local/bin/yq
 #
+#
+# Folder-Structure:
+# keys/
+# ├── JenzinerOrg/
+#     ├── admin/             # Admin-certificates and keys
+#     ├── ca/                # CA-certificates and keys
+#     ├── orderer/           # Orderer-certificates and keys
+#     ├── peer0/             # Peer 0 certificates and keys
+#     └── peer1/             # Peer 1 certificates and keys
+# ├── LiebewilerOrg/
+#     ├── admin/             # Admin-certificates and keys
+#     ├── ca/                # CA-certificates and keys
+#     ├── orderer/           # Orderer-certificates and keys
+#     └── peer0/             # Peer 1 certificates and keys
+# └── tlscerts_collections
+#     ├── tls_ca_certs       # one certificate file per CA
+#     ├── tls_ca_combined    # one certificate with all CA certificates combined (tls_ca_combined.pem)
+#     ├── tls_node_certs     # one certificate file per Node (peer and orderer of all organizations)
+#     └── tls_node_combined  # one certificate with all Node certificates combined (peer and orderer of all organizations) (tls_node_combined.pem)
+# Make sure to mount the right collection folder / file for each Node (e.g. $PWD/keys/tlscerts_collections/tls_ca_combined/combined_tls_ca.pem:/etc/hyperledger/fabric/ca/combined_tls_ca.pem)
+#
 ###############################################################
-set -Eeuo pipefail
-ls scripts/enroll.sh || { echo "ScriptInfo: run this script from the root directory: ./scripts/enroll.sh"; exit 1; }
+source ./scripts/settings.sh
+source ./scripts/help.sh
+check_script
 
 
 ###############################################################
@@ -242,48 +264,66 @@ done
 
 
 ###############################################################
-# collect and distribute tls-ca certificates
+# collect and combine certificates
 ###############################################################
 echo_info "ScriptInfo: collect and distribute tls-ca certificates"
-TLS_CACERTS_DIR="$PWD/keys/tlscacerts"
-mkdir -p "$TLS_CACERTS_DIR"
+TLS_DIR="$PWD/keys/tlscerts_collections"
+TLS_CA_CERTS_DIR="$TLS_DIR/tls_ca_certs"
+TLS_CA_COMBINED_DIR="$TLS_DIR/tls_ca_combined"
+TLS_NODE_CERTS_DIR="$TLS_DIR/tls_node_certs"
+TLS_NODE_COMBINED_DIR="$TLS_DIR/tls_node_combined"
+mkdir -p "$TLS_CA_CERTS_DIR"
+mkdir -p "$TLS_CA_COMBINED_DIR"
+mkdir -p "$TLS_NODE_CERTS_DIR"
+mkdir -p "$TLS_NODE_COMBINED_DIR"
 
 # collect certs from all ca
 for ORGANIZATION in $ORGANIZATIONS; do
   CA=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $NETWORK_CONFIG_FILE)
   CA_NAME=$(echo "$CA" | tr '.' '-')
   CA_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Port" $NETWORK_CONFIG_FILE)
-  TLS_CA_CERT_PATH="$PWD/keys/$ORGANIZATION/$CA/ca-cert.pem"
+  TLS_CA_CERT_FILE="$PWD/keys/$ORGANIZATION/$CA/ca-cert.pem"
 
-  if [[ -f "$TLS_CA_CERT_PATH" ]]; then
-    cp "$TLS_CA_CERT_PATH" "$TLS_CACERTS_DIR/tls-$CA_NAME-$CA_PORT.pem"
+  if [[ -f "$TLS_CA_CERT_FILE" ]]; then
+    cp "$TLS_CA_CERT_FILE" "$TLS_CA_CERTS_DIR/tls-$CA_NAME-$CA_PORT.pem"
   fi
 done
 
-# distribute certs to all peers
+# make combined ca file
+cat "$TLS_CA_CERTS_DIR/"*.pem > "$TLS_CA_COMBINED_DIR/tls_ca_combined.pem"
+
+# collect certs from all nodes
 for ORGANIZATION in $ORGANIZATIONS; do
   PEERS_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $NETWORK_CONFIG_FILE)
-
-  for index in $(seq 0 $(($(echo "$PEERS_NAME" | wc -l) - 1))); do
-    PEER_NAME=$(echo "$PEERS_NAME" | sed -n "$((index+1))p")
-    NODE_TLS_CACERTS_DIR="$PWD/keys/$ORGANIZATION/$PEER_NAME/tls/tlscacerts"
-    mkdir -p "$NODE_TLS_CACERTS_DIR"
-    cat "$TLS_CACERTS_DIR/"*.pem > "$NODE_TLS_CACERTS_DIR/tls-combined-ca.pem"
-#    cp "$TLS_CACERTS_DIR/"*.pem "$NODE_TLS_CACERTS_DIR/"
-  done
-done
-
-# distribute certs to all orderers
-for ORGANIZATION in $ORGANIZATIONS; do
   ORDERERS_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
 
-  for index in $(seq 0 $(($(echo "$ORDERERS_NAME" | wc -l) - 1))); do
-    ORDERER_NAME=$(echo "$ORDERERS_NAME" | sed -n "$((index+1))p")
-    NODE_TLS_CACERTS_DIR="$PWD/keys/$ORGANIZATION/$ORDERER_NAME/tls/tlscacerts"
-    mkdir -p "$NODE_TLS_CACERTS_DIR"
-    cp "$TLS_CACERTS_DIR/"*.pem "$NODE_TLS_CACERTS_DIR/"
+  for PEER_NAME in $PEERS_NAME; do
+    PEER_CERT_FILE="$PWD/keys/$ORGANIZATION/$PEER_NAME/tls/signcerts/cert.pem"
+    if [[ -f "$PEER_CERT_FILE" ]]; then
+      PEER_NAME_CLEAN=$(echo "$PEER_NAME" | tr '.' '-')
+      cp "$PEER_CERT_FILE" "$TLS_NODE_CERTS_DIR/tls-$PEER_NAME_CLEAN-cert.pem"
+    fi
+  done
+
+  for ORDERER_NAME in $ORDERERS_NAME; do
+    ORDERER_CERT_FILE="$PWD/keys/$ORGANIZATION/$ORDERER_NAME/tls/signcerts/cert.pem"
+    if [[ -f "$ORDERER_CERT_FILE" ]]; then
+      ORDERER_NAME_CLEAN=$(echo "$ORDERER_NAME" | tr '.' '-')
+      cp "$ORDERER_CERT_FILE" "$TLS_NODE_CERTS_DIR/tls-$ORDERER_NAME_CLEAN-cert.pem"
+    fi
   done
 done
+
+# make combined nodes file
+cat "$TLS_NODE_CERTS_DIR/"*.pem > "$TLS_NODE_COMBINED_DIR/tls_node_combined.pem"
+
+# check tls_node_combined.pem:
+csplit -z -f "$TLS_NODE_COMBINED_DIR/cert_" "$TLS_NODE_COMBINED_DIR/tls_node_combined.pem" '/-----BEGIN CERTIFICATE-----/' '{*}'
+for CERT in "$TLS_NODE_COMBINED_DIR"/cert_*; do
+    echo "Certificate: $CERT"
+    openssl x509 -in "$CERT" -noout -subject -nameopt multiline
+done
+rm "$TLS_NODE_COMBINED_DIR"/cert_*
 
 
 ###############################################################

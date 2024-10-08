@@ -9,8 +9,9 @@
 #       - make it executable: chmod +x /usr/local/bin/yq
 #
 ###############################################################
-set -Eeuo pipefail
-ls scripts/config.sh || { echo "ScriptInfo: run this script from the root directory: ./scripts/config.sh"; exit 1; }
+source ./scripts/settings.sh
+source ./scripts/help.sh
+check_script
 
 
 ###############################################################

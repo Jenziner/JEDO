@@ -7,21 +7,9 @@
 # - yq (sudo wget https://github.com/mikefarah/yq/releases/download/v4.6.3/yq_linux_amd64 -O /usr/local/bin/yq)
 #
 ###############################################################
-ls scripts/down.sh || { echo "ScriptInfo: run this script from the root directory: ./scripts/down.sh"; exit 1; }
-
-
-###############################################################
-# Function to echo in colors
-###############################################################
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-function echo_info() {
-    echo -e "${YELLOW}$1${NC}"
-}
-function echo_error() {
-    echo -e "${RED}$1${NC}"
-}
+source ./scripts/settings.sh
+source ./scripts/help.sh
+check_script
 
 
 ###############################################################
@@ -45,30 +33,30 @@ for ORGANIZATION in $ORGANIZATIONS; do
     ORDERERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
 
     # remove CA
-    docker rm -f $CA
+    docker rm -f $CA || true
 
     # remove couchDBs
     for index in $(seq 0 $(($(echo "$PEERS_DB" | wc -l) - 1))); do
         PEER_DB=$(echo "$PEERS_DB" | sed -n "$((index+1))p")
-        docker rm -f ${PEER_DB}
+        docker rm -f ${PEER_DB} || true
     done
 
     # remove peers
     for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
         PEER=$(echo "$PEERS" | sed -n "$((index+1))p")
-        docker rm -f ${PEER}
-        docker rm -f cli.${PEER}
+        docker rm -f ${PEER} || true
+        docker rm -f cli.${PEER} || true
     done
 
     # remove orderers
     for index in $(seq 0 $(($(echo "$ORDERERS" | wc -l) - 1))); do
         ORDERER=$(echo "$ORDERERS" | sed -n "$((index+1))p")
-        docker rm -f $ORDERER
+        docker rm -f $ORDERER || true
     done
 done
 
 echo_info "ScriptInfo: removing docker network"
-docker network rm  $DOCKER_NETWORK_NAME
+docker network rm  $DOCKER_NETWORK_NAME || true
 
 ###############################################################
 # Remove Folder

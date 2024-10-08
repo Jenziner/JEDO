@@ -7,7 +7,9 @@
 # - yq (sudo wget https://github.com/mikefarah/yq/releases/download/v4.6.3/yq_linux_amd64 -O /usr/local/bin/yq)
 #
 ###############################################################
-set -Eeuo pipefail
+source ./scripts/settings.sh
+source ./scripts/help.sh
+check_script
 
 
 ###############################################################
@@ -50,6 +52,7 @@ for ORGANIZATION in $ORGANIZATIONS; do
         --network $DOCKER_NETWORK_NAME \
         --name $CA_NAME \
         --ip $CA_IP \
+        --add-host $CA_NAME:$CA_IP \
         --restart=unless-stopped \
         --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_ca_logo.png" \
         -e FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server \
