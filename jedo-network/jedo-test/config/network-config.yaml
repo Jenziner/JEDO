@@ -10,6 +10,7 @@ Docker:
   Network:
     Name: jedo-network
     Subnet: 172.25.0.0/16
+    Gateway: 172.25.0.1
   Container:
     Wait: 20 # Max waiting time in seconds to start a docker container prior to exit
     FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available

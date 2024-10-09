@@ -63,6 +63,7 @@ NETWORK_CONFIG_FILE="./config/network-config.yaml"
 FABRIC_PATH=$(yq eval '.Fabric.Path' $NETWORK_CONFIG_FILE)
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $NETWORK_CONFIG_FILE)
 DOCKER_NETWORK_SUBNET=$(yq eval '.Docker.Network.Subnet' $NETWORK_CONFIG_FILE)
+DOCKER_NETWORK_GATEWAY=$(yq eval '.Docker.Network.Gateway' $NETWORK_CONFIG_FILE)
 DOCKER_CONTAINER_FABRICTOOLS=$(yq eval '.Docker.Container.FabricTools' $NETWORK_CONFIG_FILE)
 export PATH=$PATH:$FABRIC_PATH/bin:$FABRIC_PATH/config
 export FABRIC_CFG_PATH=./config
@@ -96,7 +97,7 @@ fi
 if [[ "$opt_r" == "net" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     echo_ok "Starting Docker Network"
     if ! docker network ls --format '{{.Name}}' | grep -wq "$DOCKER_NETWORK_NAME"; then
-        docker network create --subnet=$DOCKER_NETWORK_SUBNET "$DOCKER_NETWORK_NAME"
+        docker network create --subnet=$DOCKER_NETWORK_SUBNET --gateway=$DOCKER_NETWORK_GATEWAY "$DOCKER_NETWORK_NAME"
     fi
     docker network inspect "$DOCKER_NETWORK_NAME"
     if [[ "$opt_a" == "pause" ]]; then

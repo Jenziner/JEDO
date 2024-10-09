@@ -70,18 +70,20 @@ for ORGANIZATION in $ORGANIZATIONS; do
             -p $CA_PORT:$CA_PORT \
             -p $CA_OPPORT:$CA_OPPORT \
             hyperledger/fabric-ca:latest \
-            sh -c "fabric-ca-server start -b $CA_NAME:$CA_PASS --idemix.curve gurvy.Bn254 -d"
+            sh -c "fabric-ca-server start -b $CA_NAME:$CA_PASS --idemix.curve gurvy.Bn254 -d; sleep 5"
 
             # Workaround because fabric reads values from file and not from environment variables
             echo_info "Workaround because fabric reads values from file and not from environment variables"
-            sleep 5
-            docker cp $CA_NAME:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml ./fabric-ca-server-config.yaml
-            sed -i "s/listenAddress: 127.0.0.1:9443/listenAddress: 0.0.0.0:$CA_OPPORT/" ./fabric-ca-server-config.yaml
-            docker cp ./fabric-ca-server-config.yaml $CA_NAME:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
-            docker restart $CA_NAME
-            rm ./fabric-ca-server-config.yaml
+                sleep 5
+                docker cp $CA_NAME:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml ./fabric-ca-server-config.yaml
+                sed -i "s|listenAddress: 127.0.0.1:9443|listenAddress: 0.0.0.0:$CA_OPPORT|g" ./fabric-ca-server-config.yaml
+                sed -i "s|cert:.*|cert:\n            file: /etc/hyperledger/fabric-ca/tls/signcerts/ca-cert.pem|g" ./fabric-ca-server-config.yaml
+                sed -i "s|key:.*|key:\n            file: /etc/hyperledger/fabric-ca/tls/keystore/ca-key.pem|g" ./fabric-ca-server-config.yaml
+                docker cp ./fabric-ca-server-config.yaml $CA_NAME:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
+                docker restart $CA_NAME
+                rm ./fabric-ca-server-config.yaml
+                sleep 5
             echo_ok "Workaround completed"
-            sleep 5
 
         # waiting startup for CA
         WAIT_TIME=0

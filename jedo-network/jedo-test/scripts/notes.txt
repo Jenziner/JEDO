@@ -48,7 +48,8 @@ openssl x509 -noout -modulus -in /mnt/user/appdata/jedo-network/keys/JenzinerOrg
 docker exec -it ca.jenziner.jedo.test env | grep FABRIC_CA
 
 curl -vk https://172.25.1.10:7049/metrics
-curl -vk https://172.25.1.10:7049/healthz
+
+curl -vk http://192.168.0.20:7049/healthz
 
 curl -vk http://172.25.1.10:7049/healthz
 
