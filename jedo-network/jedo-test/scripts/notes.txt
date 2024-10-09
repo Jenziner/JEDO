@@ -38,3 +38,35 @@ openssl s_client -connect orderer.jenziner.jedo.test:7050 -cert ./keys/JenzinerO
 
 
 openssl s_client -connect orderer.jenziner.jedo.test:7050 -cert /etc/hyperledger/fabric/tls/signcerts/cert.pem -key /etc/hyperledger/fabric/tls/keystore/e2922d5eabf6ad6a4babd696c0fa8e4688a77a4b413247572ef88f7e94062f85_sk -CAfile /etc/hyperledger/fabric/tls/tlscacerts/tls_ca_combined.pem
+
+
+curl -s --cacert /mnt/user/appdata/jedo-network/keys/JenzinerOrg/ca.jenziner.jedo.test/tls/signcerts/ca-cert.pem https://ca.jenziner.jedo.test:7040/cainfo
+
+
+openssl x509 -noout -modulus -in /mnt/user/appdata/jedo-network/keys/JenzinerOrg/ca.jenziner.jedo.test/tls/signcerts/ca-cert.pem | openssl md5
+
+docker exec -it ca.jenziner.jedo.test env | grep FABRIC_CA
+
+curl -vk https://172.25.1.10:7049/metrics
+curl -vk https://172.25.1.10:7049/healthz
+
+curl -vk http://172.25.1.10:7049/healthz
+
+chmod -R 777 ./production
+
+
+            docker stop ca.jenziner.jedo.test
+            docker exec ca.jenziner.jedo.test sed -i 's/operations.listenAddress: .*/operations.listenAddress: "0.0.0.0:$CA_OPPORT"/' ${PWD}/keys/JenzinerOrg/ca.jenziner.jedo.test/fabric-ca-server-config.yaml
+            docker restart ca.jenziner.jedo.test
+
+docker exec ca.jenziner.jedo.test sed -i 's/operations.listenAddress: .*/operations.listenAddress: "0.0.0.0:7049"/' /etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
+
+
+
+
+docker cp ca.jenziner.jedo.test:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml ./fabric-ca-server-config.yaml
+sed -i 's/listenAddress: 127.0.0.1:9443/listenAddress: 0.0.0.0:7049/' ./fabric-ca-server-config.yaml
+docker cp ./fabric-ca-server-config.yaml ca.jenziner.jedo.test:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
+docker restart ca.jenziner.jedo.test
+
+

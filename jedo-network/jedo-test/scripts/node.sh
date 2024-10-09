@@ -3,16 +3,13 @@
 #
 # This script starts Hyperledger Fabric Nodes
 #
-# Prerequisits:
-#   - yq: 
-#       - installation: sudo wget https://github.com/mikefarah/yq/releases/download/v4.6.3/yq_linux_amd64 -O /usr/local/bin/yq
-#       - make it executable: chmod +x /usr/local/bin/yq
 #
 ###############################################################
 source ./scripts/settings.sh
 source ./scripts/help.sh
 check_script
 
+echo_ok "Starting Node Container - see Documentation here: https://hyperledger-fabric.readthedocs.io"
 
 ###############################################################
 # Function to echo in colors

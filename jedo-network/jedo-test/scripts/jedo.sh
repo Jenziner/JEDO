@@ -1,12 +1,8 @@
 ###############################################################
 #!/bin/bash
 #
-# This script generates crypto, starts Fabric, deploys the chaincode and starts the token nodes.
-#
-# Prerequisits:
-#   - yq: 
-#       - installation: sudo wget https://github.com/mikefarah/yq/releases/download/v4.6.3/yq_linux_amd64 -O /usr/local/bin/yq
-#       - make it executable: chmod +x /usr/local/bin/yq
+# This script generates a new jedo-network according network-config.yaml
+# Documentation: https://hyperledger-fabric.readthedocs.io
 #
 ###############################################################
 source ./scripts/settings.sh
@@ -41,7 +37,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "ca" && "$OPTARG" != "cert" && "$OPTARG" != "ch" && "$OPTARG" != "cfg" && "$OPTARG" != "net" && "$OPTARG" != "node" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" ]]; then
+            if [[ "$OPTARG" != "ca" && "$OPTARG" != "cert" && "$OPTARG" != "ch" && "$OPTARG" != "cfg" && "$OPTARG" != "net" && "$OPTARG" != "node" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -75,18 +71,11 @@ export FABRIC_CFG_PATH=./config
 ###############################################################
 # Checks
 ###############################################################
-ls scripts/jedo.sh || { echo_error "ScriptInfo: run this script from the root directory: ./scripts/jedo.sh"; exit 1; }
-echo_info "ScriptInfo: Checking prerequisites"
-docker version
-git --version
-go version
-orderer version
-peer version
-configtxgen --version
-configtxlator version
-cryptogen version
-if [[ "$opt_a" == "pause" ]] then
-    cool_down "Prerequisites checked."
+if [[ "$opt_r" == "prereq" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/prereq.sh
+    if [[ "$opt_a" == "pause" ]]; then
+        cool_down "Prerequisites checked."
+    fi
 fi
 
 
@@ -105,6 +94,7 @@ fi
 # Create Docker Network
 ###############################################################
 if [[ "$opt_r" == "net" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_ok "Starting Docker Network"
     if ! docker network ls --format '{{.Name}}' | grep -wq "$DOCKER_NETWORK_NAME"; then
         docker network create --subnet=$DOCKER_NETWORK_SUBNET "$DOCKER_NETWORK_NAME"
     fi
@@ -187,8 +177,10 @@ if [[ "$opt_r" == "ch" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
 fi
 
 
-
-echo_error "Temporary END of Script"
+###############################################################
+# FINISH
+###############################################################
+echo_ok "Script for $DOCKER_NETWORK_NAME completed"
 exit 0
 
 
@@ -221,11 +213,6 @@ docker exec $DOCKER_CONTAINER_FABRICTOOLS bash -c 'PATH=$PATH:/usr/local/go/bin 
     --auditors /root/keys/auditor/aud/msp \
     --output /root/tokengen'
 
-echo "ScriptInfo: run nodes (peers and orderers)"
-./scripts/node.sh
-
-echo "Temporary END of Script"
-exit 1
 
 
 # Start Fabric network

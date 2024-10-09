@@ -21,8 +21,10 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
       CA:
         Name: ca.jenziner.jedo.test
         Pass: Test1
-        IP: 172.25.0.10
-        Port: 7054
+        IP: 172.25.1.10
+        Port: 7040
+        OpPort: 7049
+        CLI: 172.25.1.14
         Ext:
       Admin:
         Name: admin.jenziner.jedo.test
@@ -30,14 +32,14 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
       Orderers:
         - Name: orderer.jenziner.jedo.test
           Pass: Test1
-          IP: 172.25.0.11
-          Port: 7050
+          IP: 172.25.1.11
+          Port: 7051
+          ClusterPort: 7052
           OpPort: 7059
-          ClusterPort: 7051
       Peers: # first peer will be used as AnchorPeer
         - Name: peer0.jenziner.jedo.test
           Pass: Test1
-          IP: 172.25.0.12
+          IP: 172.25.1.12
           Port1: 7061
           Port2: 7062
           OpPort: 7069
@@ -45,27 +47,29 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
           DB: 
             Name: db.peer0.jenziner.jedo.test
             Pass: Test1
-            IP: 172.25.0.13
+            IP: 172.25.1.13
             Port: 7064
         - Name: peer1.jenziner.jedo.test
           Pass: Test1
-          IP: 172.25.0.15
+          IP: 172.25.1.15
           Port1: 7071
           Port2: 7072
           OpPort: 7079
-          CLI: 172.25.0.17
+          CLI: 172.25.1.17
           DB: 
             Name: db.peer1.jenziner.jedo.test
             Pass: Test1
-            IP: 172.25.0.16
+            IP: 172.25.1.16
             Port: 7074
     - Name: LiebiwilerOrg
       Consortium: # Name of consortium if member or null
       CA:
         Name: ca.liebiwiler.jedo.test
         Pass: Test1
-        IP: 172.25.0.20
-        Port: 8054
+        IP: 172.25.2.10
+        Port: 8040
+        OpPort: 8049
+        CLI: 172.25.2.14
         Ext:
       Admin:
         Name: admin.liebiwiler.jedo.test
@@ -73,22 +77,22 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
       Orderers:
         - Name: orderer.liebiwiler.jedo.test
           Pass: Test1
-          IP: 172.25.0.21
-          Port: 8050
+          IP: 172.25.2.11
+          Port: 8051
+          ClusterPort: 8052
           OpPort: 8059
-          ClusterPort: 8051
       Peers: # first peer will be used as AnchorPeer
         - Name: peer0.liebiwiler.jedo.test
           Pass: Test1
-          IP: 172.25.0.22
+          IP: 172.25.2.12
           Port1: 8061
           Port2: 8062
           OpPort: 8069
-          CLI: 172.25.0.24
+          CLI: 172.25.2.14
           DB: 
             Name: db.peer0.liebiwiler.jedo.test
             Pass: Test1
-            IP: 172.25.0.23
+            IP: 172.25.2.13
             Port: 8064
     - Name: BreitschiOrg
       Consortium: # Name of consortium if member or null
@@ -104,22 +108,22 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
       Orderers:
         - Name: orderer.breitschi.jedo.test
           Pass: Test1
-          IP: 172.25.0.31
-          Port: 9050
+          IP: 172.25.3.11
+          Port: 9051
+          ClusterPort: 9052
           OpPort: 9059
-          ClusterPort: 9051
       Peers: # first peer will be used as AnchorPeer
         - Name: peer0.breitschi.jedo.test
           Pass: Test1
-          IP: 172.25.0.32
+          IP: 172.25.3.12
           Port1: 9061
           Port2: 9062
           OpPort: 9069
-          CLI: 172.25.0.34
+          CLI: 172.25.3.14
           DB: 
             Name: db.peer0.breitschi.jedo.test
             Pass: Test1
-            IP: 172.25.0.33
+            IP: 172.25.3.13
             Port: 9064
 TokenNetwork:
   Name: eu.jedo.test

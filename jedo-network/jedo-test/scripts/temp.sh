@@ -3,27 +3,9 @@
 #
 # Temporary script.
 #
-# Prerequisits:
-#   - yq: 
-#       - installation: sudo wget https://github.com/mikefarah/yq/releases/download/v4.6.3/yq_linux_amd64 -O /usr/local/bin/yq
-#       - make it executable: chmod +x /usr/local/bin/yq
 #
 ###############################################################
-set -Eeuo pipefail
-
-
-###############################################################
-# Function to echo in colors
-###############################################################
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-function echo_info() {
-    echo -e "${YELLOW}$1${NC}"
-}
-function echo_error() {
-    echo -e "${RED}$1${NC}"
-}
+source ./scripts/settings.sh
 
 
 ###############################################################
@@ -32,30 +14,34 @@ function echo_error() {
 NETWORK_CONFIG_FILE="./config/network-config.yaml"
 ORGANIZATIONS=$(yq e '.FabricNetwork.Organizations[].Name' $NETWORK_CONFIG_FILE)
 
-###############################################################
-# collect and distribute tls-ca certificates
-###############################################################
+# fabric-ca-server start \
+#     --port 7040 \
+#     --tls.certfile /etc/hyperledger/fabric-ca/tls/signcerts/ca-cert.pem \
+#     --tls.keyfile /etc/hyperledger/fabric-ca/tls/keystore/ca-key.pem \
+#     --operations.listenaddress 172.25.1.10:7049 \
+#     --operations.tls.enabled \
+#     --operations.tls.certfile /etc/hyperledger/fabric-ca/tls/signcerts/ca-cert.pem \
+#     --operations.tls.keyfile /etc/hyperledger/fabric-ca/tls/keystore/ca-key.pem \
+#     --ca.name ca.jenziner.jedo.test
 
 
-hosts_args=""
-for ORGANIZATION in $ORGANIZATIONS; do
-  CA=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
-  CA_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.IP" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
-  PEERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $NETWORK_CONFIG_FILE)
-  ORDERERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
-
-  hosts_args+="--add-host=$CA:$CA_IP "
-
-    for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
-        PEER=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].Name" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
-        PEER_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].IP" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
-        hosts_args+="--add-host=$PEER:$PEER_IP "
-    done
-
-    for index in $(seq 0 $(($(echo "$ORDERERS" | wc -l) - 1))); do
-        ORDERER=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].Name" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
-        ORDERER_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].IP" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
-        hosts_args+="--add-host=$ORDERER:$ORDERER_IP "
-    done
-done
-echo_info "$hosts_args" 
+docker run -d \
+  --name ca.jenziner.jedo.test \
+  --ip 172.25.1.10 \
+    -e FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server \
+    -e FABRIC_CA_SERVER_CA_NAME=ca.jenziner.jedo.test \
+    -e FABRIC_CA_SERVER_LISTENADDRESS=172.25.1.10 \
+    -e FABRIC_CA_SERVER_PORT=7040 \
+    -e FABRIC_CA_SERVER_TLS_ENABLED=true \
+    -e FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca/tls/signcerts/ca-cert.pem \
+    -e FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca/tls/keystore/ca-key.pem \
+    -e FABRIC_CA_OPERATIONS_LISTENADDRESS=0.0.0:7049 \
+    -e FABRIC_CA_OPERATIONS_TLS_ENABLED=true \
+    -e FABRIC_CA_OPERATIONS_TLS_CERTFILE=/etc/hyperledger/fabric-ca/tls/signcerts/ca-cert.pem \
+    -e FABRIC_CA_OPERATIONS_TLS_KEYFILE=/etc/hyperledger/fabric-ca/tls/keystore/ca-key.pem \
+    -v ${PWD}/production/JenzinerOrg/ca.jenziner.jedo.test:/etc/hyperledger/fabric-ca-server \
+    -v ${PWD}/keys/JenzinerOrg/ca.jenziner.jedo.test:/etc/hyperledger/fabric-ca \
+    -p 7040:7040 \
+    -p 7049:7049 \
+    hyperledger/fabric-ca:latest \
+    sh -c "fabric-ca-server start -b ca.jenziner.jedo.test:Test1 --idemix.curve gurvy.Bn254 -d"

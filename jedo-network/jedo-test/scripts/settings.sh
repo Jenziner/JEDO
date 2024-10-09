@@ -52,3 +52,39 @@ cool_down() {
         esac
     done
 }
+
+
+###############################################################
+# Define args for hosts-file
+###############################################################
+get_hosts() {
+    hosts_args=""
+    for ORGANIZATION in $ORGANIZATIONS; do
+        CA=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+        CA_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.IP" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+        CA_CLI=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.CLI" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+        PEERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $NETWORK_CONFIG_FILE)
+        ORDERERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
+
+        if [[ -n "$CA" ]]; then
+            hosts_args+="--add-host=$CA:$CA_IP --add-host=cli.$CA:$CA_CLI "
+        fi
+
+        for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
+            PEER=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].Name" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+            PEER_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].IP" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+            DB=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].DB.Name" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+            DB_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].DB.IP" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+            CLI=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].Name" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+            CLI_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].CLI" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+            hosts_args+="--add-host=$PEER:$PEER_IP --add-host=$DB:$DB_IP --add-host=cli.$CLI:$CLI_IP "
+        done
+
+        for index in $(seq 0 $(($(echo "$ORDERERS" | wc -l) - 1))); do
+            ORDERER=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].Name" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+            ORDERER_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].IP" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+            hosts_args+="--add-host=$ORDERER:$ORDERER_IP "
+        done
+    done
+}
+

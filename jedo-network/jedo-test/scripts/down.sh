@@ -3,13 +3,13 @@
 #
 # This script fully tears down and deletes all artifacts from the sample network that was started with ./scripts/up.sh.
 #
-# Prerequisits:
-# - yq (sudo wget https://github.com/mikefarah/yq/releases/download/v4.6.3/yq_linux_amd64 -O /usr/local/bin/yq)
 #
 ###############################################################
 source ./scripts/settings.sh
 source ./scripts/help.sh
 check_script
+
+echo_ok "Shuting down network"
 
 
 ###############################################################
@@ -33,7 +33,10 @@ for ORGANIZATION in $ORGANIZATIONS; do
     ORDERERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
 
     # remove CA
-    docker rm -f $CA || true
+    if [[ -n "$CA" ]]; then
+        docker rm -f $CA || true
+        docker rm -f cli.${CA} || true
+    fi
 
     # remove couchDBs
     for index in $(seq 0 $(($(echo "$PEERS_DB" | wc -l) - 1))); do
