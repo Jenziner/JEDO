@@ -61,38 +61,47 @@ for ORGANIZATION in $ORGANIZATIONS; do
             -e FABRIC_CA_SERVER_TLS_ENABLED=true \
             -e FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca/tls/signcerts/ca-cert.pem \
             -e FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca/tls/keystore/ca-key.pem \
-            -e FABRIC_CA_OPERATIONS_LISTENADDRESS=0.0.0.0:$CA_OPPORT \
-            -e FABRIC_CA_OPERATIONS_TLS_ENABLED=true \
-            -e FABRIC_CA_OPERATIONS_TLS_CERTFILE=/etc/hyperledger/fabric-ca/tls/signcerts/ca-cert.pem \
-            -e FABRIC_CA_OPERATIONS_TLS_KEYFILE=/etc/hyperledger/fabric-ca/tls/keystore/ca-key.pem \
+            -e FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS=0.0.0.0:$CA_OPPORT \
+            -e FABRIC_CA_SERVER_OPERATIONS_TLS_ENABLED=true \
+            -e FABRIC_CA_SERVER_OPERATIONS_TLS_CERTFILE=/etc/hyperledger/fabric-ca/tls/signcerts/ca-cert.pem \
+            -e FABRIC_CA_SERVER_OPERATIONS_TLS_KEYFILE=/etc/hyperledger/fabric-ca/tls/keystore/ca-key.pem \
             -v ${PWD}/production/$ORGANIZATION/$CA_NAME:/etc/hyperledger/fabric-ca-server \
             -v ${PWD}/keys/$ORGANIZATION/$CA_NAME:/etc/hyperledger/fabric-ca \
             -p $CA_PORT:$CA_PORT \
             -p $CA_OPPORT:$CA_OPPORT \
             hyperledger/fabric-ca:latest \
-            sh -c "fabric-ca-server start -b $CA_NAME:$CA_PASS --idemix.curve gurvy.Bn254 -d; sleep 5"
-
-            # Workaround because fabric reads values from file and not from environment variables
-            echo_info "Workaround because fabric reads values from file and not from environment variables"
-                sleep 5
-                docker cp $CA_NAME:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml ./fabric-ca-server-config.yaml
-                sed -i "s|listenAddress: 127.0.0.1:9443|listenAddress: 0.0.0.0:$CA_OPPORT|g" ./fabric-ca-server-config.yaml
-                sed -i "s|cert:.*|cert:\n            file: /etc/hyperledger/fabric-ca/tls/signcerts/ca-cert.pem|g" ./fabric-ca-server-config.yaml
-                sed -i "s|key:.*|key:\n            file: /etc/hyperledger/fabric-ca/tls/keystore/ca-key.pem|g" ./fabric-ca-server-config.yaml
-                docker cp ./fabric-ca-server-config.yaml $CA_NAME:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
-                docker restart $CA_NAME
-                rm ./fabric-ca-server-config.yaml
-                sleep 5
-            echo_ok "Workaround completed"
+            sh -c "fabric-ca-server start -b $CA_NAME:$CA_PASS --idemix.curve gurvy.Bn254 -d;"
 
         # waiting startup for CA
+        echo_info "ScriptInfo: checking $CA_NAME"
+
         WAIT_TIME=0
         SUCCESS=false
         while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
-            response=$(curl -vk http://$CA_IP:$CA_OPPORT/healthz 2>&1 | grep "OK")
+            if docker inspect -f '{{.State.Running}}' $CA_NAME | grep true > /dev/null; then
+                SUCCESS=true
+                echo_ok "ScriptInfo: Docker Container $CA_NAME is running!"
+                break
+            fi
+            echo "Waiting for $CA_NAME... ($WAIT_TIME seconds)"
+            sleep 2
+            WAIT_TIME=$((WAIT_TIME + 2))
+        done
+
+        if [ "$SUCCESS" = false ]; then
+            echo_error "ScriptError: $CA_NAME did not start."
+            docker logs $CA_NAME
+            exit 1
+        fi
+
+        sleep 5
+        WAIT_TIME=0
+        SUCCESS=false
+        while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
+            response=$(curl -vk https://$CA_IP:$CA_OPPORT/healthz 2>&1 | grep "OK")
             if [[ $response == *"OK"* ]]; then
                 SUCCESS=true
-                echo_info "ScriptInfo: $CA_NAME is up and running!"
+                echo_ok "ScriptInfo: Fabric-CA $CA_NAME is healthy!"
                 break
             fi
             echo "Waiting for $CA_NAME... ($WAIT_TIME seconds)"
