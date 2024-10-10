@@ -43,7 +43,8 @@ for ORGANIZATION in $ORGANIZATIONS; do
         TLS_CERT="${PWD}/keys/$ORGANIZATION/$CA_NAME/tls/signcerts/ca-cert.pem"
         TLS_KEY="${PWD}/keys/$ORGANIZATION/$CA_NAME/tls/keystore/ca-key.pem"
         openssl genpkey -algorithm EC -out "$TLS_KEY" -pkeyopt ec_paramgen_curve:P-256
-        openssl req -new -x509 -key "$TLS_KEY" -out "$TLS_CERT" -days 365 -subj "/C=US/ST=North Carolina/O=Hyperledger/OU=Fabric/CN=fabric-ca-server"
+        openssl req -new -x509 -key "$TLS_KEY" -out "$TLS_CERT" -days 365 -subj "/C=US/ST=North Carolina/O=Hyperledger/OU=Fabric/CN=fabric-ca-server" -addext "subjectAltName=DNS:$CA_NAME"
+
 
         # run CA Server
         echo_info "ScriptInfo: running $CA_NAME"
@@ -124,7 +125,12 @@ for ORGANIZATION in $ORGANIZATIONS; do
                 $hosts_args \
                 --restart=unless-stopped \
                 --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_cli_logo.png" \
-                -v /mnt/user/appdata/fabric-ca/crypto-config:/etc/hyperledger/fabric-ca-server \
+                -e FABRIC_CA_CLIENT_HOME=/etc/hyperledger/fabric-ca-client \
+                -e FABRIC_CA_CLIENT_TLS_ENABLED=true \
+                -e FABRIC_CA_CLIENT_TLS_CERTFILES=/etc/hyperledger/fabric-ca-client/ca-cert.pem \
+                -e FABRIC_CA_CLIENT_URL=https://cli.$CA_NAME:$CA_PORT \
+                -v ${PWD}/production/$ORGANIZATION/cli.$CA_NAME:/etc/hyperledger/fabric-ca-client \
+                -v ${PWD}/keys/$ORGANIZATION/$CA_NAME/tls/signcerts/ca-cert.pem:/etc/hyperledger/fabric-ca-client/ca-cert.pem \
                 hyperledger/fabric-ca:latest bash
         fi
     else

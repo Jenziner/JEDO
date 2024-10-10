@@ -19,18 +19,27 @@ DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $NETWORK_CONFIG_FILE)
 ORGANIZATIONS=$(yq e '.FabricNetwork.Organizations[].Name' $NETWORK_CONFIG_FILE)
 
 CA_NAME=ca.jenziner.jedo.test
+CA_PORT=7040
 
-        # waiting startup for CA
-        WAIT_TIME=0
-        SUCCESS=false
+ORGANIZATION=NeuLich
 
-        while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
-            if docker inspect -f '{{.State.Running}}' $CA_NAME | grep true > /dev/null; then
-                SUCCESS=true
-                echo_info "ScriptInfo: $CA_NAME is up and running!"
-                break
-            fi
-            echo "Waiting for $CA_NAME... ($WAIT_TIME seconds)"
-            sleep 2
-            WAIT_TIME=$((WAIT_TIME + 2))
-        done
+USERNAME=Ich
+USERPASS=Test1
+
+
+echo "Admin enrollen"
+docker exec -it cli.ca.jenziner.jedo.test fabric-ca-client enroll \
+-u https://ca.jenziner.jedo.test:Test1@$CA_NAME:$CA_PORT \
+-M /etc/hyperledger/fabric-ca-server/msp
+
+echo "Starte Register"
+docker exec -it cli.ca.jenziner.jedo.test fabric-ca-client register \
+-u https://$CA_NAME:$CA_PORT \
+--id.name $USERNAME --id.secret $USERPASS \
+--id.type admin --id.affiliation $ORGANIZATION
+
+echo "Starte Enrollment"
+docker exec -it cli.ca.jenziner.jedo.test fabric-ca-client enroll \
+-u https://$USERNAME:$USERPASS@$CA_NAME:$CA_PORT \
+-M /etc/hyperledger/fabric-ca-client/$USERNAME
+

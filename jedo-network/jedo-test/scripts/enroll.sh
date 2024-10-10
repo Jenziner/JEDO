@@ -31,19 +31,6 @@ check_script
 
 echo_ok "Register and Enroll identities - see Documentation here: https://hyperledger-fabric.readthedocs.io"
 
-###############################################################
-# Function to echo in colors
-###############################################################
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-function echo_info() {
-    echo -e "${YELLOW}$1${NC}"
-}
-function echo_error() {
-    echo -e "${RED}$1${NC}"
-}
-
 
 ###############################################################
 # Set variables
