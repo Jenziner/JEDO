@@ -1,15 +1,13 @@
 ###############################################################
 #!/bin/bash
 #
-# This script fully tears down and deletes all artifacts from the sample network that was started with ./scripts/up.sh.
+# This script removes all according jedo-network
 #
 #
 ###############################################################
 source ./scripts/settings.sh
 source ./scripts/help.sh
 check_script
-
-echo_ok "Shuting down network"
 
 
 ###############################################################
@@ -24,47 +22,59 @@ ORGANIZATIONS=$(yq e ".FabricNetwork.Organizations[].Name" $NETWORK_CONFIG_FILE)
 ###############################################################
 # Remove Docker-Stuff
 ###############################################################
-echo_info "ScriptInfo: removing docker container"
+echo ""
+echo_warn "JEDO-Network removing..."
+
+# Remove Root-CA
+echo_info "Root-CA removing..."
+ROOTCA=$(yq eval ".FabricNetwork.RootCA.Name" "$NETWORK_CONFIG_FILE")
+if [[ -n "$ROOTCA" ]]; then
+    docker rm -f $ROOTCA || true
+    docker rm -f cli.${ROOTCA} || true
+fi
 
 for ORGANIZATION in $ORGANIZATIONS; do
+    echo ""
+    echo_info "Docker Container from $ORGANIZATION removing..."
     CA=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $NETWORK_CONFIG_FILE)
     PEERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $NETWORK_CONFIG_FILE)
     PEERS_DB=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].DB.Name" $NETWORK_CONFIG_FILE)
     ORDERERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
 
-    # remove CA
+    # Remove CA
     if [[ -n "$CA" ]]; then
         docker rm -f $CA || true
         docker rm -f cli.${CA} || true
     fi
 
-    # remove couchDBs
+    # Remove CouchDBs
     for index in $(seq 0 $(($(echo "$PEERS_DB" | wc -l) - 1))); do
         PEER_DB=$(echo "$PEERS_DB" | sed -n "$((index+1))p")
         docker rm -f ${PEER_DB} || true
     done
 
-    # remove peers
+    # Remove peers
     for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
         PEER=$(echo "$PEERS" | sed -n "$((index+1))p")
         docker rm -f ${PEER} || true
         docker rm -f cli.${PEER} || true
     done
 
-    # remove orderers
+    # Remove orderers
     for index in $(seq 0 $(($(echo "$ORDERERS" | wc -l) - 1))); do
         ORDERER=$(echo "$ORDERERS" | sed -n "$((index+1))p")
         docker rm -f $ORDERER || true
     done
 done
 
-echo_info "ScriptInfo: removing docker network"
+# Remove Docker Network
+echo ""
+echo_info "Docker Network removing..."
 docker network rm  $DOCKER_NETWORK_NAME || true
 
-###############################################################
 # Remove Folder
-###############################################################
-echo_info "ScriptInfo: removing folders"
+echo ""
+echo_info "Folder removing..."
 rm -f ./config/configtx.yaml
 rm -f ./config/*.genesisblock
 rm -f ./config/*.tx
@@ -73,3 +83,5 @@ rm -rf keys
 rm -rf tokengen
 rm -rf production
 #rm tokenchaincode/zkatdlog_pp.json
+
+echo_ok "JEDO-Network removed."

@@ -9,7 +9,6 @@ source ./scripts/settings.sh
 source ./scripts/help.sh
 check_script
 
-echo_ok "Starting CA Docker Container - see Documentation here: https://hyperledger-fabric-ca.readthedocs.io"
 
 ###############################################################
 # Params - from ./config/network-config.yaml
@@ -17,37 +16,37 @@ echo_ok "Starting CA Docker Container - see Documentation here: https://hyperled
 NETWORK_CONFIG_FILE="./config/network-config.yaml"
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $NETWORK_CONFIG_FILE)
 DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $NETWORK_CONFIG_FILE)
+ROOTCA_NAME=$(yq eval '.FabricNetwork.RootCA.Name' $NETWORK_CONFIG_FILE)
+ROOTCA_PASS=$(yq eval '.FabricNetwork.RootCA.Pass' $NETWORK_CONFIG_FILE)
+ROOTCA_PORT=$(yq eval '.FabricNetwork.RootCA.Port' $NETWORK_CONFIG_FILE)
 ORGANIZATIONS=$(yq e '.FabricNetwork.Organizations[].Name' $NETWORK_CONFIG_FILE)
+
+CA_DIR=/etc/hyperledger/fabric-ca
+CA_SRV_DIR=/etc/hyperledger/fabric-ca-server
+CA_CLI_DIR=/etc/hyperledger/fabric-ca-client
+KEYS_DIR=/etc/hyperledger/keys
+TLS_CERT_FILE="tls-${ROOTCA_NAME//./-}-${ROOTCA_PORT}.pem"
 
 get_hosts
 
+
 ###############################################################
-# Starting CA Docker-Container
+# Start Intermediate-CAs
 ###############################################################
 for ORGANIZATION in $ORGANIZATIONS; do
     CA_EXT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Ext" $NETWORK_CONFIG_FILE)
 
-    # get proper CA Server settings
+    # skip if external CA is defined
     if ! [[ -n "$CA_EXT" ]]; then
-        # set variables
+        echo ""
+        echo_warn "Intermediate-CA for $ORGANIZATION starting... - see Documentation here: https://hyperledger-fabric-ca.readthedocs.io"
         CA_NAME=$(yq eval ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $NETWORK_CONFIG_FILE)
+        CA_PASS=$(yq eval ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Pass" $NETWORK_CONFIG_FILE)
         CA_IP=$(yq eval ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.IP" $NETWORK_CONFIG_FILE)
         CA_PORT=$(yq eval ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Port" $NETWORK_CONFIG_FILE)
-        CA_PASS=$(yq eval ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Pass" $NETWORK_CONFIG_FILE)
         CA_OPPORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.OpPort" $NETWORK_CONFIG_FILE)
-        CA_CLI=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.CLI" $NETWORK_CONFIG_FILE)
+        CA_OPENSSL=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.OpenSSL" $NETWORK_CONFIG_FILE)
 
-        # genereate selfsigned TLS-certificate for CA Server
-        mkdir -p "${PWD}/keys/$ORGANIZATION/$CA_NAME/tls/signcerts"
-        mkdir -p "${PWD}/keys/$ORGANIZATION/$CA_NAME/tls/keystore"
-        TLS_CERT="${PWD}/keys/$ORGANIZATION/$CA_NAME/tls/signcerts/ca-cert.pem"
-        TLS_KEY="${PWD}/keys/$ORGANIZATION/$CA_NAME/tls/keystore/ca-key.pem"
-        openssl genpkey -algorithm EC -out "$TLS_KEY" -pkeyopt ec_paramgen_curve:P-256
-        openssl req -new -x509 -key "$TLS_KEY" -out "$TLS_CERT" -days 365 -subj "/C=US/ST=North Carolina/O=Hyperledger/OU=Fabric/CN=fabric-ca-server" -addext "subjectAltName=DNS:$CA_NAME"
-
-
-        # run CA Server
-        echo_info "ScriptInfo: running $CA_NAME"
         docker run -d \
             --network $DOCKER_NETWORK_NAME \
             --name $CA_NAME \
@@ -55,86 +54,59 @@ for ORGANIZATION in $ORGANIZATIONS; do
             $hosts_args \
             --restart=unless-stopped \
             --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_ca_logo.png" \
-            -e FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server \
-            -e FABRIC_CA_SERVER_CA_NAME=$CA_NAME \
+            -e FABRIC_CA_SERVER_LOGLEVEL=debug \
+            -e FABRIC_CA_NAME=tls.$CA_NAME \
+            -e FABRIC_CA_SERVER=$CA_SRV_DIR \
+            -e FABRIC_CA_SERVER_MSPDIR=$CA_SRV_DIR/msp \
             -e FABRIC_CA_SERVER_LISTENADDRESS=$CA_IP \
             -e FABRIC_CA_SERVER_PORT=$CA_PORT \
+            -e FABRIC_CA_SERVER_CSR_HOSTS="tls.$CA_NAME,localhost" \
             -e FABRIC_CA_SERVER_TLS_ENABLED=true \
-            -e FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca/tls/signcerts/ca-cert.pem \
-            -e FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca/tls/keystore/ca-key.pem \
+            -e FABRIC_CA_SERVER_IDEMIX_CUURVE=gurvy.Bn254 \
+            -e FABRIC_CA_SERVER_INTERMEDIATE_TLS_CERTFILES=$CA_DIR/tls/tlscacerts/tls-$TLS_CERT_FILE \
             -e FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS=0.0.0.0:$CA_OPPORT \
-            -e FABRIC_CA_SERVER_OPERATIONS_TLS_ENABLED=true \
-            -e FABRIC_CA_SERVER_OPERATIONS_TLS_CERTFILE=/etc/hyperledger/fabric-ca/tls/signcerts/ca-cert.pem \
-            -e FABRIC_CA_SERVER_OPERATIONS_TLS_KEYFILE=/etc/hyperledger/fabric-ca/tls/keystore/ca-key.pem \
-            -v ${PWD}/production/$ORGANIZATION/$CA_NAME:/etc/hyperledger/fabric-ca-server \
-            -v ${PWD}/keys/$ORGANIZATION/$CA_NAME:/etc/hyperledger/fabric-ca \
+            -e FABRIC_CA_CLIENT=$CA_CLI_DIR \
+            -e FABRIC_CA_CLIENT_MSPDIR=$CA_CLI_DIR/msp \
+            -e FABRIC_CA_CLIENT_TLS_ENABLED=true \
+            -e FABRIC_CA_CLIENT_TLS_CERTFILES=$CA_SRV_DIR/tls-cert.pem \
+            -v ${PWD}/keys/$CA_NAME:$CA_DIR \
+            -v ${PWD}/keys/tls.$CA_NAME:$CA_SRV_DIR \
+            -v ${PWD}/keys/cli.$CA_NAME:$CA_CLI_DIR \
+            -v ${PWD}/keys/:$KEYS_DIR \
             -p $CA_PORT:$CA_PORT \
             -p $CA_OPPORT:$CA_OPPORT \
             hyperledger/fabric-ca:latest \
-            sh -c "fabric-ca-server start -b $CA_NAME:$CA_PASS --idemix.curve gurvy.Bn254 -d;"
+            sh -c "fabric-ca-server start -b $CA_NAME:$CA_PASS -u https://$ROOTCA_NAME:$ROOTCA_PASS@tls.$ROOTCA_NAME:$ROOTCA_PORT" 
 
-        # waiting startup for CA
-        echo_info "ScriptInfo: checking $CA_NAME"
+        # Waiting Intermediate-CA startup
+        CheckContainer "$CA_NAME" "$DOCKER_CONTAINER_WAIT"
+        CheckContainerLog "$CA_NAME" "Listening on https://0.0.0.0:$CA_PORT" "$DOCKER_CONTAINER_WAIT"
 
-        WAIT_TIME=0
-        SUCCESS=false
-        while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
-            if docker inspect -f '{{.State.Running}}' $CA_NAME | grep true > /dev/null; then
-                SUCCESS=true
-                echo_ok "ScriptInfo: Docker Container $CA_NAME is running!"
-                break
-            fi
-            echo "Waiting for $CA_NAME... ($WAIT_TIME seconds)"
-            sleep 2
-            WAIT_TIME=$((WAIT_TIME + 2))
-        done
-
-        if [ "$SUCCESS" = false ]; then
-            echo_error "ScriptError: $CA_NAME did not start."
-            docker logs $CA_NAME
-            exit 1
+        # Installing OpenSSL
+        if [[ $CA_OPENSSL = true ]]; then
+            echo_info "OpenSSL installing..."
+            docker exec $CA_NAME sh -c 'command -v apk && apk update && apk add --no-cache openssl || (apt-get update && apt-get install -y openssl)'
+            CheckOpenSSL "$CA_NAME" "$DOCKER_CONTAINER_WAIT"
         fi
 
-        sleep 5
-        WAIT_TIME=0
-        SUCCESS=false
-        while [ $WAIT_TIME -lt $DOCKER_CONTAINER_WAIT ]; do
-            response=$(curl -vk https://$CA_IP:$CA_OPPORT/healthz 2>&1 | grep "OK")
-            if [[ $response == *"OK"* ]]; then
-                SUCCESS=true
-                echo_ok "ScriptInfo: Fabric-CA $CA_NAME is healthy!"
-                break
-            fi
-            echo "Waiting for $CA_NAME... ($WAIT_TIME seconds)"
-            sleep 2
-            WAIT_TIME=$((WAIT_TIME + 2))
-        done
+        # Enroll Root-CA-Admin
+        echo ""
+        echo_info "Admin for $CA_NAME enrolling..."
+        docker exec -it $CA_NAME fabric-ca-client enroll -u https://$CA_NAME:$CA_PASS@tls.$CA_NAME:$CA_PORT 
 
-        if [ "$SUCCESS" = false ]; then
-            echo_error "ScriptError: $CA_NAME did not start."
-            docker logs $CA_NAME
-            exit 1
-        fi
-
-        # run CA Client if defined
-        if [[ -n "$CA_CLI" ]]; then
-            docker run -d -it \
-                --name cli.$CA_NAME \
-                --network $DOCKER_NETWORK_NAME \
-                --ip $CA_CLI \
-                $hosts_args \
-                --restart=unless-stopped \
-                --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_cli_logo.png" \
-                -e FABRIC_CA_CLIENT_HOME=/etc/hyperledger/fabric-ca-client \
-                -e FABRIC_CA_CLIENT_TLS_ENABLED=true \
-                -e FABRIC_CA_CLIENT_TLS_CERTFILES=/etc/hyperledger/fabric-ca-client/ca-cert.pem \
-                -e FABRIC_CA_CLIENT_URL=https://cli.$CA_NAME:$CA_PORT \
-                -v ${PWD}/production/$ORGANIZATION/cli.$CA_NAME:/etc/hyperledger/fabric-ca-client \
-                -v ${PWD}/keys/$ORGANIZATION/$CA_NAME/tls/signcerts/ca-cert.pem:/etc/hyperledger/fabric-ca-client/ca-cert.pem \
-                hyperledger/fabric-ca:latest bash
-        fi
-    else
-        echo_info "ScriptInfo: $CA_EXT is used for $ORGANIZATION and running!"
+        echo_ok "Intermediate-CA for $ORGANIZATION started."
     fi
-
 done
+
+chmod -R 777 ./keys
+
+# Rechte für Intermediate-Admin
+# {
+#   "hf.Registrar.Roles": "*",
+#   "hf.Registrar.DelegateRoles": "*",
+#   "hf.Registrar.Attributes": "*",
+#   "hf.AffiliationMgr": true,
+#   "hf.Revoker": true,
+#   "hf.GenCRL": true
+# }
+# 

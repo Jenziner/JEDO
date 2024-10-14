@@ -12,9 +12,16 @@ Docker:
     Subnet: 172.25.0.0/16
     Gateway: 172.25.0.1
   Container:
-    Wait: 20 # Max waiting time in seconds to start a docker container prior to exit
+    Wait: 10 # Max waiting time in seconds to start a docker container prior to exit
     FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
 FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
+  RootCA:
+    Name: ca.jedo.test
+    Pass: Test1
+    IP: 172.25.0.5
+    Port: 6040
+    OpPort: 6049
+    OpenSSL: false
   Channel: eu-jedo-test
   Organizations:
     - Name: JenzinerOrg
@@ -22,10 +29,10 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
       CA:
         Name: ca.jenziner.jedo.test
         Pass: Test1
-        IP: 172.25.1.10
+        IP: 172.25.1.5
         Port: 7040
         OpPort: 7049
-        CLI: 172.25.1.14
+        OpenSSL: false
         Ext:
       Admin:
         Name: admin.jenziner.jedo.test
@@ -44,7 +51,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
           Port1: 7061
           Port2: 7062
           OpPort: 7069
-          CLI: 172.25.0.14
+          CLI: 172.25.1.14
           DB: 
             Name: db.peer0.jenziner.jedo.test
             Pass: Test1
@@ -67,10 +74,10 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
       CA:
         Name: ca.liebiwiler.jedo.test
         Pass: Test1
-        IP: 172.25.2.10
+        IP: 172.25.2.5
         Port: 8040
         OpPort: 8049
-        CLI: 172.25.2.14
+        OpenSSL: false
         Ext:
       Admin:
         Name: admin.liebiwiler.jedo.test
@@ -102,6 +109,8 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
         Pass: 
         IP:
         Port:
+        OpPort:
+        OpenSSL: false
         Ext: ca.jenziner.jedo.test
       Admin:
         Name: admin.breitschi.jedo.test
