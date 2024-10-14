@@ -43,31 +43,39 @@ openssl s_client -connect orderer.jenziner.jedo.test:7050 -cert /etc/hyperledger
 curl -s --cacert /mnt/user/appdata/jedo-network/keys/JenzinerOrg/ca.jenziner.jedo.test/tls/signcerts/ca-cert.pem https://ca.jenziner.jedo.test:7040/cainfo
 
 
-openssl x509 -noout -modulus -in /mnt/user/appdata/jedo-network/keys/JenzinerOrg/ca.jenziner.jedo.test/tls/signcerts/ca-cert.pem | openssl md5
+    docker exec -it cli.ca.jenziner.jedo.test fabric-ca-client enroll \
+        --url https://ca.jenziner.jedo.test:Test1@ca.jenziner.jedo.test:7040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/ca-chain.pem \
+        --mspdir /etc/hyperledger/fabric-ca-client/msp/admin
 
-docker exec -it ca.jenziner.jedo.test env | grep FABRIC_CA
-
-curl -vk https://172.25.1.10:7049/metrics
-
-curl -vk http://192.168.0.20:7049/healthz
-
-curl -vk http://172.25.1.10:7049/healthz
-
-chmod -R 777 ./production
+docker exec -it cli.ca.jedo.test ls -l /etc/hyperledger/fabric-ca-client/msp/cacerts
+    
+openssl x509 -in ${PWD}/production/JenzinerOrg/ca.jenziner.jedo.test/msp/tlscacerts/tls-ca-cert.pem -text -noout
 
 
-            docker stop ca.jenziner.jedo.test
-            docker exec ca.jenziner.jedo.test sed -i 's/operations.listenAddress: .*/operations.listenAddress: "0.0.0.0:$CA_OPPORT"/' ${PWD}/keys/JenzinerOrg/ca.jenziner.jedo.test/fabric-ca-server-config.yaml
-            docker restart ca.jenziner.jedo.test
+docker exec -it cli.ca.jedo.test fabric-ca-client enroll \
+            --url https://ca.jedo.test:Test1@ca.jedo.test:6040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/root-ca-cert.pem \
+            --mspdir /etc/hyperledger/fabric-ca-client/msp
+docker exec -it cli.ca.jedo.test fabric-ca-client affiliation add TestOrg \
+            --url https://ca.jedo.test:Test1@ca.jedo.test:6040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/root-ca-cert.pem \
+            --mspdir /etc/hyperledger/fabric-ca-client/msp
+docker exec -it cli.ca.jedo.test fabric-ca-client affiliation add TestOrg \
+            --url https://ca.jedo.test:Test1@ca.jedo.test:6040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/ca-jedo-test-6040.pem \
+            --mspdir /etc/hyperledger/fabric-ca-client/msp
 
-docker exec ca.jenziner.jedo.test sed -i 's/operations.listenAddress: .*/operations.listenAddress: "0.0.0.0:7049"/' /etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
+
+docker exec -it cli.ca.jedo.test ls /etc/hyperledger/production/admin.ca.jedo.test/keystore/
+docker exec -it cli.ca.jedo.test ls /etc/hyperledger/production/admin.ca.jedo.test/signcerts/
 
 
 
 
-docker cp ca.jenziner.jedo.test:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml ./fabric-ca-server-config.yaml
-sed -i 's/listenAddress: 127.0.0.1:9443/listenAddress: 0.0.0.0:7049/' ./fabric-ca-server-config.yaml
-docker cp ./fabric-ca-server-config.yaml ca.jenziner.jedo.test:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
-docker restart ca.jenziner.jedo.test
+        docker exec -it cli.ca.jedo.test fabric-ca-client register \
+            --url https://ca.jedo.test:6040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/ca-jedo-test-6040.pem \
+            --id.name Nik --id.secret Test1 --id.type client 
+
+        docker exec -i cli.ca.jedo.test fabric-ca-client enroll \
+            --url https://Nik:Test1@ca.jedo.test:6040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/ca-jedo-test-6040.pem \
+            --csr.cn ca.jedo.test --csr.hosts ca.jedo.test \
+            --mspdir /etc/hyperledger/fabric-ca-client/intermediate/JenzinerOrg/msp \
 
 

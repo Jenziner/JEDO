@@ -37,7 +37,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "ca" && "$OPTARG" != "cert" && "$OPTARG" != "ch" && "$OPTARG" != "cfg" && "$OPTARG" != "net" && "$OPTARG" != "node" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" ]]; then
+            if [[ "$OPTARG" != "ca" && "$OPTARG" != "cert" && "$OPTARG" != "ch" && "$OPTARG" != "cfg" && "$OPTARG" != "net" && "$OPTARG" != "node" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -95,13 +95,26 @@ fi
 # Create Docker Network
 ###############################################################
 if [[ "$opt_r" == "net" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_ok "Starting Docker Network"
+    echo ""
+    echo_warn "Docker Network starting..."
     if ! docker network ls --format '{{.Name}}' | grep -wq "$DOCKER_NETWORK_NAME"; then
         docker network create --subnet=$DOCKER_NETWORK_SUBNET --gateway=$DOCKER_NETWORK_GATEWAY "$DOCKER_NETWORK_NAME"
     fi
     docker network inspect "$DOCKER_NETWORK_NAME"
     if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Docker Network created."
+        cool_down "Docker Network started."
+    fi
+    echo_ok "Docker Network started."
+fi
+
+
+###############################################################
+# Generate Root-CA-Certificates
+###############################################################
+if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/root.sh
+    if [[ "$opt_a" == "pause" ]]; then
+        cool_down "CA-Certificats generated."
     fi
 fi
 

@@ -9,7 +9,7 @@ source ./scripts/settings.sh
 source ./scripts/help.sh
 check_script
 
-echo_ok "Checking Prerequisites"
+echo_warn "Prerequisites checking..."
 
 ###############################################################
 # Help with prerequisits
@@ -73,7 +73,7 @@ check_command() {
         elif "$command" -v &> /dev/null; then
             "$command" -v
         else
-            echo "no version information is not available."
+            echo_warn "no version information is not available."
         fi
     fi
 }
@@ -90,3 +90,5 @@ check_command peer
 check_command configtxgen
 check_command configtxlator
 check_command cryptogen
+
+echo_ok "Prerequisites checked."
