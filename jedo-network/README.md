@@ -8,31 +8,12 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 
 # JEDO-Test-Network
 ![Network-Schema](network.drawio.svg)
-## Network 
+## Fabric-Network 
 - Test - jedo.test - 192.168.0.13
 - Production - jedo.me
-## Channel
-- eu.jedo.me
-- as.jedo.me
-- af.jedo.me
-- na.jedo.me
-- sa.jedo.me
-## Organisation
-- JenzinerOrg - jenziner.jedo.me
-## Certification Authority
-- ca.jenziner.jedo.test:7054
-## Orderer
-- orderer.jenziner.jedo.me:7050
-## Peers
-- peer0.jenziner.jedo.me:8051/52 | peer0db:8084
-- peer1.jenziner.jedo.me:9052/52 | peer1db:9084
-## SmartContract
-- Fabric Token SDK Chaincode
-## Application
-- JEDO-WALLET
-## CLI
-- cli.peer0.jenziner.jedo.me
-- cli.peer1.jenziner.jedo.me
+- Demo / Test - jedo.cc
+- Developpment: jedo.dev (https://github.com/Jenziner/JEDO/tree/main/jedo-network/jedo-test/config/network-config.yaml) --> Todo: Rename to jedo-dev
+
 ## Token-Network
 -           alps.eu.jedo.me (Token)
 -       aud.alps.eu.jedo.me (Auditor)
