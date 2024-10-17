@@ -63,18 +63,15 @@ for ORGANIZATION in $ORGANIZATIONS; do
         mkdir -p ${PWD}/$CA_API_NAME/config
         cp ${PWD}/package.json ${PWD}/$CA_API_NAME/package.json
         cp ${PWD}/server.js ${PWD}/$CA_API_NAME/server.js
-        cp ${PWD}/enrollUser.sh ${PWD}/$CA_API_NAME/enrollUser.sh
-        cp ${PWD}/registerUser.sh ${PWD}/$CA_API_NAME/registerUser.sh
         cp ${PWD}/start.sh ${PWD}/$CA_API_NAME/start.sh
         cat <<EOF > ${PWD}/$CA_API_NAME/config/jedo-ca-api-config.yaml
-ca_name: "$(basename $CA_NAME)"
-ca_pass: "$(basename $CA_PASS)"
-ca_port: $(basename $CA_PORT)
-api_port: $(basename $CA_API_SRV_PORT)
-ca_msp_dir: "/etc/hyperledger/fabric-ca-client/msp"
+ca_name: "${CA_NAME}"
+ca_url: "https://${CA_NAME}:${CA_PORT}"
+ca_pass: "${CA_PASS}"
+api_port: ${CA_API_SRV_PORT}
 keys_dir: "/etc/hyperledger/keys"
-channel: "$(basename $CHANNEL)"
-organization: "$(basename $ORGANIZATION)"
+channel: "${CHANNEL}"
+organization: "${ORGANIZATION}"
 EOF
 
         # Run Docker Container
@@ -82,28 +79,24 @@ EOF
             --network $DOCKER_NETWORK_NAME \
             --name $CA_API_NAME \
             --ip $CA_API_IP \
+            --restart=unless-stopped \
             $hosts_args \
-            -v /var/run/docker.sock:/var/run/docker.sock \
+            -e FABRIC_CA_CLIENT_TLS_CERTFILES=/app/tls/tls-cert.pem \
             -v ${PWD}/$CA_API_NAME:/app \
+            -v ${PWD}/../jedo-network/keys:/etc/hyperledger/keys \
+            -v ${PWD}/../jedo-network/keys/cli.$CA_NAME/msp:/app/admin \
+            -v ${PWD}/../jedo-network/keys/tls.$CA_NAME/tls-cert.pem:/app/tls/tls-cert.pem \
             -w /app \
             -p $CA_API_PORT:$CA_API_PORT \
             -p $CA_API_SRV_PORT:$CA_API_SRV_PORT \
             jedo-ca-api 
-#            /bin/sh
 
-#            bash -c "rm -rf node_modules package-lock.json && npm install && node server.js"
-        # docker exec -it $CA_API_NAME /bin/sh -c "
-        #     apk add --no-cache nodejs npm && \
-        #     npm install
-        # "
-        # docker exec -it $CA_API_NAME /bin/sh
-#        docker exec -it $CA_API_NAME node server.js
+        CheckContainerLog $CA_API_NAME "Server running on port $CA_API_SRV_PORT" "$DOCKER_CONTAINER_WAIT"
 
         echo_ok "API-Server for $CA_NAME started."
 
     fi
 done
 
-#            --restart=unless-stopped \
 
 

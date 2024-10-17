@@ -12,7 +12,7 @@ Docker:
     Subnet: 172.25.0.0/16
     Gateway: 172.25.0.1
   Container:
-    Wait: 10 # Max waiting time in seconds to start a docker container prior to exit
+    Wait: 20 # Max waiting time in seconds to start a docker container prior to exit
     FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
 FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
   RootCA:

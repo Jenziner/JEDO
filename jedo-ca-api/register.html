@@ -66,16 +66,30 @@
 
             try {
                 const response = await fetch(`${apiUrl}/enroll`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
                 });
-                const result = await response.text();
-                document.getElementById('enrollResponse').textContent = result;
+
+                if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `${username}_certs.zip`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                alert('Zertifikate erfolgreich heruntergeladen.');
+                } else {
+                const error = await response.text();
+                document.getElementById('enrollResponse').textContent = error;
+                }
             } catch (error) {
                 document.getElementById('enrollResponse').textContent = error;
             }
-        }
+            }
     </script>
 </body>
 </html>
