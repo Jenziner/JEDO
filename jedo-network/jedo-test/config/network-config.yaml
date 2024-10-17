@@ -34,6 +34,11 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
         OpPort: 7049
         OpenSSL: false
         Ext:
+      CAAPI:
+        Name: api.ca.jenziner.jedo.test
+        IP: 172.25.1.6
+        Port: 7047
+        SrvPort: 7048
       Admin:
         Name: admin.jenziner.jedo.test
         Pass: Test1
@@ -79,6 +84,11 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
         OpPort: 8049
         OpenSSL: false
         Ext:
+      CAAPI:
+        Name: api.ca.liebiwiler.jedo.test
+        IP: 172.25.2.6
+        Port: 8047
+        SrvPort: 8048
       Admin:
         Name: admin.liebiwiler.jedo.test
         Pass: Test1
@@ -112,6 +122,11 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
         OpPort:
         OpenSSL: false
         Ext: ca.jenziner.jedo.test
+      CAAPI:
+        Name: 
+        IP: 
+        Port: 
+        SrvPort:
       Admin:
         Name: admin.breitschi.jedo.test
         Pass: Test1

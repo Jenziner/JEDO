@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CA-Client Test Interface</title>
+</head>
+<body>
+    <h1>CA-Client API Test Interface</h1>
+
+    <label for="apiUrl">API Server URL:</label>
+    <input type="text" id="apiUrl" value="http://localhost:7048" style="width: 300px;">
+    <br><br>
+
+    <h2>Register User</h2>
+    <form id="registerForm">
+        <label for="registerUsername">Username:</label>
+        <input type="text" id="registerUsername" name="username" required>
+        <br>
+        <label for="registerPassword">Password:</label>
+        <input type="password" id="registerPassword" name="password" required>
+        <br>
+        <label for="registerAffiliation">Affiliation:</label>
+        <input type="text" id="registerAffiliation" name="affiliation" required>
+        <br>
+        <button type="button" onclick="registerUser()">Register</button>
+    </form>
+    <pre id="registerResponse"></pre>
+
+    <h2>Enroll User</h2>
+    <form id="enrollForm">
+        <label for="enrollUsername">Username:</label>
+        <input type="text" id="enrollUsername" name="username" required>
+        <br>
+        <label for="enrollPassword">Password:</label>
+        <input type="password" id="enrollPassword" name="password" required>
+        <br>
+        <button type="button" onclick="enrollUser()">Enroll</button>
+    </form>
+    <pre id="enrollResponse"></pre>
+
+    <script>
+        async function registerUser() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+            const affiliation = document.getElementById('registerAffiliation').value;
+
+            try {
+                const response = await fetch(`${apiUrl}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, affiliation })
+                });
+                const result = await response.text();
+                document.getElementById('registerResponse').textContent = result;
+            } catch (error) {
+                document.getElementById('registerResponse').textContent = error;
+            }
+        }
+
+        async function enrollUser() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const username = document.getElementById('enrollUsername').value;
+            const password = document.getElementById('enrollPassword').value;
+
+            try {
+                const response = await fetch(`${apiUrl}/enroll`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const result = await response.text();
+                document.getElementById('enrollResponse').textContent = result;
+            } catch (error) {
+                document.getElementById('enrollResponse').textContent = error;
+            }
+        }
+    </script>
+</body>
+</html>

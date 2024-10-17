@@ -1,0 +1,8 @@
+ca_name: "ca.jenziner.jedo.test"
+ca_pass: "Test1"
+ca_port: 7040 
+api_port: 8054
+ca_msp_dir: "/etc/hyperledger/fabric-ca-client/msp"
+keys_dir: "/etc/hyperledger/keys"
+channel: "eu.jedo.test"
+organization: "TestOwner"

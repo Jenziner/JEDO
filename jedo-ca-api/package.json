@@ -1,0 +1,17 @@
+{
+  "name": "jedo-ca-api",
+  "version": "1.0.0",
+  "description": "Prerequisites: 1. Node.js 2. Express.js",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.1",
+    "yaml": "^2.6.0"
+  }
+}
