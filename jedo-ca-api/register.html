@@ -12,84 +12,81 @@
     <input type="text" id="apiUrl" value="http://localhost:7048" style="width: 300px;">
     <br><br>
 
-    <h2>Register User</h2>
-    <form id="registerForm">
-        <label for="registerUsername">Username:</label>
-        <input type="text" id="registerUsername" name="username" required>
+    <form id="userForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
         <br>
-        <label for="registerPassword">Password:</label>
-        <input type="password" id="registerPassword" name="password" required>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
         <br>
-        <label for="registerAffiliation">Affiliation:</label>
-        <input type="text" id="registerAffiliation" name="affiliation" required>
+        <label for="affiliation">Affiliation:</label>
+        <input type="text" id="affiliation" name="affiliation" required>
         <br>
-        <button type="button" onclick="registerUser()">Register</button>
+        <label><input type="checkbox" id="registerCheckbox"> Register</label>
+        <label><input type="checkbox" id="enrollCheckbox"> Enroll</label>
+        <br>
+        <button type="button" onclick="execute()">Execute</button>
     </form>
-    <pre id="registerResponse"></pre>
-
-    <h2>Enroll User</h2>
-    <form id="enrollForm">
-        <label for="enrollUsername">Username:</label>
-        <input type="text" id="enrollUsername" name="username" required>
-        <br>
-        <label for="enrollPassword">Password:</label>
-        <input type="password" id="enrollPassword" name="password" required>
-        <br>
-        <button type="button" onclick="enrollUser()">Enroll</button>
-    </form>
-    <pre id="enrollResponse"></pre>
+    
+    <pre id="response"></pre>
 
     <script>
-        async function registerUser() {
+        async function execute() {
             const apiUrl = document.getElementById('apiUrl').value;
-            const username = document.getElementById('registerUsername').value;
-            const password = document.getElementById('registerPassword').value;
-            const affiliation = document.getElementById('registerAffiliation').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const affiliation = document.getElementById('affiliation').value;
+            const registerChecked = document.getElementById('registerCheckbox').checked;
+            const enrollChecked = document.getElementById('enrollCheckbox').checked;
+            let result = '';
 
-            try {
-                const response = await fetch(`${apiUrl}/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, affiliation })
-                });
-                const result = await response.text();
-                document.getElementById('registerResponse').textContent = result;
-            } catch (error) {
-                document.getElementById('registerResponse').textContent = error;
-            }
-        }
-
-        async function enrollUser() {
-            const apiUrl = document.getElementById('apiUrl').value;
-            const username = document.getElementById('enrollUsername').value;
-            const password = document.getElementById('enrollPassword').value;
-
-            try {
-                const response = await fetch(`${apiUrl}/enroll`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-                });
-
-                if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `${username}_certs.zip`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                alert('Zertifikate erfolgreich heruntergeladen.');
-                } else {
-                const error = await response.text();
-                document.getElementById('enrollResponse').textContent = error;
+            if (registerChecked) {
+                try {
+                    const registerResponse = await fetch(`${apiUrl}/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password, affiliation })
+                    });
+                    result += await registerResponse.text() + '\n';
+                } catch (error) {
+                    result += 'Register Error: ' + error + '\n';
                 }
-            } catch (error) {
-                document.getElementById('enrollResponse').textContent = error;
             }
+
+            if (enrollChecked) {
+                try {
+                    const enrollResponse = await fetch(`${apiUrl}/enroll`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+
+                    if (enrollResponse.ok) {
+                        const blob = await enrollResponse.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = `${username}_certs.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        result += 'Certificates successfully downloaded.\n';
+                    } else {
+                        const enrollError = await enrollResponse.text();
+                        result += 'Enroll Error: ' + enrollError + '\n';
+                    }
+                } catch (error) {
+                    result += 'Enroll Error: ' + error + '\n';
+                }
             }
+
+            if (!registerChecked && !enrollChecked) {
+                result = 'Please select either Register, Enroll, or both.';
+            }
+
+            document.getElementById('response').textContent = result;
+        }
     </script>
 </body>
 </html>
