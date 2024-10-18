@@ -70,11 +70,17 @@ get_hosts() {
     for ORGANIZATION in $ORGANIZATIONS; do
         CA=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
         CA_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.IP" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+        CA_API=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CAAPI.Name" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
+        CA_API_IP=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CAAPI.IP" $NETWORK_CONFIG_FILE | tr -d '\n' | tr -d '\r')
         PEERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $NETWORK_CONFIG_FILE)
         ORDERERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
 
         if [[ -n "$CA" ]]; then
             hosts_args+="--add-host=$CA:$CA_IP --add-host=tls.$CA:$CA_IP "
+        fi
+
+        if [[ -n "$CA_API" ]]; then
+            hosts_args+="--add-host=$CA_API:$CA_API_IP "
         fi
 
         for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
