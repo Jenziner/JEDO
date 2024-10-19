@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CA-Client Test Interface</title>
+</head>
+<body>
+    <h1>CA-Client API Test Interface</h1>
+
+    <label for="apiUrl">API Server URL:</label>
+    <input type="text" id="apiUrl" value="http://localhost:7048" style="width: 300px;">
+    <br><br>
+
+    <form id="userForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        <br>
+        <label for="affiliation">Affiliation:</label>
+        <input type="text" id="affiliation" name="affiliation" required>
+        <br>
+        <label for="certType">Certificate Type:</label>
+        <select id="certType" name="certType" required>
+            <option value="issuer">Issuer</option>
+            <option value="owner">Owner</option>
+            <option value="user">User</option>
+        </select>
+        <br><br>
+        <label><input type="checkbox" id="registerCheckbox"> Register</label>
+        <label><input type="checkbox" id="enrollCheckbox"> Enroll</label>
+        <br>
+        <button type="button" onclick="execute()">Execute</button>
+    </form>
+    
+    <pre id="response"></pre>
+
+    <script>
+        async function execute() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const affiliation = document.getElementById('affiliation').value;
+            const certType = document.getElementById('certType').value;
+            const registerChecked = document.getElementById('registerCheckbox').checked;
+            const enrollChecked = document.getElementById('enrollCheckbox').checked;
+            let result = '';
+
+            const requestBody = {
+                username,
+                password,
+                affiliation,
+                certType
+            };
+
+            if (registerChecked) {
+                try {
+                    const registerResponse = await fetch(`${apiUrl}/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody)
+                    });
+                    result += await registerResponse.text() + '\n';
+                } catch (error) {
+                    result += 'Register Error: ' + error + '\n';
+                }
+            }
+
+            if (enrollChecked) {
+                try {
+                    const enrollResponse = await fetch(`${apiUrl}/enroll`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    if (enrollResponse.ok) {
+                        const blob = await enrollResponse.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = `${username}_certs.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        result += 'Certificates successfully downloaded.\n';
+                    } else {
+                        const enrollError = await enrollResponse.text();
+                        result += 'Enroll Error: ' + enrollError + '\n';
+                    }
+                } catch (error) {
+                    result += 'Enroll Error: ' + error + '\n';
+                }
+            }
+
+            if (!registerChecked && !enrollChecked) {
+                result = 'Please select either Register, Enroll, or both.';
+            }
+
+            document.getElementById('response').textContent = result;
+        }
+    </script>
+</body>
+</html>

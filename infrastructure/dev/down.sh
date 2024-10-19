@@ -5,65 +5,68 @@
 #
 #
 ###############################################################
-source ./scripts/settings.sh
-source ./scripts/help.sh
+source ./utils/utils.sh
+source ./utils/help.sh
 check_script
 
 
 ###############################################################
-# Params - from ./config/network-config.yaml
+# Params
 ###############################################################
-NETWORK_CONFIG_FILE="./config/network-config.yaml"
-FABRIC_PATH=$(yq eval ".Fabric.Path" "$NETWORK_CONFIG_FILE")
-DOCKER_NETWORK_NAME=$(yq eval ".Docker.Network.Name" "$NETWORK_CONFIG_FILE")
-ORGANIZATIONS=$(yq e ".FabricNetwork.Organizations[].Name" $NETWORK_CONFIG_FILE)
+CONFIG_FILE="./config/infrastructure-dev.yaml"
+DOCKER_NETWORK_NAME=$(yq eval ".Docker.Network.Name" "$CONFIG_FILE")
+CHANNELS=$(yq e ".FabricNetwork.Channels[].Name" $CONFIG_FILE)
 
 
 ###############################################################
 # Remove Docker-Stuff
 ###############################################################
 echo ""
-echo_warn "JEDO-Network removing..."
+echo_warn "$DOCKER_NETWORK_NAME removing..."
 
-# Remove Root-CA
-echo_info "Root-CA removing..."
-ROOTCA=$(yq eval ".FabricNetwork.RootCA.Name" "$NETWORK_CONFIG_FILE")
-if [[ -n "$ROOTCA" ]]; then
-    docker rm -f $ROOTCA || true
-    docker rm -f cli.${ROOTCA} || true
-fi
-
-for ORGANIZATION in $ORGANIZATIONS; do
+for CHANNEL in $CHANNELS; do
     echo ""
-    echo_info "Docker Container from $ORGANIZATION removing..."
-    CA=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $NETWORK_CONFIG_FILE)
-    PEERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $NETWORK_CONFIG_FILE)
-    PEERS_DB=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].DB.Name" $NETWORK_CONFIG_FILE)
-    ORDERERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
+    echo_info "Channel $CHANNEL removing..."
+    ORGANIZATIONS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[].Name" $CONFIG_FILE)
 
-    # Remove CA
-    if [[ -n "$CA" ]]; then
-        docker rm -f $CA || true
-        docker rm -f cli.${CA} || true
+    # Remove Root-CA
+    echo_info "Root-CA removing..."
+    ROOTCA=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .RootCA.Name" "$CONFIG_FILE")
+    if [[ -n "$ROOTCA" ]]; then
+        docker rm -f $ROOTCA || true
     fi
 
-    # Remove CouchDBs
-    for index in $(seq 0 $(($(echo "$PEERS_DB" | wc -l) - 1))); do
-        PEER_DB=$(echo "$PEERS_DB" | sed -n "$((index+1))p")
-        docker rm -f ${PEER_DB} || true
-    done
+    for ORGANIZATION in $ORGANIZATIONS; do
+        echo ""
+        echo_info "Docker Container from $ORGANIZATION removing..."
+        CA=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" "$CONFIG_FILE")
+        PEERS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" "$CONFIG_FILE")
+        PEERS_DB=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].DB.Name" "$CONFIG_FILE")
+        ORDERERS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" "$CONFIG_FILE")
 
-    # Remove peers
-    for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
-        PEER=$(echo "$PEERS" | sed -n "$((index+1))p")
-        docker rm -f ${PEER} || true
-        docker rm -f cli.${PEER} || true
-    done
+        # Remove CA
+        if [[ -n "$CA" ]]; then
+            docker rm -f $CA || true
+        fi
 
-    # Remove orderers
-    for index in $(seq 0 $(($(echo "$ORDERERS" | wc -l) - 1))); do
-        ORDERER=$(echo "$ORDERERS" | sed -n "$((index+1))p")
-        docker rm -f $ORDERER || true
+        # Remove CouchDBs
+        for index in $(seq 0 $(($(echo "$PEERS_DB" | wc -l) - 1))); do
+            PEER_DB=$(echo "$PEERS_DB" | sed -n "$((index+1))p")
+            docker rm -f ${PEER_DB} || true
+        done
+
+        # Remove peers
+        for index in $(seq 0 $(($(echo "$PEERS" | wc -l) - 1))); do
+            PEER=$(echo "$PEERS" | sed -n "$((index+1))p")
+            docker rm -f ${PEER} || true
+            docker rm -f cli.${PEER} || true
+        done
+
+        # Remove orderers
+        for index in $(seq 0 $(($(echo "$ORDERERS" | wc -l) - 1))); do
+            ORDERER=$(echo "$ORDERERS" | sed -n "$((index+1))p")
+            docker rm -f $ORDERER || true
+        done
     done
 done
 
@@ -84,4 +87,4 @@ rm -rf tokengen
 rm -rf production
 #rm tokenchaincode/zkatdlog_pp.json
 
-echo_ok "JEDO-Network removed."
+echo_ok "$DOCKER_NETWORK_NAME removed."

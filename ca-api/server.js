@@ -85,7 +85,7 @@ const enrollUser = async (username, password) => {
       enrollmentID: username,
       enrollmentSecret: password,
       attr_reqs: [{ name: 'hf.Affiliation' }, { name: 'hf.EnrollmentID' }],
-      csrHosts: [`tls.${config.ca_name}`]
+      csrHosts: [`${config.ca_name}`]
     });
 
     // Speichern in das MSP-Verzeichnis

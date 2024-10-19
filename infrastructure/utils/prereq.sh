@@ -5,8 +5,8 @@
 # Documentation: https://hyperledger-fabric.readthedocs.io
 #
 ###############################################################
-source ./scripts/settings.sh
-source ./scripts/help.sh
+source ./utils/utils.sh
+source ./utils/help.sh
 check_script
 
 echo_warn "Prerequisites checking..."
