@@ -214,7 +214,12 @@ EOF
             CA_REF=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Regions[] | select(.Name == \"$REGION\") | .Auditors[] | select(.Name == \"$AUDITOR\") | .CA" $CONFIG_FILE)
             CA_NAME=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .Name" "$CONFIG_FILE")
             CA_PASS=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .Pass" "$CONFIG_FILE")
+            CA_IP=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .IP" "$CONFIG_FILE")
             CA_PORT=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .Port" "$CONFIG_FILE")
+
+            CAAPI_NAME=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .CAAPI.Name" "$CONFIG_FILE")
+            CAAPI_IP=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .CAAPI.IP" "$CONFIG_FILE")
+            CAAPI_PORT=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .CAAPI.SrvPort" "$CONFIG_FILE")
 
             AUDITOR_NAME=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Regions[] | select(.Name == \"$REGION\") | .Auditors[] | select(.Name == \"$AUDITOR\") | .Name" $CONFIG_FILE)
             AUDITOR_PASS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Regions[] | select(.Name == \"$REGION\") | .Auditors[] | select(.Name == \"$AUDITOR\") | .Pass" $CONFIG_FILE)
@@ -231,11 +236,12 @@ EOF
 
             # Register FSC User
             docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \
-              --id.name fsc.$AUDITOR_NAME --id.secret $AUDITOR_PASS --id.type client --id.affiliation $AFFILIATION
+              --id.name fsc.$AUDITOR_NAME --id.secret $AUDITOR_PASS --id.type client --id.affiliation $AFFILIATION \
+              --id.attrs "jedo.apiPort=$CAAPI_PORT, jedo.role=auditor"
 
             # Enroll FSC User
             docker exec -it $CA_NAME fabric-ca-client enroll -u https://fsc.$AUDITOR_NAME:$AUDITOR_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/$REGION/$AUDITOR_NAME/fsc/msp \
-                --csr.cn $CN --csr.names "$CSR_NAMES"
+                --enrollment.attrs "jedo.apiPort, jedo.role" --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13"
             # make private key name predictable
             # mv "$FABRIC_CA_CLIENT_HOME/$TOKEN_NETWORK_NAME/$FSC_OWNER/fsc/msp/keystore/"* "$FABRIC_CA_CLIENT_HOME/$TOKEN_NETWORK_NAME/$FSC_OWNER/fsc/msp/keystore/priv_sk"
 
@@ -245,7 +251,7 @@ EOF
 
             # Enroll Wallet User
             docker exec -it $CA_NAME fabric-ca-client enroll -u https://$AUDITOR_NAME:$AUDITOR_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/$REGION/$AUDITOR_NAME/msp \
-                --csr.cn $CN --csr.names "$CSR_NAMES"
+                 --csr.cn $CN --csr.names "$CSR_NAMES"
         done
         echo_ok "Auditors for $REGION enrolled."
 
@@ -260,7 +266,12 @@ EOF
             CA_REF=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Regions[] | select(.Name == \"$REGION\") | .Issuers[] | select(.Name == \"$ISSUER\") | .CA" $CONFIG_FILE)
             CA_NAME=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .Name" "$CONFIG_FILE")
             CA_PASS=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .Pass" "$CONFIG_FILE")
+            CA_IP=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .IP" "$CONFIG_FILE")
             CA_PORT=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .Port" "$CONFIG_FILE")
+
+            CAAPI_NAME=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .CAAPI.Name" "$CONFIG_FILE")
+            CAAPI_IP=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .CAAPI.IP" "$CONFIG_FILE")
+            CAAPI_PORT=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .CAAPI.SrvPort" "$CONFIG_FILE")
 
             ISSUER_NAME=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Regions[] | select(.Name == \"$REGION\") | .Issuers[] | select(.Name == \"$ISSUER\") | .Name" $CONFIG_FILE)
             ISSUER_PASS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Regions[] | select(.Name == \"$REGION\") | .Issuers[] | select(.Name == \"$ISSUER\") | .Pass" $CONFIG_FILE)
@@ -277,11 +288,12 @@ EOF
 
             # Register FSC User
             docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \
-              --id.name fsc.$ISSUER_NAME --id.secret $ISSUER_PASS --id.type client --id.affiliation $AFFILIATION
+              --id.name fsc.$ISSUER_NAME --id.secret $ISSUER_PASS --id.type client --id.affiliation $AFFILIATION \
+              --id.attrs "jedo.apiPort=$CAAPI_PORT, jedo.role=issuer"
 
             # Enroll FSC User
             docker exec -it $CA_NAME fabric-ca-client enroll -u https://fsc.$ISSUER_NAME:$ISSUER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/$REGION/$ISSUER_NAME/fsc/msp \
-                --csr.cn $CN --csr.names "$CSR_NAMES"
+                --enrollment.attrs "jedo.apiPort, jedo.role" --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13" 
             # make private key name predictable
             # mv "$FABRIC_CA_CLIENT_HOME/$TOKEN_NETWORK_NAME/$FSC_OWNER/fsc/msp/keystore/"* "$FABRIC_CA_CLIENT_HOME/$TOKEN_NETWORK_NAME/$FSC_OWNER/fsc/msp/keystore/priv_sk"
 
@@ -306,7 +318,12 @@ EOF
             CA_REF=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Regions[] | select(.Name == \"$REGION\") | .Owners[] | select(.Name == \"$OWNER\") | .CA" $CONFIG_FILE)
             CA_NAME=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .Name" "$CONFIG_FILE")
             CA_PASS=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .Pass" "$CONFIG_FILE")
+            CA_IP=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .IP" "$CONFIG_FILE")
             CA_PORT=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .Port" "$CONFIG_FILE")
+
+            CAAPI_NAME=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .CAAPI.Name" "$CONFIG_FILE")
+            CAAPI_IP=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .CAAPI.IP" "$CONFIG_FILE")
+            CAAPI_PORT=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_REF\") | .CAAPI.SrvPort" "$CONFIG_FILE")
 
             OWNER_NAME=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Regions[] | select(.Name == \"$REGION\") | .Owners[] | select(.Name == \"$OWNER\") | .Name" $CONFIG_FILE)
             OWNER_PASS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Regions[] | select(.Name == \"$REGION\") | .Owners[] | select(.Name == \"$OWNER\") | .Pass" $CONFIG_FILE)
@@ -324,17 +341,18 @@ EOF
 
             # Register FSC User
             docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \
-              --id.name fsc.$OWNER_NAME --id.secret $OWNER_PASS --id.type client --id.affiliation $AFFILIATION
+                --id.name fsc.$OWNER_NAME --id.secret $OWNER_PASS --id.type client --id.affiliation $AFFILIATION \
+                --id.attrs "jedo.apiPort=$CAAPI_PORT, jedo.role=owner"
 
             # Enroll FSC User
             docker exec -it $CA_NAME fabric-ca-client enroll -u https://fsc.$OWNER_NAME:$OWNER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/$REGION/$OWNER_NAME/owner/fsc/msp \
-                --csr.cn $CN --csr.names "$CSR_NAMES"
+                --enrollment.attrs "jedo.apiPort, jedo.role" --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13" 
             # make private key name predictable
             # mv "$FABRIC_CA_CLIENT_HOME/$TOKEN_NETWORK_NAME/$FSC_OWNER/fsc/msp/keystore/"* "$FABRIC_CA_CLIENT_HOME/$TOKEN_NETWORK_NAME/$FSC_OWNER/fsc/msp/keystore/priv_sk"
 
             # Register Wallet User
             docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \
-              --id.name $OWNER_NAME --id.secret $OWNER_PASS --id.type client --id.affiliation $AFFILIATION --enrollment.type idemix --idemix.curve gurvy.Bn254
+                --id.name $OWNER_NAME --id.secret $OWNER_PASS --id.type client --id.affiliation $AFFILIATION --enrollment.type idemix --idemix.curve gurvy.Bn254
 
             # Enroll Wallet User
             docker exec -it $CA_NAME fabric-ca-client enroll -u https://$OWNER_NAME:$OWNER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/$REGION/$OWNER_NAME/owner/msp \
@@ -364,7 +382,7 @@ EOF
 
                 # Register Wallet User
                 docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \
-                  --id.name $USER_NAME --id.secret $USER_PASS --id.type client --id.affiliation $AFFILIATION --enrollment.type idemix --idemix.curve gurvy.Bn254
+                    --id.name $USER_NAME --id.secret $USER_PASS --id.type client --id.affiliation $AFFILIATION --enrollment.type idemix --idemix.curve gurvy.Bn254 \
 
                 # Enroll Wallet User
                 docker exec -it $CA_NAME fabric-ca-client enroll -u https://$USER_NAME:$USER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/$REGION/$OWNER_NAME/users/$USER_NAME/msp \

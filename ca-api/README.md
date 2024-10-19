@@ -9,6 +9,20 @@ Affiliation: dev.jedo.eu.jenziner
 Affiliation: dev.jedo.eu.alps.worb
 
 # Role definition:
-- Issuer = !Subject.OU & id.name beginsWith "fsc."
-- Owner = Subject.OU & id.name beginsWith "fsc."
-- User = id.name !beginsWith "fsc."
+- CA = --id.attrs "jedo.role=CA"
+- Issuer = --id.attrs "jedo.role=issuer"
+- Owner = --id.attrs "jedo.role=owner"
+- User = --id.attrs "jedo.role=user"
+
+
+
+
+# ToDel
+openssl x509 -in /mnt/user/appdata/jedo/keys/eu.jedo.dev/alps.eu.jedo.dev/worb.alps.eu.jedo.dev/owner/msp/signcerts/cert.pem -text -noout
+
+/mnt/user/appdata/jedo/keys/eu.jedo.dev/alps.eu.jedo.dev/worb.alps.eu.jedo.dev/owner/msp/signcerts/cert.pem
+
+
+
+
+

@@ -3,11 +3,10 @@ const cors = require('cors');
 const fs = require('fs');
 const yaml = require('yaml');
 const FabricCAServices = require('fabric-ca-client');
-const { Wallets, X509Identity } = require('fabric-network');
-const { User } = require('fabric-common');
+const { Wallets } = require('fabric-network');
 const path = require('path');
 const archiver = require('archiver');
-const { createReadStream, createWriteStream } = require('fs');
+const { createWriteStream } = require('fs');
 const app = express();
 
 app.use(cors());
@@ -15,6 +14,11 @@ app.use(express.json());
 
 // Lade Konfigurationen aus der YAML-Datei
 const config = yaml.parse(fs.readFileSync('/app/config/jedo-ca-api-config.yaml', 'utf8'));
+
+// Feste Werte für den Version-Endpoint
+const API_VERSION = '1.0.0';  // Version als Konstante
+const RELEASE_DATE = '2024-10-20';  // Datum als Konstante
+const SERVER_NAME = 'JEDO CA-Server';  // Servername als Konstante
 
 // Dynamisch den Dateinamen des CA-Zertifikats im Verzeichnis /app/admin/cacerts ermitteln
 const caCertDir = '/app/admin/cacerts';
@@ -24,10 +28,10 @@ const tlsCertPath = path.join(caCertDir, caCertFile);
 // TLS-Optionen für die CA-Verbindung mit Zertifikatsprüfung
 const tlsOptions = {
   trustedRoots: [fs.readFileSync(tlsCertPath)],
-  verify: false // Falls du später auf true umstellen möchtest
+  verify: false
 };
 
-// Setze den CA-Service mit den neuen TLS-Optionen
+// Setze den CA-Service mit den TLS-Optionen
 const caService = new FabricCAServices(config.ca_url, tlsOptions);
 
 // Funktion zum Laden der Admin-Identität
@@ -96,48 +100,51 @@ const enrollUser = async (username, password) => {
     fs.mkdirSync(signcertsDir, { recursive: true });
     fs.mkdirSync(keystoreDir, { recursive: true });
 
-    fs.writeFileSync(path.join(signcertsDir, 'cert.pem'), enrollment.certificate);
-    fs.writeFileSync(path.join(keystoreDir, 'key.pem'), enrollment.key.toBytes());
+    const certPath = path.join(signcertsDir, 'cert.pem');
+    const keyPath = path.join(keystoreDir, 'key.pem');
 
+    fs.writeFileSync(certPath, enrollment.certificate);
+    fs.writeFileSync(keyPath, enrollment.key.toBytes());
+    
     console.log(`Successfully enrolled user: ${username}`);
-    return { message: `Enrollment successful for ${username}`, output: enrollment.certificate, signcertsDir, keystoreDir };
+    console.log(`Enrollment paths: certPath=${certPath}, keyPath=${keyPath}`);
+
+    return { certPath, keyPath };
   } catch (error) {
     console.error(`Error during enrollment: ${error}`);
     throw { message: "Enrollment failed", details: error.message };
   }
 };
 
-// POST Endpoint für die Registrierung
-app.post('/register', async (req, res) => {
-  const { username, password, affiliation } = req.body;
-  try {
-    const result = await registerUser(username, password, affiliation);
-    res.status(200).send(result);
-  } catch (error) {
-    console.error("Error during registration:", error);
-    res.status(500).send({ error });
-  }
+// GET Endpoint für die Version
+app.get('/version', (req, res) => {
+  res.status(200).json({
+    version: API_VERSION,
+    releaseDate: RELEASE_DATE,
+    serverName: SERVER_NAME
+  });
 });
 
-// POST Endpoint für Enrollment
-app.post('/enroll', async (req, res) => {
+// POST Endpoint für die Registrierung
+app.post('/register', async (req, res) => {
   const { username, password } = req.body;
   try {
-    const { signcertsDir, keystoreDir } = await enrollUser(username, password);
+    // Benutzer registrieren
+    const registerResult = await registerUser(username, password, 'org1.department1');
+    
+    // Benutzer einschreiben und Zertifikate erstellen
+    const { certPath, keyPath } = await enrollUser(username, password);
 
-    // Erstelle die Zip-Datei mit Zertifikaten und Schlüssel
+    if (!certPath || !keyPath) {
+      throw new Error('Certificate or key file path is missing.');
+    }
+    // Erstelle ZIP-Datei mit Zertifikaten
     const zipFilePath = `/tmp/${username}_certs.zip`;
     const output = createWriteStream(zipFilePath);
     const archive = archiver('zip', { zlib: { level: 9 } });
-    
+
     output.on('close', () => {
-      // Sende die Zip-Datei als Download
-      res.download(zipFilePath, `${username}_certs.zip`, (err) => {
-        if (err) {
-          console.error("Download error:", err);
-          res.status(500).send({ error: "Failed to download certificates." });
-        }
-      });
+      res.download(zipFilePath, `${username}_certs.zip`);
     });
 
     archive.on('error', (err) => {
@@ -145,15 +152,11 @@ app.post('/enroll', async (req, res) => {
     });
 
     archive.pipe(output);
-    
-    // Füge die Zertifikate und den privaten Schlüssel hinzu
-    archive.file(path.join(signcertsDir, 'cert.pem'), { name: 'cert.pem' });
-    archive.file(path.join(keystoreDir, 'key.pem'), { name: 'key.pem' });
+    archive.file(certPath, { name: 'cert.pem' });
+    archive.file(keyPath, { name: 'key.pem' });
     archive.finalize();
-
   } catch (error) {
-    console.error("Error during enrollment:", error);
-    res.status(500).send({ error: error.message || error.toString() });
+    res.status(500).send({ error: error.message });
   }
 });
 
