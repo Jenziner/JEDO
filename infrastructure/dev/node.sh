@@ -112,7 +112,7 @@ for ORGANIZATION in $ORGANIZATIONS; do
         --network $DOCKER_NETWORK_NAME \
         --ip $ORDERER_IP \
         $hosts_args \
-        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
+        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/infrastructure/src/fabric_logo.png" \
         -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
         -e ORDERER_GENERAL_LISTENPORT=$ORDERER_PORT \
         -e ORDERER_GENERAL_GENESISMETHOD=file \
@@ -257,7 +257,7 @@ for ORGANIZATION in $ORGANIZATIONS; do
         --network $DOCKER_NETWORK_NAME \
         --ip $PEER_IP \
         $hosts_args \
-        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_logo.png" \
+        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/infrastructure/src/fabric_logo.png" \
         -e CORE_VM_ENDPOINT=unix:///var/run/docker.sock \
         -e CORE_PEER_ID=$PEER_NAME \
         -e CORE_PEER_LISTENADDRESS=0.0.0.0:$PEER_PORT1 \
@@ -321,7 +321,7 @@ for ORGANIZATION in $ORGANIZATIONS; do
         --network $DOCKER_NETWORK_NAME \
         --ip $PEER_CLI \
         $hosts_args \
-        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/jedo-network/src/fabric_cli_logo.png" \
+        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/infrastructure/src/fabric_cli_logo.png" \
         -e GOPATH=/opt/gopath \
         -e CORE_PEER_ID=cli.$PEER_NAME \
         -e CORE_PEER_ADDRESS=$PEER_NAME:$PEER_PORT1 \

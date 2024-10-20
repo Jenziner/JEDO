@@ -5,8 +5,8 @@
 # Documentation: https://hyperledger-fabric.readthedocs.io
 #
 ###############################################################
-source ./scripts/settings.sh
-source ./scripts/help.sh
+source ./utils/utils.sh
+source ./utils/help.sh
 export JEDO_INITIATED="yes"
 
 
@@ -57,14 +57,14 @@ done
 
 
 ###############################################################
-# Params - from ./config/network-config.yaml
+# Params
 ###############################################################
-NETWORK_CONFIG_FILE="./config/network-config.yaml"
-FABRIC_PATH=$(yq eval '.Fabric.Path' $NETWORK_CONFIG_FILE)
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $NETWORK_CONFIG_FILE)
-DOCKER_NETWORK_SUBNET=$(yq eval '.Docker.Network.Subnet' $NETWORK_CONFIG_FILE)
-DOCKER_NETWORK_GATEWAY=$(yq eval '.Docker.Network.Gateway' $NETWORK_CONFIG_FILE)
-DOCKER_CONTAINER_FABRICTOOLS=$(yq eval '.Docker.Container.FabricTools' $NETWORK_CONFIG_FILE)
+CONFIG_FILE="./config/infrastructure-dev.yaml"
+FABRIC_PATH=$(yq eval '.Fabric.Path' $CONFIG_FILE)
+DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
+DOCKER_NETWORK_SUBNET=$(yq eval '.Docker.Network.Subnet' $CONFIG_FILE)
+DOCKER_NETWORK_GATEWAY=$(yq eval '.Docker.Network.Gateway' $CONFIG_FILE)
+DOCKER_CONTAINER_FABRICTOOLS=$(yq eval '.Docker.Container.FabricTools' $CONFIG_FILE)
 export PATH=$PATH:$FABRIC_PATH/bin:$FABRIC_PATH/config
 export FABRIC_CFG_PATH=./config
 
@@ -73,7 +73,7 @@ export FABRIC_CFG_PATH=./config
 # Checks
 ###############################################################
 if [[ "$opt_r" == "prereq" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/prereq.sh
+    ./utils/prereq.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Prerequisites checked."
     fi
@@ -84,7 +84,7 @@ fi
 # Delete previous installation
 ###############################################################
 if $opt_d || [[ "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/down.sh
+    ./dev/down.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Previous installation deleted."
     fi
@@ -109,12 +109,12 @@ fi
 
 
 ###############################################################
-# Generate Root-CA-Certificates
+# Generate Root-CA
 ###############################################################
 if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/root.sh
+    ./dev/root.sh
     if [[ "$opt_a" == "pause" ]]; then
-        cool_down "CA-Certificats generated."
+        cool_down "Root-CA started."
     fi
 fi
 
@@ -123,7 +123,7 @@ fi
 # Run CA
 ###############################################################
 if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/ca.sh
+    ./dev/ca.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "CA running."
     fi
@@ -134,18 +134,27 @@ fi
 # Enroll certificates
 ###############################################################
 if [[ "$opt_r" == "cert" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/enroll.sh
+    ./dev/enroll.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Certificates enrolled."
     fi
 fi
+echo_warn "TEMP END"
+exit 1
+
+
+
+
+
+
+
 
 
 ###############################################################
 # Generate configuration (genesis block and channel configuration)
 ###############################################################
 if [[ "$opt_r" == "cert" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/config.sh
+    ./dev/config.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Genesis Block and Channel Configuration generated."
     fi
@@ -156,24 +165,21 @@ fi
 # Run Orderer and/or Peer
 ###############################################################
 if [[ "$opt_r" == "node" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_info "ScriptInfo: Make sure, all Servers are reachable via DNS or hosts-File - starting $DOCKER_NETWORK_NAME"
-    ./scripts/node.sh node
+    ./dev/node.sh node
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Nodes running."
     fi
 fi
 
 # if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-#     echo_info "ScriptInfo: Make sure, all Servers are reachable via DNS or hosts-File - starting $DOCKER_NETWORK_NAME"
-#     ./scripts/node.sh orderer
+#     ./dev/node.sh orderer
 #     if [[ "$opt_a" == "pause" ]]; then
 #         cool_down "Orderers running."
 #     fi
 # fi
 
 # if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-#     echo_info "ScriptInfo: Make sure, all Servers are reachable via DNS or hosts-File - starting $DOCKER_NETWORK_NAME"
-#     ./scripts/node.sh peer
+#     ./dev/node.sh peer
 #     if [[ "$opt_a" == "pause" ]]; then
 #         cool_down "Peers running."
 #     fi
@@ -184,7 +190,7 @@ fi
 # Create Channel
 ###############################################################
 if [[ "$opt_r" == "ch" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/channel.sh
+    ./dev/channel.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Channel created."
     fi

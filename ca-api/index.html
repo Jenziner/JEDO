@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEDO-CA-API</title>
+</head>
+<body>
+    <h1>JEDO-CA-API</h1>
+
+    <form id="certForm">
+        <label for="certFile">Upload Certificate:</label>
+        <input type="file" id="certFile" name="certFile" accept=".pem,.crt" required>
+        <br><br>
+        <button type="button" onclick="loadCertificate()">Load Certificate</button>
+    </form>
+
+    <pre id="certInfo" style="white-space: pre-wrap; word-wrap: break-word;"></pre> <!-- Show needed Certificate-Infos -->
+
+    <form id="userForm" style="display:none;">
+        <label for="region">Region:</label>
+        <input type="text" id="region" name="region">
+        <br>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        <br><br>
+        <button type="button" onclick="execute()">Execute</button>
+    </form>
+
+    <pre id="response" style="white-space: pre-wrap; word-wrap: break-word;"></pre> <!-- Show API Server Response -->
+
+    <script>
+        let customAttrs = {};
+        let sanData = {};
+        let certText = '';
+
+        async function loadCertificate() {
+            const certFileInput = document.getElementById('certFile');
+            let result = '';
+
+            if (!certFileInput.files.length) {
+                result += 'No certificate file uploaded.\n';
+                document.getElementById('certInfo').textContent = result;
+                return;
+            }
+
+            const certFile = certFileInput.files[0];
+            certText = await certFile.text();
+
+            try {
+                // Base64-Decode
+                const base64Cert = certText.replace(/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\n/g, '');
+                const rawCert = atob(base64Cert);
+
+                // Extract user attributs
+                customAttrs = extractCustomAttributes(rawCert);
+                result += `Extracted Custom Attributes:\nRole: ${customAttrs.role}\nAPI Port: ${customAttrs.apiPort}\n`;
+
+                // Extract SAN-Data (DNS and IP)
+                sanData = extractSANData(rawCert);
+                result += `\nExtracted SAN Data:\nDNS: ${sanData.dnsNames.join(', ')}\nIP: ${sanData.ipAddresses.join(', ')}\n`;
+
+                // Show extracted data
+                document.getElementById('certInfo').textContent = result;
+
+                // Show user form
+                document.getElementById('userForm').style.display = 'block';
+
+            } catch (error) {
+                result += `Error processing certificate: ${error.message}\n`;
+                document.getElementById('certInfo').textContent = result;
+            }
+        }
+
+        async function execute() {
+            const region = document.getElementById('region').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            let result = '';
+            let validApiUrl = null;
+
+            document.getElementById('response').textContent = 'Attempting to find valid API server...';
+
+            // Try "version"-endpoints with each DNS/IP
+            for (const dns of sanData.dnsNames) {
+                const apiUrl = `http://${dns}:${customAttrs.apiPort}/version`;
+                const versionResponse = await tryVersionEndpoint(apiUrl);
+                result += `Trying ${apiUrl}... `;
+
+                if (versionResponse.ok) {
+                    validApiUrl = apiUrl;
+                    result += `Found: ${apiUrl}\n`;
+                    break;
+                } else {
+                    result += `Failed\n`;
+                }
+
+                document.getElementById('response').textContent = result;
+            }
+
+            if (!validApiUrl) {
+                for (const ip of sanData.ipAddresses) {
+                    const apiUrl = `http://${ip}:${customAttrs.apiPort}`;
+                    const versionApiUrl = `${apiUrl}/version`;
+                    const versionResponse = await tryVersionEndpoint(versionApiUrl);
+                    result += `Trying ${versionApiUrl}... `;
+
+                    if (versionResponse.ok) {
+                        validApiUrl = apiUrl;
+                        result += `Found: ${apiUrl}\n`;
+                        break;
+                    } else {
+                        result += `Failed\n`;
+                    }
+
+                    document.getElementById('response').textContent = result;
+                }
+            }
+
+            if (!validApiUrl) {
+                result += 'Error: No valid API server found.\n';
+                document.getElementById('response').textContent = result;
+                return;
+            }
+
+            // Execute registerUser
+            result += await registerUser(validApiUrl, region, username, password, certText);
+
+            document.getElementById('response').textContent = result;
+        }
+
+        function extractCustomAttributes(certData) {
+            const customAttrsRegex = /"attrs":\{([^}]+)\}/;
+            const match = certData.match(customAttrsRegex);
+            let role = 'Unknown';
+            let apiPort = 'Unknown';
+            
+            if (match) {
+                const attrs = JSON.parse(`{${match[1]}}`);
+                role = attrs['jedo.role'] || 'Unknown';
+                apiPort = attrs['jedo.apiPort'] || 'Unknown';
+            }
+
+            return { role, apiPort };
+        }
+
+        function extractSANData(certData) {
+            const dnsNames = [];
+            const ipAddresses = [];
+            let dnsCount = 0;
+            let startExtractingIPs = false;
+            let lastDNSIndex = -1;
+
+            // Regex to extract DNS names
+            const dnsRegex = /(ca\.|api\.ca\.)[a-zA-Z0-9.-]+jedo\.[a-z]{2,3}/g;
+            let dnsMatch;
+            while ((dnsMatch = dnsRegex.exec(certData)) !== null) {
+                dnsCount++;
+                if (dnsCount >= 2) {
+                    dnsNames.push(dnsMatch[0]);
+                    lastDNSIndex = dnsRegex.lastIndex;
+                }
+            }
+
+            // Search IP between last DNS and "jedo.role" tag
+            const roleIndex = certData.indexOf('" jedo.role');
+            const certSectionForIPs = certData.slice(lastDNSIndex, roleIndex);
+
+            // Regex to extract IPs
+            const ipAddressRegex = /([\xAC\xC0])([\x00-\xFF])([\x00-\xFF])([\x00-\xFF])/g;
+            let ipMatch;
+            while ((ipMatch = ipAddressRegex.exec(certSectionForIPs)) !== null) {
+                try {
+                    const octet1 = parseInt(ipMatch[1].charCodeAt(0));
+                    const octet2 = parseInt(ipMatch[2].charCodeAt(0));
+                    const octet3 = parseInt(ipMatch[3].charCodeAt(0));
+                    const octet4 = parseInt(ipMatch[4]?.charCodeAt(0));
+                    ipAddresses.push(`${octet1}.${octet2}.${octet3}.${octet4}`);
+                } catch (error) {
+                    console.error("Error processing IP extraction", error);
+                }
+            }
+
+            return { dnsNames, ipAddresses };
+        }
+
+        async function tryVersionEndpoint(apiUrl, timeout = 2000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+            try {
+                const response = await fetch(apiUrl, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                return response;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.error(`Request to ${apiUrl} timed out.`);
+                }
+                return { ok: false };
+            }
+        }
+
+        async function registerUser(apiUrl, region, username, password, certText) {
+            try {
+                const registerResponse = await fetch(`${apiUrl}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ region, username, password, certText })
+                });
+                if (registerResponse.ok) {
+                    const blob = await registerResponse.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `${username}_certs.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+
+                    return 'Registration successful and certificates downloaded.\n';
+                } else {
+                    const errorText = await registerResponse.text();
+                    return 'Registration failed: ' + errorText + '\n';
+                }
+            } catch (error) {
+                return 'Register Error: ' + error.message + '\n';
+            }
+        }
+
+    </script>
+</body>
+</html>
