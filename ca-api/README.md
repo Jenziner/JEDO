@@ -18,11 +18,26 @@ Affiliation: dev.jedo.eu.alps.worb
 
 
 # ToDel
-openssl x509 -in /mnt/user/appdata/jedo/keys/eu.jedo.dev/alps.eu.jedo.dev/worb.alps.eu.jedo.dev/owner/msp/signcerts/cert.pem -text -noout
+CA:
+openssl x509 -in /mnt/user/appdata/jedo/keys/eu.jedo.dev/_infrastructure/ca.jenziner.eu.jedo.dev/msp/signcerts/cert.pem -text -noout
+
+Issuer - generiert via API:
+openssl x509 -in /mnt/user/appdata/jedo/keys/eu.jedo.dev/alps.eu.jedo.dev/issuer/IssuerA22/fsc/msp/signcerts/cert.pem -text -noout
+
+Owner:
+openssl x509 -in /mnt/user/appdata/jedo/keys/eu.jedo.dev/alps.eu.jedo.dev/owner/OwnerA23/fsc/msp/signcerts/cert.pem -text -noout
+
+
 
 /mnt/user/appdata/jedo/keys/eu.jedo.dev/alps.eu.jedo.dev/worb.alps.eu.jedo.dev/owner/msp/signcerts/cert.pem
 
 
 
 
+fscdir /etc/hyperledger/keys/$L.$ST.$C/$O.$L.$ST.$C/$ISSUER_NAME/fsc/msp
+mspdir /etc/hyperledger/keys/$L.$ST.$C/$O.$L.$ST.$C/$ISSUER_NAME/msp
 
+CSR_NAMES="C=$C,ST=$ST,L=$L,O=$O"
+
+
+docker exec ca.jenziner.eu.jedo.dev fabric-ca-client affiliation list 

@@ -18,6 +18,9 @@
     <pre id="certInfo" style="white-space: pre-wrap; word-wrap: break-word;"></pre> <!-- Show needed Certificate-Infos -->
 
     <form id="userForm" style="display:none;">
+        <label for="region">Region:</label>
+        <input type="text" id="region" name="region">
+        <br>
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required>
         <br>
@@ -73,6 +76,7 @@
         }
 
         async function execute() {
+            const region = document.getElementById('region').value;
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             let result = '';
@@ -123,7 +127,7 @@
             }
 
             // Execute registerUser
-            result += await registerUser(validApiUrl, username, password, certText);
+            result += await registerUser(validApiUrl, region, username, password, certText);
 
             document.getElementById('response').textContent = result;
         }
@@ -136,7 +140,7 @@
             
             if (match) {
                 const attrs = JSON.parse(`{${match[1]}}`);
-                role = attrs[' jedo.role'] || 'Unknown';
+                role = attrs['jedo.role'] || 'Unknown';
                 apiPort = attrs['jedo.apiPort'] || 'Unknown';
             }
 
@@ -199,12 +203,12 @@
             }
         }
 
-        async function registerUser(apiUrl, username, password, certText) {
+        async function registerUser(apiUrl, region, username, password, certText) {
             try {
                 const registerResponse = await fetch(`${apiUrl}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, certText })
+                    body: JSON.stringify({ region, username, password, certText })
                 });
                 if (registerResponse.ok) {
                     const blob = await registerResponse.blob();

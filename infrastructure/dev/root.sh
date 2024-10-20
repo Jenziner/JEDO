@@ -14,6 +14,7 @@ check_script
 # Params - from ./config/network-config.yaml
 ###############################################################
 CONFIG_FILE="./config/infrastructure-dev.yaml"
+DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
 DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
 CHANNELS=$(yq e ".FabricNetwork.Channels[].Name" $CONFIG_FILE)
@@ -62,9 +63,9 @@ for CHANNEL in $CHANNELS; do
         -e FABRIC_CA_CLIENT_MSPDIR=$ROOTCA_CLI_DIR/msp \
         -e FABRIC_CA_CLIENT_TLS_ENABLED=true \
         -e FABRIC_CA_CLIENT_TLS_CERTFILES=$ROOTCA_SRV_DIR/tls-cert.pem \
-        -v ${PWD}/keys/$ROOTCA_NAME:$ROOTCA_SRV_DIR \
-        -v ${PWD}/keys/$ROOTCA_NAME/cli.$ROOTCA_NAME:$ROOTCA_CLI_DIR \
-        -v ${PWD}/keys/:$KEYS_DIR \
+        -v ${PWD}/keys/$CHANNEL/_infrastructure/$ROOTCA_NAME:$ROOTCA_SRV_DIR \
+        -v ${PWD}/keys/$CHANNEL/_infrastructure/$ROOTCA_NAME/cli.$ROOTCA_NAME:$ROOTCA_CLI_DIR \
+        -v ${PWD}/keys/$CHANNEL/_infrastructure/:$KEYS_DIR \
         -p $ROOTCA_PORT:$ROOTCA_PORT \
         -p $ROOTCA_OPPORT:$ROOTCA_OPPORT \
         hyperledger/fabric-ca:latest \
@@ -94,9 +95,9 @@ for CHANNEL in $CHANNELS; do
     ST=$(echo "$ROOTCA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
     L=$(echo "$ROOTCA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
 
-    docker exec -it $ROOTCA_NAME fabric-ca-client affiliation add $C -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp
-    docker exec -it $ROOTCA_NAME fabric-ca-client affiliation add $C.$ST -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp
-    docker exec -it $ROOTCA_NAME fabric-ca-client affiliation add $C.$ST.$L -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp
+    docker exec -it $ROOTCA_NAME fabric-ca-client affiliation add $ST -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp
+    docker exec -it $ROOTCA_NAME fabric-ca-client affiliation add $ST.jedo -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp
+    docker exec -it $ROOTCA_NAME fabric-ca-client affiliation add $ST.jedo.$C -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp
 
     echo_ok "Root-CA started."
 
@@ -116,9 +117,9 @@ for CHANNEL in $CHANNELS; do
             CA_SUBJECT=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Subject" $CONFIG_FILE)
             CA_PASS=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Pass" $CONFIG_FILE)
 
-            CAAPI_NAME=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CAAPI.Name" $CONFIG_FILE)
-            CAAPI_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CAAPI.IP" $CONFIG_FILE)
-            CAAPI_PORT=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CAAPI.SrvPort" $CONFIG_FILE)
+            CAAPI_NAME=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.CAAPI.Name" $CONFIG_FILE)
+            CAAPI_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.CAAPI.IP" $CONFIG_FILE)
+            CAAPI_PORT=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.CAAPI.SrvPort" $CONFIG_FILE)
 
             # Add Affiliation
             echo ""
@@ -128,10 +129,9 @@ for CHANNEL in $CHANNELS; do
             C=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
             ST=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
             L=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
-            O=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
             CN=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
-            CSR_NAMES=$(echo "$CA_SUBJECT" | sed 's/,CN=[^,]*//')
-            AFFILIATION="$C.$ST.$L.$O"
+            CSR_NAMES="C=$C,ST=$ST,L=$L"
+            AFFILIATION="$ST.jedo.$C.$L"
 
             docker exec -it $ROOTCA_NAME fabric-ca-client affiliation add $AFFILIATION -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp
 
@@ -140,19 +140,19 @@ for CHANNEL in $CHANNELS; do
             echo_info "User $CA_NAME registering..."
             docker exec -it $ROOTCA_NAME fabric-ca-client register -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp \
                 --id.name $CA_NAME --id.secret $CA_PASS --id.type client --id.affiliation $AFFILIATION \
-                --id.attrs "hf.Registrar.Roles=client,hf.IntermediateCA=true,jedo.apiPort=$CAAPI_PORT, jedo.role=CA"
+                --id.attrs "hf.Registrar.Roles=client,hf.IntermediateCA=true,jedo.apiPort=$CAAPI_PORT,jedo.role=CA"
 
             # Enroll User
             echo ""
             echo_info "User $CA_NAME enrolling..."
             docker exec -it $ROOTCA_NAME fabric-ca-client enroll -u https://$CA_NAME:$CA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $KEYS_DIR/$CA_NAME/msp \
-                --enrollment.attrs "jedo.apiPort, jedo.role" --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$ROOTCA_NAME,$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13"
+                --enrollment.attrs "jedo.apiPort,jedo.role" --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$ROOTCA_NAME,$CA_NAME,$CAAPI_NAME,$CAAPI_IP,$DOCKER_UNRAID"
 
             # Enroll User TLS
             echo ""
             echo_info "User $CA_NAME TLS enrolling..."
             docker exec -it $ROOTCA_NAME fabric-ca-client enroll -u https://$CA_NAME:$CA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $KEYS_DIR/$CA_NAME/tls \
-                --enrollment.profile tls --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$ROOTCA_NAME,$ROOTCA_IP,192.168.0.13"  
+                --enrollment.profile tls --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$ROOTCA_NAME,$ROOTCA_IP,$DOCKER_UNRAID"  
         fi
     done
 

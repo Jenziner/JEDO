@@ -73,9 +73,9 @@ for CHANNEL in $CHANNELS; do
                 -e FABRIC_CA_CLIENT_MSPDIR=$CA_CLI_DIR/msp \
                 -e FABRIC_CA_CLIENT_TLS_ENABLED=true \
                 -e FABRIC_CA_CLIENT_TLS_CERTFILES=$CA_SRV_DIR/tls-cert.pem \
-                -v ${PWD}/keys/$CA_NAME:$CA_DIR \
-                -v ${PWD}/keys/$CA_NAME:$CA_SRV_DIR \
-                -v ${PWD}/keys/$CA_NAME/cli.$CA_NAME:$CA_CLI_DIR \
+                -v ${PWD}/keys/$CHANNEL/_infrastructure/$CA_NAME:$CA_DIR \
+                -v ${PWD}/keys/$CHANNEL/_infrastructure/$CA_NAME:$CA_SRV_DIR \
+                -v ${PWD}/keys/$CHANNEL/_infrastructure/$CA_NAME/cli.$CA_NAME:$CA_CLI_DIR \
                 -v ${PWD}/keys/:$KEYS_DIR \
                 -p $CA_PORT:$CA_PORT \
                 -p $CA_OPPORT:$CA_OPPORT \
@@ -106,11 +106,10 @@ for CHANNEL in $CHANNELS; do
             C=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
             ST=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
             L=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
-            O=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
-            docker exec -it $CA_NAME fabric-ca-client affiliation add $C -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
-            docker exec -it $CA_NAME fabric-ca-client affiliation add $C.$ST -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
-            docker exec -it $CA_NAME fabric-ca-client affiliation add $C.$ST.$L -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
-            docker exec -it $CA_NAME fabric-ca-client affiliation add $C.$ST.$L.$O -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
+            docker exec -it $CA_NAME fabric-ca-client affiliation add $ST -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
+            docker exec -it $CA_NAME fabric-ca-client affiliation add $ST.jedo -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
+            docker exec -it $CA_NAME fabric-ca-client affiliation add $ST.jedo.$C -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
+            docker exec -it $CA_NAME fabric-ca-client affiliation add $ST.jedo.$C.$L -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
 
             echo_ok "Intermediate-CA for $ORGANIZATION started."
 
@@ -125,8 +124,9 @@ for CHANNEL in $CHANNELS; do
                 C=$(echo "$REGION_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
                 ST=$(echo "$REGION_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
                 L=$(echo "$REGION_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
-                O=$(echo "$REGION_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
-                docker exec -it $CA_NAME fabric-ca-client affiliation add $C.$ST.$L.$O -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
+                AFFILIATION="$ST.jedo.$C.$L"
+
+                docker exec -it $CA_NAME fabric-ca-client affiliation add $AFFILIATION -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
 
                 OWNERS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Regions[] | select(.Name == \"$REGION\") | .Owners[].Name" $CONFIG_FILE)
                 for OWNER in $OWNERS; do
@@ -140,8 +140,7 @@ for CHANNEL in $CHANNELS; do
                     ST=$(echo "$OWNER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
                     L=$(echo "$OWNER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
                     O=$(echo "$OWNER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
-                    OU=$(echo "$OWNER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^OU=/) {sub(/^OU=/, "", $i); print $i}}')
-                    docker exec -it $CA_NAME fabric-ca-client affiliation add $C.$ST.$L.$O.$OU -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
+                    docker exec -it $CA_NAME fabric-ca-client affiliation add $ST.jedo.$C.$L.$O -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
                 done
             done
         fi

@@ -40,6 +40,7 @@ for CHANNEL in $CHANNELS; do
         echo ""
         echo_info "Docker Container from $ORGANIZATION removing..."
         CA=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" "$CONFIG_FILE")
+        CAAPI=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.CAAPI.Name" "$CONFIG_FILE")
         PEERS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" "$CONFIG_FILE")
         PEERS_DB=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].DB.Name" "$CONFIG_FILE")
         ORDERERS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" "$CONFIG_FILE")
@@ -47,6 +48,11 @@ for CHANNEL in $CHANNELS; do
         # Remove CA
         if [[ -n "$CA" ]]; then
             docker rm -f $CA || true
+        fi
+
+        # Remove CA-API
+        if [[ -n "$CAAPI" ]]; then
+            docker rm -f $CAAPI || true
         fi
 
         # Remove CouchDBs

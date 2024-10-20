@@ -89,10 +89,9 @@ for CHANNEL in $CHANNELS; do
             C=$(echo "$ORDERER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
             ST=$(echo "$ORDERER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
             L=$(echo "$ORDERER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
-            O=$(echo "$ORDERER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
             CN=$(echo "$ORDERER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
             CSR_NAMES=$(echo "$ORDERER_SUBJECT" | sed 's/,CN=[^,]*//')
-            AFFILIATION="$C.$ST.$L.$O"
+            AFFILIATION="$ST.jedo.$C.$L"
 
             # Register User
             echo_info "User $ORDERER_NAME registering..."
@@ -102,19 +101,19 @@ for CHANNEL in $CHANNELS; do
             # Enroll User
             echo ""
             echo_info "User $ORDERER_NAME enrolling..."
-            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$ORDERER_NAME/msp \
+            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$ORDERER_NAME/msp \
                 --csr.cn $CN --csr.names "$CSR_NAMES"
             # Enroll User TLS
             echo ""
             echo_info "User $ORDERER_NAME TLS enrolling..."
-            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$ORDERER_NAME/tls \
+            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$ORDERER_NAME/tls \
                 --enrollment.profile tls --csr.cn $CN --csr.names "$CSR_NAMES"
 
             # Generating NodeOUs-File
             echo ""
             echo_info "NodeOUs-File writing..."
-            CA_CERT_FILE=$(ls ${PWD}/keys/$ORDERER_NAME/msp/cacerts/*.pem)
-            cat <<EOF > ${PWD}/keys/$ORDERER_NAME/msp/config.yaml
+            CA_CERT_FILE=$(ls ${PWD}/keys/$CHANNEL/_infrastructure/$ORDERER_NAME/msp/cacerts/*.pem)
+            cat <<EOF > ${PWD}/keys/$CHANNEL/_infrastructure/$ORDERER_NAME/msp/config.yaml
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
@@ -149,10 +148,9 @@ EOF
             C=$(echo "$PEER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
             ST=$(echo "$PEER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
             L=$(echo "$PEER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
-            O=$(echo "$PEER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
             CN=$(echo "$PEER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
             CSR_NAMES=$(echo "$PEER_SUBJECT" | sed 's/,CN=[^,]*//')
-            AFFILIATION="$C.$ST.$L.$O"
+            AFFILIATION="$ST.jedo.$C.$L"
 
             # Register User
             echo_info "User $PEER_NAME registering..."
@@ -162,20 +160,20 @@ EOF
             # Enroll User
             echo ""
             echo_info "User $PEER_NAME enrolling..."
-            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$PEER_NAME/msp \
+            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$PEER_NAME/msp \
                 --csr.cn $CN --csr.names "$CSR_NAMES"
 
             # Enroll User TLS
             echo ""
             echo_info "User $PEER_NAME TLS enrolling..."
-            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$PEER_NAME/tls \
+            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$PEER_NAME/tls \
                 --enrollment.profile tls --csr.cn $CN --csr.names "$CSR_NAMES"
 
             # Generating NodeOUs-File
             echo ""
             echo_info "NodeOUs-File writing..."
-            CA_CERT_FILE=$(ls ${PWD}/keys/$PEER_NAME/msp/cacerts/*.pem)
-            cat <<EOF > ${PWD}/keys/$PEER_NAME/msp/config.yaml
+            CA_CERT_FILE=$(ls ${PWD}/keys/$CHANNEL/_infrastructure/$PEER_NAME/msp/cacerts/*.pem)
+            cat <<EOF > ${PWD}/keys/$CHANNEL/_infrastructure/$PEER_NAME/msp/config.yaml
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
@@ -229,10 +227,9 @@ EOF
             C=$(echo "$AUDITOR_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
             ST=$(echo "$AUDITOR_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
             L=$(echo "$AUDITOR_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
-            O=$(echo "$AUDITOR_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
             CN=$(echo "$AUDITOR_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
-            CSR_NAMES=$(echo "$AUDITOR_SUBJECT" | sed 's/,CN=[^,]*//')
-            AFFILIATION="$C.$ST.$L.$O"
+            CSR_NAMES="C=$C,ST=$ST,L=$L"
+            AFFILIATION="$ST.jedo.$C.$L"
 
             # Register FSC User
             docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \
@@ -281,19 +278,18 @@ EOF
             C=$(echo "$ISSUER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
             ST=$(echo "$ISSUER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
             L=$(echo "$ISSUER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
-            O=$(echo "$ISSUER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
             CN=$(echo "$ISSUER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
-            CSR_NAMES=$(echo "$ISSUER_SUBJECT" | sed 's/,CN=[^,]*//')
-            AFFILIATION="$C.$ST.$L.$O"
+            CSR_NAMES="C=$C,ST=$ST,L=$L"
+            AFFILIATION="$ST.jedo.$C.$L"
 
             # Register FSC User
             docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \
               --id.name fsc.$ISSUER_NAME --id.secret $ISSUER_PASS --id.type client --id.affiliation $AFFILIATION \
-              --id.attrs "jedo.apiPort=$CAAPI_PORT, jedo.role=issuer"
+              --id.attrs "jedo.apiPort=$CAAPI_PORT,jedo.role=issuer"
 
             # Enroll FSC User
             docker exec -it $CA_NAME fabric-ca-client enroll -u https://fsc.$ISSUER_NAME:$ISSUER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/$REGION/$ISSUER_NAME/fsc/msp \
-                --enrollment.attrs "jedo.apiPort, jedo.role" --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13" 
+                --enrollment.attrs "jedo.apiPort,jedo.role" --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13" 
             # make private key name predictable
             # mv "$FABRIC_CA_CLIENT_HOME/$TOKEN_NETWORK_NAME/$FSC_OWNER/fsc/msp/keystore/"* "$FABRIC_CA_CLIENT_HOME/$TOKEN_NETWORK_NAME/$FSC_OWNER/fsc/msp/keystore/priv_sk"
 
@@ -334,19 +330,18 @@ EOF
             ST=$(echo "$OWNER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
             L=$(echo "$OWNER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
             O=$(echo "$OWNER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
-            OU=$(echo "$OWNER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^OU=/) {sub(/^OU=/, "", $i); print $i}}')
             CN=$(echo "$OWNER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
-            CSR_NAMES=$(echo "$OWNER_SUBJECT" | sed 's/,CN=[^,]*//')
-            AFFILIATION="$C.$ST.$L.$O.$OU"
+            CSR_NAMES="C=$C,ST=$ST,L=$L,O=$O"
+            AFFILIATION="$ST.jedo.$C.$L.$O"
 
             # Register FSC User
             docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \
                 --id.name fsc.$OWNER_NAME --id.secret $OWNER_PASS --id.type client --id.affiliation $AFFILIATION \
-                --id.attrs "jedo.apiPort=$CAAPI_PORT, jedo.role=owner"
+                --id.attrs "jedo.apiPort=$CAAPI_PORT,jedo.role=owner"
 
             # Enroll FSC User
             docker exec -it $CA_NAME fabric-ca-client enroll -u https://fsc.$OWNER_NAME:$OWNER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/$REGION/$OWNER_NAME/owner/fsc/msp \
-                --enrollment.attrs "jedo.apiPort, jedo.role" --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13" 
+                --enrollment.attrs "jedo.apiPort,jedo.role" --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13" 
             # make private key name predictable
             # mv "$FABRIC_CA_CLIENT_HOME/$TOKEN_NETWORK_NAME/$FSC_OWNER/fsc/msp/keystore/"* "$FABRIC_CA_CLIENT_HOME/$TOKEN_NETWORK_NAME/$FSC_OWNER/fsc/msp/keystore/priv_sk"
 
@@ -375,10 +370,9 @@ EOF
                 ST=$(echo "$USER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
                 L=$(echo "$USER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
                 O=$(echo "$USER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
-                OU=$(echo "$USER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^OU=/) {sub(/^OU=/, "", $i); print $i}}')
                 CN=$(echo "$USER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
-                CSR_NAMES=$(echo "$USER_SUBJECT" | sed 's/,CN=[^,]*//')
-                AFFILIATION="$C.$ST.$L.$O.$OU"
+                CSR_NAMES="C=$C,ST=$ST,L=$L,O=$O"
+                AFFILIATION="$ST.jedo.$C.$L.$O"
 
                 # Register Wallet User
                 docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \

@@ -7,6 +7,7 @@ Fabric:
     # path to fabric-folder where bin and config subfolders exist
     Path: /mnt/user/appdata/fabric
 Docker:
+    Unraid: 192.168.0.13
     Network:
         Name: jedo-dev
         Subnet: 172.25.0.0/16
@@ -19,7 +20,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
         - Name: eu.jedo.dev
           RootCA:
               Name: ca.eu.jedo.dev
-              Subject: "C=dv,ST=jedo,L=eu,CN=ca.eu.jedo.dev"
+              Subject: "C=eu,ST=dev,L=root,CN=ca.root.eu.jedo.dev"
               Pass: Test1
               IP: 172.25.0.5
               Port: 6040
@@ -30,7 +31,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                 Consortium: JEDO # Name of consortium if member or null
                 CA:
                     Name: ca.jenziner.eu.jedo.dev
-                    Subject: "C=dv,ST=jedo,L=eu,O=jenziner,CN=ca.jenziner.eu.jedo.dev"
+                    Subject: "C=eu,ST=dev,L=jenziner,CN=ca.jenziner.eu.jedo.dev"
                     Pass: Test1
                     IP: 172.25.1.5
                     Port: 7040
@@ -44,7 +45,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                         SrvPort: 7048
                 Orderers:
                     - Name: orderer.jenziner.eu.jedo.dev
-                      Subject: "C=dv,ST=jedo,L=eu,O=jenziner,CN=orderer.jenziner.eu.jedo.dev"
+                      Subject: "C=eu,ST=dev,L=jenziner,CN=orderer.jenziner.eu.jedo.dev"
                       Pass: Test1
                       IP: 172.25.1.11
                       Port: 7051
@@ -52,7 +53,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                       OpPort: 7059
                 Peers: # first peer will be used as AnchorPeer
                     - Name: peer0.jenziner.eu.jedo.dev
-                      Subject: "C=dv,ST=jedo,L=eu,O=jenziner,CN=peer0.jenziner.eu.jedo.dev"
+                      Subject: "C=eu,ST=dev,L=jenziner,CN=peer0.jenziner.eu.jedo.dev"
                       Pass: Test1
                       IP: 172.25.1.12
                       Port1: 7061
@@ -65,7 +66,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                           IP: 172.25.1.13
                           Port: 7064
                     - Name: peer1.jenziner.eu.jedo.dev
-                      Subject: "C=dv,ST=jedo,L=eu,O=jenziner,CN=peer1.jenziner.eu.jedo.dev"
+                      Subject: "C=eu,ST=dev,L=jenziner,CN=peer1.jenziner.eu.jedo.dev"
                       Pass: Test1
                       IP: 172.25.1.15
                       Port1: 7071
@@ -81,7 +82,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                 Consortium: # Name of consortium if member or null
                 CA:
                     Name: ca.liebiwiler.eu.jedo.dev
-                    Subject: "C=dv,ST=jedo,L=eu,O=liebiwiler,CN=ca.liebiwiler.eu.jedo.dev"
+                    Subject: "C=eu,ST=dev,L=liebiwiler,CN=ca.liebiwiler.eu.jedo.dev"
                     Pass: Test1
                     IP: 172.25.2.5
                     Port: 8040
@@ -95,7 +96,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                         SrvPort: 8048
                 Orderers:
                     - Name: orderer.liebiwiler.eu.jedo.dev
-                      Subject: "C=dv,ST=jedo,L=eu,O=liebiwiler,CN=orderer.liebiwiler.eu.jedo.dev"
+                      Subject: "C=eu,ST=dev,L=liebiwiler,CN=orderer.liebiwiler.eu.jedo.dev"
                       Pass: Test1
                       IP: 172.25.2.11
                       Port: 8051
@@ -103,7 +104,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                       OpPort: 8059
                 Peers: # first peer will be used as AnchorPeer
                     - Name: peer0.liebiwiler.eu.jedo.dev
-                      Subject: "C=dv,ST=jedo,L=eu,O=liebiwiler,CN=peer0.liebiwiler.eu.jedo.dev"
+                      Subject: "C=eu,ST=dev,L=liebiwiler,CN=peer0.liebiwiler.eu.jedo.dev"
                       Pass: Test1
                       IP: 172.25.2.12
                       Port1: 8061
@@ -132,7 +133,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                         SrvPort:
                 Orderers:
                     - Name: orderer.breitschi.eu.jedo.dev
-                      Subject: "C=dv,ST=jedo,L=eu,O=jenziner,CN=orderer.breitschi.eu.jedo.dev"
+                      Subject: "C=eu,ST=dev,L=jenziner,CN=orderer.breitschi.eu.jedo.dev"
                       Pass: Test1
                       IP: 172.25.3.11
                       Port: 9051
@@ -140,7 +141,7 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                       OpPort: 9059
                 Peers: # first peer will be used as AnchorPeer
                     - Name: peer0.breitschi.eu.jedo.dev
-                      Subject: "C=dv,ST=jedo,L=eu,O=jenziner,CN=peer0.breitschi.eu.jedo.dev"
+                      Subject: "C=eu,ST=dev,L=jenziner,CN=peer0.breitschi.eu.jedo.dev"
                       Pass: Test1
                       IP: 172.25.3.12
                       Port1: 9061
@@ -154,38 +155,38 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                           Port: 9064
           Regions:
               - Name: alps.eu.jedo.dev
-                Subject: "C=dv,ST=jedo,L=eu,O=alps,CN=alps.eu.jedo.dev"
+                Subject: "C=eu,ST=dev,L=alps,CN=alps.eu.jedo.dev"
                 Auditors: #for FSC and User
                     - Name: aud.alps.eu.jedo.dev
-                      Subject: "C=dv,ST=jedo,L=eu,O=alps,CN=aud.alps.eu.jedo.dev"
+                      Subject: "C=eu,ST=dev,L=alps,CN=aud.alps.eu.jedo.dev"
                       Pass: Test1
                       CA: ca.jenziner.eu.jedo.dev
                 Issuers: #for FSC and User
                     - Name: iss.alps.eu.jedo.dev
-                      Subject: "C=dv,ST=jedo,L=eu,O=alps,CN=iss.alps.eu.jedo.dev"
+                      Subject: "C=eu,ST=dev,L=alps,CN=iss.alps.eu.jedo.dev"
                       Pass: Test1
                       CA: ca.jenziner.eu.jedo.dev
                 Owners:  #for FSC and User
                     - Name: worb.alps.eu.jedo.dev
-                      Subject: "C=dv,ST=jedo,L=eu,O=alps,OU=worb,CN=worb.alps.eu.jedo.dev"
+                      Subject: "C=eu,ST=dev,L=alps,O=worb,CN=worb.alps.eu.jedo.dev"
                       Pass: Test1
                       CA: ca.jenziner.eu.jedo.dev
                       Users: 
                           - Name: do
-                            Subject: "C=dv,ST=jedo,L=eu,O=alps,OU=worb,CN=do.worb.alps.eu.jedo.dev"
+                            Subject: "C=eu,ST=dev,L=alps,O=worb,CN=do.worb.alps.eu.jedo.dev"
                             Pass: Test1
                           - Name: ra
-                            Subject: "C=dv,ST=jedo,L=eu,O=alps,OU=worb,CN=ra.worb.alps.eu.jedo.dev"
+                            Subject: "C=eu,ST=dev,L=alps,O=worb,CN=ra.worb.alps.eu.jedo.dev"
                             Pass: Test1
                     - Name: biglen.alps.eu.jedo.dev
-                      Subject: "C=dv,ST=jedo,L=eu,O=alps,OU=biglen,CN=biglen.alps.eu.jedo.dev"
+                      Subject: "C=eu,ST=dev,L=alps,O=biglen,CN=biglen.alps.eu.jedo.dev"
                       Pass: Test1
                       CA: ca.liebiwiler.eu.jedo.dev
                       Users:
                           - Name: lu
-                            Subject: "C=dv,ST=jedo,L=eu,O=alps,OU=biglen,CN=lu.biglen.alps.eu.jedo.dev"
+                            Subject: "C=eu,ST=dev,L=alps,O=biglen,CN=lu.biglen.alps.eu.jedo.dev"
                             Pass: Test1
                           - Name: is
-                            Subject: "C=dv,ST=jedo,L=eu,O=alps,OU=biglen,CN=is.biglen.alps.eu.jedo.dev"
+                            Subject: "C=eu,ST=dev,L=alps,O=biglen,CN=is.biglen.alps.eu.jedo.dev"
                             Pass: Test1
   
