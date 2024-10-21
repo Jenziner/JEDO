@@ -4,33 +4,118 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JEDO-CA-WEB</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            margin-top: 40px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"], input[type="password"], input[type="file"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        input[readonly] {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+            color: #6c757d;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #333;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .response-box {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
-    <h1>JEDO-CA-WEB</h1>
+    <div class="container">
+        <h1>JEDO</h1>
+        <h1>CA-WEB</h1>
 
-    <form id="certForm">
-        <label for="certFile">Upload Certificate:</label>
-        <input type="file" id="certFile" name="certFile" accept=".pem,.crt" required>
-        <br><br>
-        <button type="button" onclick="loadCertificate()">Load Certificate</button>
-    </form>
+        <form id="certForm">
+            <label for="certFile">Upload Certificate:</label>
+            <input type="file" id="certFile" name="certFile" accept=".pem,.crt" required>
+            <button type="button" onclick="loadCertificate()">Load Certificate</button>
+        </form>
 
-    <pre id="certInfo" style="white-space: pre-wrap; word-wrap: break-word;"></pre> <!-- Show needed Certificate-Infos -->
+        <pre id="certInfo" class="response-box"></pre> <!-- Show needed Certificate-Infos -->
 
-    <form id="userForm" style="display:none;">
-        <label for="region">Region:</label>
-        <input type="text" id="region" name="region">
-        <br>
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
-        <br>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
-        <br><br>
-        <button type="button" onclick="execute()">Execute</button>
-    </form>
+        <form id="userForm" class="hidden">
+            <label for="region">Region:</label>
+            <input type="text" id="region" name="region">
 
-    <pre id="response" style="white-space: pre-wrap; word-wrap: break-word;"></pre> <!-- Show API Server Response -->
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="button" onclick="execute()">Execute</button>
+        </form>
+
+        <pre id="response" class="response-box"></pre> <!-- Show API Server Response -->
+    </div>
 
     <script>
         let customAttrs = {};
@@ -40,6 +125,8 @@
         async function loadCertificate() {
             const certFileInput = document.getElementById('certFile');
             let result = '';
+
+            document.getElementById('region').style.display = 'none';  // Hide by default
 
             if (!certFileInput.files.length) {
                 result += 'No certificate file uploaded.\n';
@@ -60,13 +147,9 @@
                 result += `Extracted Custom Attributes:\nRole: ${customAttrs.role}\nAPI Port: ${customAttrs.apiPort}\n`;
 
                 // Show or hide the region field based on the role
-                if (customAttrs.role === 'CA') {
-                    document.getElementById('region').parentElement.style.display = 'block';
-                } else {
-                    document.getElementById('region').parentElement.style.display = 'none';
-                }
+                updateRegionField(customAttrs.role);
 
-            // Extract SAN-Data (DNS and IP)
+                // Extract SAN-Data (DNS and IP)
                 sanData = extractSANData(rawCert);
                 result += `\nExtracted SAN Data:\nDNS: ${sanData.dnsNames.join(', ')}\nIP: ${sanData.ipAddresses.join(', ')}\n`;
 
@@ -74,7 +157,7 @@
                 document.getElementById('certInfo').textContent = result;
 
                 // Show user form
-                document.getElementById('userForm').style.display = 'block';
+                document.getElementById('userForm').classList.remove('hidden');
 
             } catch (error) {
                 result += `Error processing certificate: ${error.message}\n`;
@@ -82,8 +165,22 @@
             }
         }
 
+        function updateRegionField(role) {
+            const regionField = document.getElementById('region');
+
+            if (role === 'CA') {
+                regionField.style.display = 'block';
+                regionField.value = '';
+                regionField.readOnly = false;
+            } else {
+                regionField.style.display = 'block';
+                regionField.value = 'n/a';
+                regionField.readOnly = true;
+            }
+        }
+
         async function execute() {
-            const region = document.getElementById('region').value;
+            let region = document.getElementById('region').value;
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             let result = '';
@@ -133,18 +230,8 @@
                 return;
             }
 
-            // Only include region if role is CA
-            const requestBody = {
-                username,
-                password,
-                certText
-            };
-            if (customAttrs.role === 'CA') {
-                requestBody.region = region;
-            }
-
             // Execute registerUser
-            result += await registerUser(validApiUrl, requestBody);
+            result += await registerUser(validApiUrl, region, username, password, certText);
 
             document.getElementById('response').textContent = result;
         }
@@ -154,7 +241,7 @@
             const match = certData.match(customAttrsRegex);
             let role = 'Unknown';
             let apiPort = 'Unknown';
-            
+
             if (match) {
                 const attrs = JSON.parse(`{${match[1]}}`);
                 role = attrs['jedo.role'] || 'Unknown';
@@ -168,7 +255,6 @@
             const dnsNames = [];
             const ipAddresses = [];
             let dnsCount = 0;
-            let startExtractingIPs = false;
             let lastDNSIndex = -1;
 
             // Regex to extract DNS names
@@ -247,7 +333,6 @@
                 return 'Register Error: ' + error.message + '\n';
             }
         }
-
     </script>
 </body>
 </html>
