@@ -390,8 +390,8 @@ const createOwner = async (username, password, affiliation, subjectDetails, res)
       config.keys_dir, 
       `${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
       `${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `_owner`, 
-      `${username}`, 
+      `${username}.${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
+      `_owner-${username}`, 
       `fsc`, 
       `msp`
     );
@@ -423,8 +423,8 @@ const createOwner = async (username, password, affiliation, subjectDetails, res)
       config.keys_dir, 
       `${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
       `${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `_owner`, 
-      `${username}`, 
+      `${username}.${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
+      `_owner-${username}`, 
       `wallet`,
       `msp`
     );
@@ -480,9 +480,7 @@ const createUser = async (username, password, affiliation, subjectDetails, res) 
       config.keys_dir, 
       `${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
       `${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`,
-      `_owner`,
-      `${subjectDetails.O}`, 
-      `_user`, 
+      `${subjectDetails.O}.${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
       `${username}`, 
       `msp`
     );
