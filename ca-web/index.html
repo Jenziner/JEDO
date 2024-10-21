@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JEDO-CA-API</title>
+    <title>JEDO-CA-WEB</title>
 </head>
 <body>
-    <h1>JEDO-CA-API</h1>
+    <h1>JEDO-CA-WEB</h1>
 
     <form id="certForm">
         <label for="certFile">Upload Certificate:</label>
@@ -59,7 +59,14 @@
                 customAttrs = extractCustomAttributes(rawCert);
                 result += `Extracted Custom Attributes:\nRole: ${customAttrs.role}\nAPI Port: ${customAttrs.apiPort}\n`;
 
-                // Extract SAN-Data (DNS and IP)
+                // Show or hide the region field based on the role
+                if (customAttrs.role === 'CA') {
+                    document.getElementById('region').parentElement.style.display = 'block';
+                } else {
+                    document.getElementById('region').parentElement.style.display = 'none';
+                }
+
+            // Extract SAN-Data (DNS and IP)
                 sanData = extractSANData(rawCert);
                 result += `\nExtracted SAN Data:\nDNS: ${sanData.dnsNames.join(', ')}\nIP: ${sanData.ipAddresses.join(', ')}\n`;
 
@@ -126,8 +133,18 @@
                 return;
             }
 
+            // Only include region if role is CA
+            const requestBody = {
+                username,
+                password,
+                certText
+            };
+            if (customAttrs.role === 'CA') {
+                requestBody.region = region;
+            }
+
             // Execute registerUser
-            result += await registerUser(validApiUrl, region, username, password, certText);
+            result += await registerUser(validApiUrl, requestBody);
 
             document.getElementById('response').textContent = result;
         }
