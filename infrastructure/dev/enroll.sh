@@ -101,19 +101,19 @@ for CHANNEL in $CHANNELS; do
             # Enroll User
             echo ""
             echo_info "User $ORDERER_NAME enrolling..."
-            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$ORDERER_NAME/msp \
+            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER_NAME/msp \
                 --csr.cn $CN --csr.names "$CSR_NAMES"
             # Enroll User TLS
             echo ""
             echo_info "User $ORDERER_NAME TLS enrolling..."
-            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$ORDERER_NAME/tls \
+            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER_NAME/tls \
                 --enrollment.profile tls --csr.cn $CN --csr.names "$CSR_NAMES"
 
             # Generating NodeOUs-File
             echo ""
             echo_info "NodeOUs-File writing..."
-            CA_CERT_FILE=$(ls ${PWD}/keys/$CHANNEL/_infrastructure/$ORDERER_NAME/msp/cacerts/*.pem)
-            cat <<EOF > ${PWD}/keys/$CHANNEL/_infrastructure/$ORDERER_NAME/msp/config.yaml
+            CA_CERT_FILE=$(ls ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER_NAME/msp/cacerts/*.pem)
+            cat <<EOF > ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER_NAME/msp/config.yaml
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
@@ -160,20 +160,20 @@ EOF
             # Enroll User
             echo ""
             echo_info "User $PEER_NAME enrolling..."
-            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$PEER_NAME/msp \
+            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$ORGANIZATION/$PEER_NAME/msp \
                 --csr.cn $CN --csr.names "$CSR_NAMES"
 
             # Enroll User TLS
             echo ""
             echo_info "User $PEER_NAME TLS enrolling..."
-            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$PEER_NAME/tls \
+            docker exec -it $CA_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$ORGANIZATION/$PEER_NAME/tls \
                 --enrollment.profile tls --csr.cn $CN --csr.names "$CSR_NAMES"
 
             # Generating NodeOUs-File
             echo ""
             echo_info "NodeOUs-File writing..."
-            CA_CERT_FILE=$(ls ${PWD}/keys/$CHANNEL/_infrastructure/$PEER_NAME/msp/cacerts/*.pem)
-            cat <<EOF > ${PWD}/keys/$CHANNEL/_infrastructure/$PEER_NAME/msp/config.yaml
+            CA_CERT_FILE=$(ls ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$PEER_NAME/msp/cacerts/*.pem)
+            cat <<EOF > ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$PEER_NAME/msp/config.yaml
 NodeOUs:
   Enable: true
   ClientOUIdentifier:

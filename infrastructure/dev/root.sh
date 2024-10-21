@@ -63,8 +63,8 @@ for CHANNEL in $CHANNELS; do
         -e FABRIC_CA_CLIENT_MSPDIR=$ROOTCA_CLI_DIR/msp \
         -e FABRIC_CA_CLIENT_TLS_ENABLED=true \
         -e FABRIC_CA_CLIENT_TLS_CERTFILES=$ROOTCA_SRV_DIR/tls-cert.pem \
-        -v ${PWD}/keys/$CHANNEL/_infrastructure/$ROOTCA_NAME:$ROOTCA_SRV_DIR \
-        -v ${PWD}/keys/$CHANNEL/_infrastructure/$ROOTCA_NAME/cli.$ROOTCA_NAME:$ROOTCA_CLI_DIR \
+        -v ${PWD}/keys/$CHANNEL/_infrastructure/_root/$ROOTCA_NAME:$ROOTCA_SRV_DIR \
+        -v ${PWD}/keys/$CHANNEL/_infrastructure/_root/$ROOTCA_NAME/cli.$ROOTCA_NAME:$ROOTCA_CLI_DIR \
         -v ${PWD}/keys/$CHANNEL/_infrastructure/:$KEYS_DIR \
         -p $ROOTCA_PORT:$ROOTCA_PORT \
         -p $ROOTCA_OPPORT:$ROOTCA_OPPORT \
@@ -145,13 +145,13 @@ for CHANNEL in $CHANNELS; do
             # Enroll User
             echo ""
             echo_info "User $CA_NAME enrolling..."
-            docker exec -it $ROOTCA_NAME fabric-ca-client enroll -u https://$CA_NAME:$CA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $KEYS_DIR/$CA_NAME/msp \
+            docker exec -it $ROOTCA_NAME fabric-ca-client enroll -u https://$CA_NAME:$CA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $KEYS_DIR/$ORGANIZATION/$CA_NAME/msp \
                 --enrollment.attrs "jedo.apiPort,jedo.role" --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$ROOTCA_NAME,$CA_NAME,$CAAPI_NAME,$CAAPI_IP,$DOCKER_UNRAID"
 
             # Enroll User TLS
             echo ""
             echo_info "User $CA_NAME TLS enrolling..."
-            docker exec -it $ROOTCA_NAME fabric-ca-client enroll -u https://$CA_NAME:$CA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $KEYS_DIR/$CA_NAME/tls \
+            docker exec -it $ROOTCA_NAME fabric-ca-client enroll -u https://$CA_NAME:$CA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $KEYS_DIR/$ORGANIZATION/$CA_NAME/tls \
                 --enrollment.profile tls --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$ROOTCA_NAME,$ROOTCA_IP,$DOCKER_UNRAID"  
         fi
     done
