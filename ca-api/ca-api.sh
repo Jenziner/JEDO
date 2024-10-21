@@ -90,7 +90,7 @@ EOF
                 -e FABRIC_CA_CLIENT_TLS_CERTFILES=/app/tls/tls-cert.pem \
                 -v ${PWD}/production/$CA_API_NAME:/app \
                 -v ${PWD}/keys:/etc/hyperledger/keys \
-                -v ${PWD}/keys/$CHANNEL/_infrastructure/$CA_NAME/cli.$CA_NAME/msp:/app/admin \
+                -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$CA_NAME/cli.$CA_NAME/msp:/app/admin \
                 -w /app \
                 -p $CA_API_PORT:$CA_API_PORT \
                 -p $CA_API_SRV_PORT:$CA_API_SRV_PORT \
