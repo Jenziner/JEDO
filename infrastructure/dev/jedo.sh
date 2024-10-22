@@ -139,27 +139,21 @@ if [[ "$opt_r" == "cert" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
         cool_down "Certificates enrolled."
     fi
 fi
-echo_warn "TEMP END"
-exit 1
-
-
-
-
-
-
-
 
 
 ###############################################################
 # Generate configuration (genesis block and channel configuration)
 ###############################################################
-if [[ "$opt_r" == "cert" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+if [[ "$opt_r" == "cfg" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./dev/config.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Genesis Block and Channel Configuration generated."
     fi
 fi
 
+
+echo_warn "TEMP END"
+exit 1
 
 ###############################################################
 # Run Orderer and/or Peer
