@@ -5,80 +5,81 @@
 #
 #
 ###############################################################
-source ./scripts/settings.sh
-source ./scripts/help.sh
+source ./utils/utils.sh
+source ./utils/help.sh
 check_script
 
-echo_ok "Generating configtx.yaml / Genesis-Block / Channel-Configuration - see Documentation here: https://hyperledger-fabric.readthedocs.io"
-
-###############################################################
-# Function to echo in colors
-###############################################################
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-function echo_info() {
-    echo -e "${YELLOW}$1${NC}"
-}
-function echo_error() {
-    echo -e "${RED}$1${NC}"
-}
+echo_ok "Generating Blockchain-Configuration - see Documentation here: https://hyperledger-fabric.readthedocs.io"
 
 
 ###############################################################
-# Definitions 
+# Params - from ./config/network-config.yaml
 ###############################################################
-export FABRIC_CFG_PATH=./config
-NETWORK_CONFIG_FILE="$FABRIC_CFG_PATH/network-config.yaml"
-OUTPUT_CONFIGTX_FILE="$FABRIC_CFG_PATH/configtx.yaml"
-FABRIC_PATH=$(yq eval '.Fabric.Path' "$NETWORK_CONFIG_FILE")
-ORGANIZATIONS=$(yq e '.FabricNetwork.Organizations[].Name' $NETWORK_CONFIG_FILE)
+CONFIG_FILE="./config/infrastructure-dev.yaml"
+FABRIC_BIN_PATH=$(yq eval '.Fabric.Path' "$CONFIG_FILE")
+CHANNELS=$(yq e ".FabricNetwork.Channels[].Name" $CONFIG_FILE)
+
+for CHANNEL in $CHANNELS; do
+    ###############################################################
+    # Definitions 
+    ###############################################################
+    mkdir ${PWD}/config/$CHANNEL
+    export FABRIC_CFG_PATH=${PWD}/config/$CHANNEL
+    ORGANIZATIONS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[].Name" $CONFIG_FILE)
+    OUTPUT_CONFIGTX_FILE="$FABRIC_CFG_PATH/configtx.yaml"
 
 
-###############################################################
-# Start of configtx.yaml
-###############################################################
-echo_info "ScriptInfo: generating $OUTPUT_CONFIGTX_FILE"
+    ###############################################################
+    # Start of configtx.yaml
+    ###############################################################
+    echo_info "$OUTPUT_CONFIGTX_FILE generating..."
 
 cat <<EOF > $OUTPUT_CONFIGTX_FILE
 ---
 EOF
 
 
-###############################################################
-# Section Organization
-###############################################################
+    ###############################################################
+    # Section Organization
+    ###############################################################
 cat <<EOF > $OUTPUT_CONFIGTX_FILE
 Organizations:
 EOF
 
-for ORGANIZATION in $ORGANIZATIONS; do
-    ORG_ADMIN=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Admin.Name" $NETWORK_CONFIG_FILE)
-    ORDERERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
-    PEERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $NETWORK_CONFIG_FILE)
-  
-    ORDERER_ENDPOINTS=""
-    if [[ -n "$ORDERERS" ]]; then
-        ORDERER=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Name" $NETWORK_CONFIG_FILE)
-        ORDERER_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Port" $NETWORK_CONFIG_FILE)
-        ORDERER_ENDPOINTS="OrdererEndpoints:
-      - $ORDERER:$ORDERER_PORT"
-    fi
+    for ORGANIZATION in $ORGANIZATIONS; do
+        CA_EXT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Ext" $CONFIG_FILE)
+        if [[ -n "$CA_EXT" ]]; then
+            CA=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_EXT\") | .Name" "$CONFIG_FILE")
+            CA_ORG=$(yq eval ".FabricNetwork.Channels[].Organizations[] | select(.CA.Name == \"$CA\") | .Name" "$CONFIG_FILE")
+        else
+            CA=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $CONFIG_FILE)
+            CA_ORG=$ORGANIZATION
+        fi
+        ORDERERS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
+        PEERS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $CONFIG_FILE)
+      
+        ORDERER_ENDPOINTS=""
+        if [[ -n "$ORDERERS" ]]; then
+            ORDERER=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Name" $CONFIG_FILE)
+            ORDERER_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Port" $CONFIG_FILE)
+            ORDERER_ENDPOINTS="OrdererEndpoints:
+          - $ORDERER:$ORDERER_PORT"
+        fi
 
-    ANCHOR_PEERS=""
-    if [[ -n "$PEERS" ]]; then
-        PEER=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[0].Name" $NETWORK_CONFIG_FILE)
-        PEER_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[0].Port1" $NETWORK_CONFIG_FILE)
-        ANCHOR_PEERS="AnchorPeers:
-      - Host: $PEER
-        Port: $PEER_PORT"
-    fi
+        ANCHOR_PEERS=""
+        if [[ -n "$PEERS" ]]; then
+            PEER=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[0].Name" $CONFIG_FILE)
+            PEER_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[0].Port1" $CONFIG_FILE)
+            ANCHOR_PEERS="AnchorPeers:
+          - Host: $PEER
+            Port: $PEER_PORT"
+        fi
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   - &${ORGANIZATION}
     Name: $ORGANIZATION
     ID: ${ORGANIZATION}MSP
-    MSPDir: $PWD/keys/$ORGANIZATION/$ORG_ADMIN/msp
+    MSPDir: $PWD/keys/$CHANNEL/_infrastructure/$CA_ORG/$CA/msp
     Policies:
       Readers:
         Type: Signature
@@ -98,12 +99,12 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
     $ORDERER_ENDPOINTS
     $ANCHOR_PEERS
 EOF
-done
+    done
 
 
-###############################################################
-# Section Capabilities
-###############################################################
+    ###############################################################
+    # Section Capabilities
+    ###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Capabilities:
   Channel: &ChannelCapabilities
@@ -115,32 +116,32 @@ Capabilities:
 EOF
 
 
-###############################################################
-# Section Application
-###############################################################
+    ###############################################################
+    # Section Application
+    ###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Application: &ApplicationDefaults
   Organizations:
 EOF
 
-for ORGANIZATION in $ORGANIZATIONS; do
+    for ORGANIZATION in $ORGANIZATIONS; do
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
     - *$ORGANIZATION
 EOF
-done
+    done
 
-RULE_MEMBER="OR("
-RULE_ADMIN="OR("
-RULE_PEER="OR("
-for ORG in $ORGANIZATIONS; do
-  ORG_MSP="${ORG}MSP"
-  RULE_MEMBER="${RULE_MEMBER}'${ORG_MSP}.member', "
-  RULE_ADMIN="${RULE_ADMIN}'${ORG_MSP}.admin', "
-  RULE_PEER="${RULE_PEER}'${ORG_MSP}.peer', "
-done
-RULE_MEMBER="${RULE_MEMBER::-2})"
-RULE_ADMIN="${RULE_ADMIN::-2})"
-RULE_PEER="${RULE_PEER::-2})"
+    RULE_MEMBER="OR("
+    RULE_ADMIN="OR("
+    RULE_PEER="OR("
+    for ORG in $ORGANIZATIONS; do
+        ORG_MSP="${ORG}MSP"
+        RULE_MEMBER="${RULE_MEMBER}'${ORG_MSP}.member', "
+        RULE_ADMIN="${RULE_ADMIN}'${ORG_MSP}.admin', "
+        RULE_PEER="${RULE_PEER}'${ORG_MSP}.peer', "
+    done
+    RULE_MEMBER="${RULE_MEMBER::-2})"
+    RULE_ADMIN="${RULE_ADMIN::-2})"
+    RULE_PEER="${RULE_PEER::-2})"
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   Policies:
@@ -164,25 +165,25 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 EOF
 
 
-###############################################################
-# Section Orderer
-###############################################################
+    ###############################################################
+    # Section Orderer
+    ###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Orderer: &OrdererDefaults
   Addresses:
 EOF
 
-for ORGANIZATION in $ORGANIZATIONS; do
-    ORDERERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
-  
-    if [[ -n "$ORDERERS" ]]; then
-        ORDERER=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Name" $NETWORK_CONFIG_FILE)
-        ORDERER_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Port" $NETWORK_CONFIG_FILE)
-    fi
+    for ORGANIZATION in $ORGANIZATIONS; do
+        ORDERERS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
+      
+        if [[ -n "$ORDERERS" ]]; then
+            ORDERER=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Name" $CONFIG_FILE)
+            ORDERER_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Port" $CONFIG_FILE)
+        fi
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
     - $ORDERER:$ORDERER_PORT
 EOF
-done
+    done
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   OrdererType: etcdraft
@@ -190,19 +191,19 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
     Consenters:
 EOF
 
-for ORGANIZATION in $ORGANIZATIONS; do
-    ORDERERS=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $NETWORK_CONFIG_FILE)
-    if [[ -n "$ORDERERS" ]]; then
-        ORDERER=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Name" $NETWORK_CONFIG_FILE)
-        ORDERER_PORT=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Port" $NETWORK_CONFIG_FILE)
-    fi
+    for ORGANIZATION in $ORGANIZATIONS; do
+        ORDERERS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
+        if [[ -n "$ORDERERS" ]]; then
+            ORDERER=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Name" $CONFIG_FILE)
+            ORDERER_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Port" $CONFIG_FILE)
+        fi
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
       - Host: $ORDERER
         Port: $ORDERER_PORT
-        ClientTLSCert: $PWD/keys/$ORGANIZATION/$ORDERER/tls/signcerts/cert.pem
-        ServerTLSCert: $PWD/keys/$ORGANIZATION/$ORDERER/tls/signcerts/cert.pem
+        ClientTLSCert: $PWD/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER/tls/signcerts/cert.pem
+        ServerTLSCert: $PWD/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER/tls/signcerts/cert.pem
 EOF
-done
+    done
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   BatchTimeout: 2s
@@ -213,11 +214,11 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   Organizations:
 EOF
 
-for ORGANIZATION in $ORGANIZATIONS; do
+    for ORGANIZATION in $ORGANIZATIONS; do
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
       - *$ORGANIZATION
 EOF
-done
+    done
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   Policies:
@@ -238,9 +239,9 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 EOF
 
 
-###############################################################
-# Section Channel
-###############################################################
+    ###############################################################
+    # Section Channel
+    ###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Channel: &ChannelDefaults
   Policies:
@@ -258,9 +259,9 @@ Channel: &ChannelDefaults
 EOF
 
 
-###############################################################
-# Profile
-###############################################################
+    ###############################################################
+    # Profile
+    ###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Profiles:
   JedoGenesis:
@@ -273,11 +274,11 @@ Profiles:
         Organizations:
 EOF
 
-for ORGANIZATION in $ORGANIZATIONS; do
+    for ORGANIZATION in $ORGANIZATIONS; do
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
           - *$ORGANIZATION
 EOF
-done
+    done
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
     Policies:
@@ -299,11 +300,11 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
       Organizations:
 EOF
 
-for ORGANIZATION in $ORGANIZATIONS; do
+    for ORGANIZATION in $ORGANIZATIONS; do
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
         - *$ORGANIZATION
 EOF
-done
+    done
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
       Capabilities: 
@@ -324,15 +325,15 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 EOF
 
 
-###############################################################
-# Generate GenesisBlock and ChannelConfiguration
-###############################################################
-CHANNEL=$(yq e '.FabricNetwork.Channel' $NETWORK_CONFIG_FILE)
+    ###############################################################
+    # Generate GenesisBlock and ChannelConfiguration
+    ###############################################################
+    echo_info "$FABRIC_CFG_PATH/$CHANNEL.genesisblock generating..."
+    $FABRIC_BIN_PATH/bin/configtxgen -profile JedoGenesis -channelID system-channel -outputBlock $FABRIC_CFG_PATH/$CHANNEL.genesisblock
 
-echo_info "ScriptInfo: generating $FABRIC_CFG_PATH/$CHANNEL.genesisblock"
-$FABRIC_PATH/bin/configtxgen -profile JedoGenesis -channelID system-channel -outputBlock $FABRIC_CFG_PATH/$CHANNEL.genesisblock
+    echo_info "$FABRIC_CFG_PATH/$CHANNEL.tx generating..."
+    $FABRIC_BIN_PATH/bin/configtxgen -profile JedoChannel -channelID $CHANNEL -outputCreateChannelTx $FABRIC_CFG_PATH/$CHANNEL.tx
 
-echo_info "ScriptInfo: generating $FABRIC_CFG_PATH/$CHANNEL.tx"
-$FABRIC_PATH/bin/configtxgen -profile JedoChannel -channelID $CHANNEL -outputCreateChannelTx $FABRIC_CFG_PATH/$CHANNEL.tx
+done
 
-
+echo_ok "configtx.yaml, Genesis-Block and Channel-Configuration generated"

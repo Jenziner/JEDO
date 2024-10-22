@@ -84,9 +84,9 @@ docker network rm  $DOCKER_NETWORK_NAME || true
 # Remove Folder
 echo ""
 echo_info "Folder removing..."
-rm -f ./config/configtx.yaml
-rm -f ./config/*.genesisblock
-rm -f ./config/*.tx
+for CHANNEL in $CHANNELS; do
+    rm -rf ./config/$CHANNEL
+done
 rm -rf ./config/couchdb
 rm -rf keys
 rm -rf tokengen
