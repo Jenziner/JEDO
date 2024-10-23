@@ -119,7 +119,7 @@ CheckContainer() {
     while [ $wait_time -lt $wait_time_limit ]; do
         if docker inspect -f '{{.State.Running}}' "$container_name" | grep true > /dev/null; then
             success=true
-            echo_ok "ScriptInfo: Docker Container $container_name started."
+            echo_ok "Docker Container $container_name started."
             break
         fi
         echo "Waiting for $container_name... ($wait_time seconds)"
@@ -128,7 +128,7 @@ CheckContainer() {
     done
 
     if [ "$success" = false ]; then
-        echo_error "ScriptError: $container_name did not start."
+        echo_error "$container_name did not start."
         docker logs "$container_name"
         exit 1
     fi
@@ -150,7 +150,7 @@ CheckHealth() {
         response=$(curl -vk https://"$ip_address":"$port"/healthz 2>&1 | grep "OK")
         if [[ $response == *"OK"* ]]; then
             success=true
-            echo_ok "ScriptInfo: Fabric-CA $service_name health-check passed."
+            echo_ok "Fabric-CA $service_name health-check passed."
             break
         fi
         echo "Waiting for $service_name... ($wait_time seconds)"
@@ -159,7 +159,7 @@ CheckHealth() {
     done
 
     if [ "$success" = false ]; then
-        echo_error "ScriptError: $service_name health-check failed."
+        echo_error "$service_name health-check failed."
         exit 1
     fi
 }
@@ -179,7 +179,7 @@ CheckOpenSSL() {
         if docker exec $service_name sh -c 'command -v openssl' > /dev/null; then
             SUCCESS=true
             docker exec -it $service_name sh -c 'openssl version'
-            echo_ok "ScriptInfo: OpenSSL Docker Container $service_name started."
+            echo_ok "OpenSSL Docker Container $service_name started."
             break
         fi
         echo "Waiting for OpenSSL installation... ($wait_time seconds)"
@@ -188,7 +188,7 @@ CheckOpenSSL() {
     done
 
     if [ "$SUCCESS" = false ]; then
-        echo_error "ScriptError: OpenSSL installation failed."
+        echo_error "OpenSSL installation failed."
         docker logs $service_name
         exit 1
     fi
@@ -208,7 +208,7 @@ CheckContainerLog() {
     while [ $wait_time -lt $wait_time_limit ]; do
         if docker logs "$container_name" 2>&1 | grep -q "$log_entry"; then
             success=true
-            echo_ok "ScriptInfo: Expected log entry '$log_entry' found for Docker Container $container_name."
+            echo_ok "Expected log entry '$log_entry' found for Docker Container $container_name."
             break
         fi
         echo "Waiting for expected log entry '$log_entry' in $container_name... ($wait_time seconds)"
@@ -217,7 +217,7 @@ CheckContainerLog() {
     done
 
     if [ "$success" = false ]; then
-        echo_error "ScriptError: Expected log entry '$log_entry' not found for $container_name within the time limit."
+        echo_error "Expected log entry '$log_entry' not found for $container_name within the time limit."
         docker logs "$container_name"
         exit 1
     fi
