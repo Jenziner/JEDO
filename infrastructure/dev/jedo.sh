@@ -152,25 +152,22 @@ if [[ "$opt_r" == "cfg" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
 fi
 
 
-echo_warn "TEMP END"
-exit 1
-
 ###############################################################
 # Run Orderer and/or Peer
 ###############################################################
-if [[ "$opt_r" == "node" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./dev/node.sh node
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Nodes running."
-    fi
-fi
-
-# if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-#     ./dev/node.sh orderer
+# if [[ "$opt_r" == "node" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+#     ./dev/node.sh node
 #     if [[ "$opt_a" == "pause" ]]; then
-#         cool_down "Orderers running."
+#         cool_down "Nodes running."
 #     fi
 # fi
+
+ if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+     ./dev/orderer.sh
+     if [[ "$opt_a" == "pause" ]]; then
+         cool_down "Orderers running."
+     fi
+ fi
 
 # if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
 #     ./dev/node.sh peer
@@ -179,6 +176,9 @@ fi
 #     fi
 # fi
 
+
+echo_warn "TEMP END"
+exit 1
 
 ###############################################################
 # Create Channel
