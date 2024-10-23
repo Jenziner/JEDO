@@ -88,7 +88,7 @@ EOF
                 --restart=unless-stopped \
                 $hosts_args \
                 -e FABRIC_CA_CLIENT_TLS_CERTFILES=/app/tls/tls-cert.pem \
-                -v ${PWD}/production/$CA_API_NAME:/app \
+                -v ${PWD}/production/$CHANNEL/$ORGANIZATION/$CA_API_NAME:/app \
                 -v ${PWD}/keys:/etc/hyperledger/keys \
                 -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$CA_NAME/cli.$CA_NAME/msp:/app/admin \
                 -w /app \
