@@ -139,7 +139,7 @@ for CHANNEL in $CHANNELS; do
             echo ""
             echo_info "User $CA_NAME registering..."
             docker exec -it $ROOTCA_NAME fabric-ca-client register -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp \
-                --id.name $CA_NAME --id.secret $CA_PASS --id.type client --id.affiliation $AFFILIATION \
+                --id.name $CA_NAME --id.secret $CA_PASS --id.type admin --id.affiliation $AFFILIATION \
                 --id.attrs "hf.Registrar.Roles=client,hf.IntermediateCA=true,jedo.apiPort=$CAAPI_PORT,jedo.role=CA"
 
             # Enroll User

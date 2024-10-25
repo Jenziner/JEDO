@@ -155,7 +155,7 @@ EOF
             # Register User
             echo_info "User $PEER_NAME registering..."
             docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \
-                --id.name $PEER_NAME --id.secret $PEER_PASS --id.type orderer --id.affiliation $AFFILIATION
+                --id.name $PEER_NAME --id.secret $PEER_PASS --id.type peer --id.affiliation $AFFILIATION
 
             # Enroll User
             echo ""
