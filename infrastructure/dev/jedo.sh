@@ -37,7 +37,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "ca" && "$OPTARG" != "cert" && "$OPTARG" != "ch" && "$OPTARG" != "cfg" && "$OPTARG" != "net" && "$OPTARG" != "node" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" ]]; then
+            if [[ "$OPTARG" != "ca" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -133,7 +133,7 @@ fi
 ###############################################################
 # Enroll certificates
 ###############################################################
-if [[ "$opt_r" == "cert" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+if [[ "$opt_r" == "enroll" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./dev/enroll.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Certificates enrolled."
@@ -144,7 +144,7 @@ fi
 ###############################################################
 # Generate configuration (genesis block and channel configuration)
 ###############################################################
-if [[ "$opt_r" == "cfg" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+if [[ "$opt_r" == "config" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./dev/config.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Genesis Block and Channel Configuration generated."
@@ -153,28 +153,25 @@ fi
 
 
 ###############################################################
-# Run Orderer and/or Peer
+# Run Peer
 ###############################################################
-# if [[ "$opt_r" == "node" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-#     ./dev/node.sh node
-#     if [[ "$opt_a" == "pause" ]]; then
-#         cool_down "Nodes running."
-#     fi
-# fi
+if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./dev/peer.sh peer
+    if [[ "$opt_a" == "pause" ]]; then
+        cool_down "Peers running."
+    fi
+fi
 
- if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-     ./dev/orderer.sh
-     if [[ "$opt_a" == "pause" ]]; then
-         cool_down "Orderers running."
-     fi
- fi
 
-# if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-#     ./dev/node.sh peer
-#     if [[ "$opt_a" == "pause" ]]; then
-#         cool_down "Peers running."
-#     fi
-# fi
+###############################################################
+# Run Orderer
+###############################################################
+if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./dev/orderer.sh
+    if [[ "$opt_a" == "pause" ]]; then
+        cool_down "Orderers running."
+    fi
+fi
 
 
 echo_warn "TEMP END"
@@ -183,7 +180,7 @@ exit 1
 ###############################################################
 # Create Channel
 ###############################################################
-if [[ "$opt_r" == "ch" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+if [[ "$opt_r" == "channel" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./dev/channel.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Channel created."

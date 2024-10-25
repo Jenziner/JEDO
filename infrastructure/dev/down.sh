@@ -91,6 +91,7 @@ rm -rf ./config/couchdb
 rm -rf keys
 rm -rf tokengen
 rm -rf production
+rm -rf chaincode
 #rm tokenchaincode/zkatdlog_pp.json
 
 echo_ok "$DOCKER_NETWORK_NAME removed."

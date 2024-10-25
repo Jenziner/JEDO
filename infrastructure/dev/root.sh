@@ -64,7 +64,7 @@ for CHANNEL in $CHANNELS; do
         -e FABRIC_CA_CLIENT_TLS_ENABLED=true \
         -e FABRIC_CA_CLIENT_TLS_CERTFILES=$ROOTCA_SRV_DIR/tls-cert.pem \
         -v ${PWD}/keys/$CHANNEL/_infrastructure/_root/$ROOTCA_NAME:$ROOTCA_SRV_DIR \
-        -v ${PWD}/keys/$CHANNEL/_infrastructure/_root/$ROOTCA_NAME/cli.$ROOTCA_NAME:$ROOTCA_CLI_DIR \
+        -v ${PWD}/keys/$CHANNEL/_infrastructure/_root/cli.$ROOTCA_NAME:$ROOTCA_CLI_DIR \
         -v ${PWD}/keys/$CHANNEL/_infrastructure/:$KEYS_DIR \
         -p $ROOTCA_PORT:$ROOTCA_PORT \
         -p $ROOTCA_OPPORT:$ROOTCA_OPPORT \
@@ -85,7 +85,7 @@ for CHANNEL in $CHANNELS; do
     # Enroll Root-CA-Admin
     echo ""
     echo_info "Root-Admin enrolling..."
-    docker exec -it $ROOTCA_NAME fabric-ca-client enroll -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT
+    docker exec -it $ROOTCA_NAME fabric-ca-client enroll -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp
 
     # Add Affiliation
     echo ""
@@ -139,14 +139,14 @@ for CHANNEL in $CHANNELS; do
             echo ""
             echo_info "User $CA_NAME registering..."
             docker exec -it $ROOTCA_NAME fabric-ca-client register -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp \
-                --id.name $CA_NAME --id.secret $CA_PASS --id.type client --id.affiliation $AFFILIATION \
-                --id.attrs "hf.Registrar.Roles=client,hf.IntermediateCA=true,jedo.apiPort=$CAAPI_PORT,jedo.role=CA"
+                --id.name $CA_NAME --id.secret $CA_PASS --id.type admin --id.affiliation $AFFILIATION \
+                --id.attrs '"hf.Registrar.Roles=peer,orderer,admin,client",hf.IntermediateCA=true,jedo.apiPort='"$CAAPI_PORT"',jedo.role=CA'
 
             # Enroll User
             echo ""
             echo_info "User $CA_NAME enrolling..."
             docker exec -it $ROOTCA_NAME fabric-ca-client enroll -u https://$CA_NAME:$CA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $KEYS_DIR/$ORGANIZATION/$CA_NAME/msp \
-                --enrollment.attrs "jedo.apiPort,jedo.role" --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$ROOTCA_NAME,$CA_NAME,$CAAPI_NAME,$CAAPI_IP,$DOCKER_UNRAID"
+                --enrollment.attrs "hf.Registrar.Roles,hf.IntermediateCA,jedo.apiPort,jedo.role" --csr.cn $CN --csr.names $CSR_NAMES --csr.hosts "$ROOTCA_NAME,$CA_NAME,$CAAPI_NAME,$CAAPI_IP,$DOCKER_UNRAID"
 
             # Enroll User TLS
             echo ""

@@ -75,7 +75,7 @@ for CHANNEL in $CHANNELS; do
                 -e FABRIC_CA_CLIENT_TLS_CERTFILES=$CA_SRV_DIR/tls-cert.pem \
                 -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$CA_NAME:$CA_DIR \
                 -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$CA_NAME:$CA_SRV_DIR \
-                -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$CA_NAME/cli.$CA_NAME:$CA_CLI_DIR \
+                -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/cli.$CA_NAME:$CA_CLI_DIR \
                 -v ${PWD}/keys/:$KEYS_DIR \
                 -p $CA_PORT:$CA_PORT \
                 -p $CA_OPPORT:$CA_OPPORT \
