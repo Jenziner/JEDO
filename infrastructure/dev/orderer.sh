@@ -30,23 +30,24 @@ for CHANNEL in $CHANNELS; do
     get_hosts
 
     for ORGANIZATION in $ORGANIZATIONS; do
-        ORDERERS_NAME=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
         CA_EXT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Ext" $CONFIG_FILE)
         if [[ -n "$CA_EXT" ]]; then
-            CA=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_EXT\") | .Name" "$CONFIG_FILE")
-            CA_ORG=$(yq eval ".FabricNetwork.Channels[].Organizations[] | select(.CA.Name == \"$CA\") | .Name" "$CONFIG_FILE")
+            CA_NAME=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_EXT\") | .Name" "$CONFIG_FILE")
+            CA_ORG=$(yq eval ".FabricNetwork.Channels[].Organizations[] | select(.CA.Name == \"$CA_NAME\") | .Name" "$CONFIG_FILE")
         else
-            CA=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $CONFIG_FILE)
+            CA_NAME=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" $CONFIG_FILE)
             CA_ORG=$ORGANIZATION
         fi
+        ORDERERS=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
 
-        for index in $(seq 0 $(($(echo "$ORDERERS_NAME" | wc -l) - 1))); do
-            ORDERER_NAME=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].Name" $CONFIG_FILE)
-            ORDERER_PASS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].Pass" $CONFIG_FILE)
-            ORDERER_IP=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].IP" $CONFIG_FILE)
-            ORDERER_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].Port" $CONFIG_FILE)
-            ORDERER_OPPORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].OpPort" $CONFIG_FILE)
-            ORDERER_CLUSTER_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[$index].ClusterPort" $CONFIG_FILE)
+        for ORDERER in $ORDERERS; do
+            ORDERER_NAME=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Name" $CONFIG_FILE)
+            ORDERER_PASS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Pass" $CONFIG_FILE)
+            ORDERER_IP=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .IP" $CONFIG_FILE)
+            ORDERER_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
+            ORDERER_OPPORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .OpPort" $CONFIG_FILE)
+            ORDERER_CLUSTER_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .ClusterPort" $CONFIG_FILE)
+            
             TLS_PRIVATE_KEY=$(basename $(ls $PWD/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER_NAME/tls/keystore/*_sk))
 
             ORGS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[].Name" $CONFIG_FILE)
@@ -84,27 +85,21 @@ for CHANNEL in $CHANNELS; do
             -e ORDERER_GENERAL_TLS_ENABLED=true \
             -e ORDERER_GENERAL_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
             -e ORDERER_GENERAL_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
-            -e ORDERER_GENERAL_TLS_ROOTCAS=[$CA_DIR/ca-chain.pem] \
-            -e ORDERER_GENERAL_TLS_CLIENTAUTHREQUIRED=true \
-            -e ORDERER_GENERAL_TLS_CLIENTROOTCAS=[$CA_DIR/ca-chain.pem] \
+            -e ORDERER_GENERAL_TLS_ROOTCAS=[/etc/hyperledger/orderer/msp/ca-chain.pem] \
             -e ORDERER_GENERAL_CLUSTER_LISTENADDRESS=0.0.0.0 \
             -e ORDERER_GENERAL_CLUSTER_LISTENPORT=$ORDERER_CLUSTER_PORT \
             -e ORDERER_GENERAL_CLUSTER_PEERS=[$CLUSTER_PEERS] \
             -e ORDERER_GENERAL_CLUSTER_SERVERCERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
             -e ORDERER_GENERAL_CLUSTER_SERVERPRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
-            -e ORDERER_GENERAL_CLUSTER_ROOTCAS=[$CA_DIR/ca-chain.pem] \
+            -e ORDERER_GENERAL_CLUSTER_ROOTCAS=[/etc/hyperledger/orderer/msp/ca-chain.pem] \
             -e ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
             -e ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
-            -e ORDERER_GENERAL_CLUSTER_DIALTIMEOUT=10s \
-            -e ORDERER_GENERAL_CLUSTER_RPCTIMEOUT=10s \
             -e ORDERER_GENERAL_BOOTSTRAPMETHOD=none \
             -e ORDERER_CHANNELPARTICIPATION_ENABLED=true \
-            -e ORDERER_RAFT_ELECTIONTICK=20 \
-            -e ORDERER_RAFT_HEARBEATTICK=2 \
-            -e ORDERER_RAFT_SNAPSHOTINTERVALSIZE=20MB \
             -v $FABRIC_BIN_PATH/config/orderer.yaml:/etc/hyperledger/fabric/orderer.yaml \
-            -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER_NAME:/etc/hyperledger/orderer \
-            -v ${PWD}/keys/$CHANNEL/_infrastructure/$CA_ORG/$CA:$CA_DIR \
+            -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER_NAME/msp:/etc/hyperledger/orderer/msp \
+            -v ${PWD}/keys/$CHANNEL/_infrastructure/$CA_ORG/$CA_NAME/ca-chain.pem:/etc/hyperledger/orderer/msp/ca-chain.pem \
+            -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
             -v ${PWD}/production/$CHANNEL/$ORGANIZATION/$ORDERER_NAME:/var/hyperledger/production \
             -p $ORDERER_PORT:$ORDERER_PORT \
             -p $ORDERER_OPPORT:$ORDERER_OPPORT \
