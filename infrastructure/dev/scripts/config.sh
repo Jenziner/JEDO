@@ -23,7 +23,6 @@ for CHANNEL in $CHANNELS; do
     ###############################################################
     # Definitions 
     ###############################################################
-    mkdir ${PWD}/config/$CHANNEL
     export FABRIC_CFG_PATH=${PWD}/config/$CHANNEL
     ORGANIZATIONS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[].Name" $CONFIG_FILE)
     OUTPUT_CONFIGTX_FILE="$FABRIC_CFG_PATH/configtx.yaml"
@@ -264,75 +263,41 @@ EOF
     ###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Profiles:
-  JedoGenesis:
-    <<: *ChannelDefaults
-    Orderer:
-      <<: *OrdererDefaults
-      Capabilities: *OrdererCapabilities
-    Consortiums:
-      JEDO:
-        Organizations:
-EOF
-
-    for ORGANIZATION in $ORGANIZATIONS; do
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-          - *$ORGANIZATION
-EOF
-    done
-
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-    Policies:
-      Readers:
-        Type: ImplicitMeta
-        Rule: "ANY Readers"
-      Writers:
-        Type: ImplicitMeta
-        Rule: "ANY Writers"
-      Admins:
-        Type: ImplicitMeta
-        Rule: "ANY Admins"
-
   JedoChannel:
     <<: *ChannelDefaults
-    Consortium: JEDO
+    Orderer:
+        <<: *OrdererDefaults
     Application:
-      <<: *ApplicationDefaults
-      Organizations:
-EOF
-
-    for ORGANIZATION in $ORGANIZATIONS; do
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-        - *$ORGANIZATION
-EOF
-    done
-
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-      Capabilities: 
-        <<: *ApplicationCapabilities
-      Policies:
-        Readers:
-          Type: ImplicitMeta
-          Rule: "ANY Readers"
-        Writers:
-          Type: ImplicitMeta
-          Rule: "ANY Writers"
-        Admins:
-          Type: ImplicitMeta
-          Rule: "ANY Admins"
-        Endorsement:
-          Type: ImplicitMeta
-          Rule: "ANY Endorsement"      
+        <<: *ApplicationDefaults
+        Capabilities: 
+          <<: *ApplicationCapabilities
+        Policies:
+          Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+          Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+          Admins:
+            Type: ImplicitMeta
+            Rule: "ANY Admins"
+          Endorsement:
+            Type: ImplicitMeta
+            Rule: "ANY Endorsement"      
 EOF
 
 
     ###############################################################
     # Generate GenesisBlock and ChannelConfiguration
     ###############################################################
-    echo_info "$FABRIC_CFG_PATH/$CHANNEL.genesisblock generating..."
-    $FABRIC_BIN_PATH/bin/configtxgen -profile JedoGenesis -channelID system-channel -outputBlock $FABRIC_CFG_PATH/$CHANNEL.genesisblock
+    # echo_info "$FABRIC_CFG_PATH/$CHANNEL.genesisblock generating..."
+    # $FABRIC_BIN_PATH/bin/configtxgen -profile JedoGenesis -channelID system-channel -outputBlock $FABRIC_CFG_PATH/$CHANNEL.genesisblock
 
-    echo_info "$FABRIC_CFG_PATH/$CHANNEL.tx generating..."
-    $FABRIC_BIN_PATH/bin/configtxgen -profile JedoChannel -channelID $CHANNEL -outputCreateChannelTx $FABRIC_CFG_PATH/$CHANNEL.tx
+    # echo_info "$FABRIC_CFG_PATH/$CHANNEL.tx generating..."
+    # $FABRIC_BIN_PATH/bin/configtxgen -profile JedoChannel -channelID $CHANNEL -outputCreateChannelTx $FABRIC_CFG_PATH/$CHANNEL.tx
+
+    echo_info "Genesis block for $CHANNEL generating..."
+    $FABRIC_BIN_PATH/bin/configtxgen -profile JedoChannel -channelID $CHANNEL -outputBlock $FABRIC_CFG_PATH/genesis_block.pb
 
 done
 

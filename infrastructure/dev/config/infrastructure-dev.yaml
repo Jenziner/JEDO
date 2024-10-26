@@ -51,32 +51,35 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                       Port: 7051
                       ClusterPort: 7052
                       OpPort: 7059
+                      Admin:
+                          IP: 172.25.1.12
+                          Port: 7053
                 Peers: # first peer will be used as AnchorPeer
                     - Name: peer0.jenziner.eu.jedo.dev
                       Subject: "C=eu,ST=dev,L=jenziner,CN=peer0.jenziner.eu.jedo.dev"
                       Pass: Test1
-                      IP: 172.25.1.12
+                      IP: 172.25.1.13
                       Port1: 7061
                       Port2: 7062
                       OpPort: 7069
-                      CLI: 172.25.1.14
+                      CLI: 172.25.1.15
                       DB: 
                           Name: db.peer0.jenziner.eu.jedo.dev
                           Pass: Test1
-                          IP: 172.25.1.13
+                          IP: 172.25.1.14
                           Port: 7064
                     - Name: peer1.jenziner.eu.jedo.dev
                       Subject: "C=eu,ST=dev,L=jenziner,CN=peer1.jenziner.eu.jedo.dev"
                       Pass: Test1
-                      IP: 172.25.1.15
+                      IP: 172.25.1.16
                       Port1: 7071
                       Port2: 7072
                       OpPort: 7079
-                      CLI: 172.25.1.17
+                      CLI: 172.25.1.19
                       DB: 
                           Name: db.peer1.jenziner.eu.jedo.dev
                           Pass: Test1
-                          IP: 172.25.1.16
+                          IP: 172.25.1.17
                           Port: 7074
               - Name: Liebiwiler
                 Consortium: # Name of consortium if member or null
@@ -102,19 +105,22 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                       Port: 8051
                       ClusterPort: 8052
                       OpPort: 8059
+                      Admin:
+                        IP: 172.25.2.12
+                        Port: 8053
                 Peers: # first peer will be used as AnchorPeer
                     - Name: peer0.liebiwiler.eu.jedo.dev
                       Subject: "C=eu,ST=dev,L=liebiwiler,CN=peer0.liebiwiler.eu.jedo.dev"
                       Pass: Test1
-                      IP: 172.25.2.12
+                      IP: 172.25.2.13
                       Port1: 8061
                       Port2: 8062
                       OpPort: 8069
-                      CLI: 172.25.2.14
+                      CLI: 172.25.2.15
                       DB: 
                           Name: db.peer0.liebiwiler.eu.jedo.dev
                           Pass: Test1
-                          IP: 172.25.2.13
+                          IP: 172.25.2.14
                           Port: 8064
               - Name: Breitschi
                 Consortium: # Name of consortium if member or null
@@ -139,19 +145,22 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                       Port: 9051
                       ClusterPort: 9052
                       OpPort: 9059
+                      Admin:
+                        IP: 172.25.3.12
+                        Port: 9053
                 Peers: # first peer will be used as AnchorPeer
                     - Name: peer0.breitschi.eu.jedo.dev
                       Subject: "C=eu,ST=dev,L=jenziner,CN=peer0.breitschi.eu.jedo.dev"
                       Pass: Test1
-                      IP: 172.25.3.12
+                      IP: 172.25.3.13
                       Port1: 9061
                       Port2: 9062
                       OpPort: 9069
-                      CLI: 172.25.3.14
+                      CLI: 172.25.3.15
                       DB: 
                           Name: db.peer0.breitschi.eu.jedo.dev
                           Pass: Test1
-                          IP: 172.25.3.13
+                          IP: 172.25.3.14
                           Port: 9064
           Regions:
               - Name: alps.eu.jedo.dev

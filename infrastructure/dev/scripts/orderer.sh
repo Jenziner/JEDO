@@ -47,6 +47,8 @@ for CHANNEL in $CHANNELS; do
             ORDERER_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
             ORDERER_OPPORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .OpPort" $CONFIG_FILE)
             ORDERER_CLUSTER_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .ClusterPort" $CONFIG_FILE)
+            ORDERER_ADMIN_IP=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Admin.IP" $CONFIG_FILE)
+            ORDERER_ADMIN_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Admin.Port" $CONFIG_FILE)
             
             TLS_PRIVATE_KEY=$(basename $(ls $PWD/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER_NAME/tls/keystore/*_sk))
 
@@ -95,6 +97,12 @@ for CHANNEL in $CHANNELS; do
             -e ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
             -e ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
             -e ORDERER_GENERAL_BOOTSTRAPMETHOD=none \
+            -e ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:$ORDERER_ADMIN_PORT \
+            -e ORDERER_ADMIN_TLS_ENABLED=true \
+            -e ORDERER_ADMIN_TLS_CLIENTAUTHREQUIRED=true \
+            -e ORDERER_ADMIN_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+            -e ORDERER_ADMIN_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
+            -e ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/etc/hyperledger/orderer/msp/ca-chain.pem] \
             -e ORDERER_CHANNELPARTICIPATION_ENABLED=true \
             -v $FABRIC_BIN_PATH/config/orderer.yaml:/etc/hyperledger/fabric/orderer.yaml \
             -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER_NAME/msp:/etc/hyperledger/orderer/msp \
@@ -104,6 +112,7 @@ for CHANNEL in $CHANNELS; do
             -p $ORDERER_PORT:$ORDERER_PORT \
             -p $ORDERER_OPPORT:$ORDERER_OPPORT \
             -p $ORDERER_CLUSTER_PORT:$ORDERER_CLUSTER_PORT \
+            -p $ORDERER_ADMIN_PORT:$ORDERER_ADMIN_PORT \
             --restart unless-stopped \
             hyperledger/fabric-orderer:latest
 
