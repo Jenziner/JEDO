@@ -63,8 +63,8 @@ for CHANNEL in $CHANNELS; do
             --label net.unraid.docker.icon="https://raw.githubusercontent.com/apache/couchdb/main/branding/logo/CouchDB_Logo_192px.png" \
             -e COUCHDB_USER=$PEER_DB_NAME \
             -e COUCHDB_PASSWORD=$PEER_DB_PASS \
-            -v $PWD/production/couchdb/$PEER_DB_NAME:/opt/couchdb/data \
-            -v $PWD/config/couchdb/$PEER_DB_NAME:/opt/couchdb/etc/local.d \
+            -v $PWD/production/$CHANNEL/$ORGANIZATION/$PEER_DB_NAME:/opt/couchdb/data \
+            -v $PWD/config/$CHANNEL/$ORGANIZATION/$PEER_DB_NAME:/opt/couchdb/etc/local.d \
             -p $PEER_DB_PORT:5984 \
             --restart unless-stopped \
             couchdb:latest
@@ -172,8 +172,8 @@ for CHANNEL in $CHANNELS; do
             -v ${PWD}/keys/$CHANNEL/_infrastructure/$CA_ORG/$CA_NAME/ca-chain.pem:/etc/hyperledger/peer/msp/ca-chain.pem \
             -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
             -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$FIRST_ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
-            -v ${PWD}/production/$CHANNEL/$PEER_NAME:/var/hyperledger/production \
-            -v ${PWD}/chaincode/$CHANNEL/$PEER_NAME:/opt/gopath/src/github.com/hyperledger/fabric/chaincode \
+            -v ${PWD}/production/$CHANNEL/$ORGANIZATION/$PEER_NAME:/var/hyperledger/production \
+            -v ${PWD}/chaincode/$CHANNEL/$ORGANIZATION/$PEER_NAME:/opt/gopath/src/github.com/hyperledger/fabric/chaincode \
             -v ${PWD}/config/$CHANNEL:/etc/hyperledger/config \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w /opt/gopath/src/github.com/hyperledger/fabric \
@@ -183,13 +183,13 @@ for CHANNEL in $CHANNELS; do
 
             CheckContainer "cli.$PEER_NAME" "$DOCKER_CONTAINER_WAIT"
 
-            ###############################################################
-            # sign channelconfig
-            ###############################################################
-            echo ""
-            echo_info "Channelconfig $CHANNEL with $PEER_NAME signing..."
-            docker exec -it cli.$PEER_NAME peer channel signconfigtx -f /etc/hyperledger/config/$CHANNEL.tx
-            echo_ok "Channelconfig $CHANNEL with $PEER_NAME signed."
+            # ###############################################################
+            # # sign channelconfig
+            # ###############################################################
+            # echo ""
+            # echo_info "Channelconfig $CHANNEL with $PEER_NAME signing..."
+            # docker exec -it cli.$PEER_NAME peer channel signconfigtx -f /etc/hyperledger/config/$CHANNEL.tx
+            # echo_ok "Channelconfig $CHANNEL with $PEER_NAME signed."
         done
     done
 done

@@ -34,8 +34,7 @@ inst_help_go() {
     echo "installation:"
     echo "1. wget https://go.dev/dl/$(wget -qO- https://go.dev/VERSION?m=text).linux-amd64.tar.gz"
     echo "2. sudo tar -C /usr/local -xzf go*.linux-amd64.tar.gz"
-    echo "3. echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc"
-    echo "4. source ~/.bashrc"
+
 }
 inst_help_orderer() {
     echo "Orderer installation is part of the Hyperledger Fabric binaries. Follow the official documentation to download the binaries: https://hyperledger-fabric.readthedocs.io"
@@ -73,7 +72,7 @@ check_command() {
         elif "$command" -v &> /dev/null; then
             "$command" -v
         else
-            echo_warn "no version information is not available."
+            echo_warn "Version information is not available."
         fi
     fi
 }

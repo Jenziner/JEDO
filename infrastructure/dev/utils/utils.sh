@@ -8,7 +8,7 @@
 set -Eeuo pipefail
 
 ###############################################################
-# Function to echo in colors
+# Function to check script call
 ###############################################################
 function check_script() {
     if [[ "$JEDO_INITIATED" != "yes" ]]; then
@@ -101,7 +101,8 @@ get_hosts() {
             for index in $(seq 0 $(($(echo "$UTIL_ORDERERS" | wc -l) - 1))); do
                 ORDERER_NAME=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[$index].Name" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
                 ORDERER_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[$index].IP" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-                hosts_args+="--add-host=$ORDERER_NAME:$ORDERER_IP "
+                ORDERER_ADMIN_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[$index].Admin.IP" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
+                hosts_args+="--add-host=$ORDERER_NAME:$ORDERER_IP --add-host=$ORDERER_NAME:$ORDERER_ADMIN_IP "
             done
         done
     done

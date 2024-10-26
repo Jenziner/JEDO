@@ -84,7 +84,7 @@ fi
 # Delete previous installation
 ###############################################################
 if $opt_d || [[ "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./dev/down.sh
+    ./scripts/down.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Previous installation deleted."
     fi
@@ -112,7 +112,7 @@ fi
 # Generate Root-CA
 ###############################################################
 if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./dev/root.sh
+    ./scripts/root.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Root-CA started."
     fi
@@ -123,7 +123,7 @@ fi
 # Run CA
 ###############################################################
 if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./dev/ca.sh
+    ./scripts/ca.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "CA running."
     fi
@@ -134,20 +134,9 @@ fi
 # Enroll certificates
 ###############################################################
 if [[ "$opt_r" == "enroll" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./dev/enroll.sh
+    ./scripts/enroll.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Certificates enrolled."
-    fi
-fi
-
-
-###############################################################
-# Generate configuration (genesis block and channel configuration)
-###############################################################
-if [[ "$opt_r" == "config" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./dev/config.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Genesis Block and Channel Configuration generated."
     fi
 fi
 
@@ -156,7 +145,7 @@ fi
 # Run Peer
 ###############################################################
 if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./dev/peer.sh peer
+    ./scripts/peer.sh peer
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Peers running."
     fi
@@ -167,21 +156,29 @@ fi
 # Run Orderer
 ###############################################################
 if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./dev/orderer.sh
+    ./scripts/orderer.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Orderers running."
     fi
 fi
 
 
-echo_warn "TEMP END"
-exit 1
+###############################################################
+# Generate configuration (genesis block and channel configuration)
+###############################################################
+if [[ "$opt_r" == "config" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/config.sh
+    if [[ "$opt_a" == "pause" ]]; then
+        cool_down "Genesis Block and Channel Configuration generated."
+    fi
+fi
+
 
 ###############################################################
 # Create Channel
 ###############################################################
 if [[ "$opt_r" == "channel" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./dev/channel.sh
+    ./scripts/channel.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Channel created."
     fi
