@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@ionic-native/barcode-scanner": "^5.36.0",
     "cors": "^2.8.5",
     "fabric-ca-client": "^2.2.20"
   }

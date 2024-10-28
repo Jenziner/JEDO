@@ -7,8 +7,15 @@ Either a smartphone app for people or a computer app for organizations. It is us
 Based on the ionic framework (https://ionicframework.com/) with Angular (https://angular.dev/).
 
 Run ionic Server: 
-- cd WALLET
-- npm run ionic:serve
+cd WALLET
+npm run ionic:serve
 
 Update: 
-- ionic serve
+ionic serve
+
+
+Create Android APP:
+npm run build
+npx cap sync
+npx cap open android
+
