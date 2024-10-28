@@ -26,6 +26,22 @@
         </ion-item>
       </ion-list>
 
+      <ion-button expand="block" (click)="registerWallet()" [disabled]="isRegistered">
+        {{ 'REGISTER' | translate }}
+      </ion-button>
+
+      <!-- <ion-button expand="block" (click)="importWalletCert()" [disabled]="isRegistered">
+        {{ 'IMPORT' | translate }}
+      </ion-button>
+
+      <ion-button expand="block" (click)="exportWalletCert()" [enabled]="isRegistered">
+        {{ 'EXPORT' | translate }}
+      </ion-button> -->
+
+
+
+
+
       <ion-button expand="block" (click)="generateCredentials()" [disabled]="isGenerated">
         {{ 'GENERATE' | translate }}
       </ion-button>
@@ -47,16 +63,6 @@
           {{ 'CHANGE_LANGUAGE' | translate }}
         </ion-button>        
       </ion-list>
-
-    <ion-button (click)="navigateToTab('tab_test')">
-      Tab-TEST
-    </ion-button>
-    
-    <ion-button (click)="navigateToTab('tab_assets')">
-      Tab ASSET
-    </ion-button>
-
-
 
 </ion-content>
 </ion-menu>

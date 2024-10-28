@@ -2,11 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonMenu, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButtons, IonButton, IonMenuButton, IonIcon } from '@ionic/angular/standalone';
 import { FormsModule } from '@angular/forms';
+import { QrScanService } from '../services/qr-scan.service';
+import { parseCertificate } from '../utils/certificate-utils';
 import { Storage } from '@ionic/storage-angular';
 import { v4 as uuidv4 } from 'uuid';
 import { TranslateService, TranslateModule } from '@ngx-translate/core';
 import { ModalController } from '@ionic/angular';
 import { LanguageSelectorComponent } from '../language-selector/language-selector.component';
+import { AlertController, ToastController } from '@ionic/angular';
 
 
 
@@ -42,6 +45,7 @@ import { TabsPage } from '../tabs/tabs.page';
 export class MenuComponent  implements OnInit {
   uuid: string | null = null;
   password: string | null = null;
+  isRegistered: boolean = false;
   isGenerated: boolean = false;
   isImportMode: boolean = false;
 
@@ -49,7 +53,10 @@ export class MenuComponent  implements OnInit {
     private storage: Storage, 
     private translate: TranslateService,
     private tabsPage: TabsPage,
-    private modalCtrl: ModalController
+    private modalCtrl: ModalController,
+    private qrScanService: QrScanService,
+    private alertController: AlertController,
+    private toastController: ToastController
   ) { 
     this.init();
     translate.setDefaultLang('en');
@@ -70,7 +77,43 @@ export class MenuComponent  implements OnInit {
   async ngOnInit() {
     this.uuid = await this.storage.get('uuid');
     this.password = await this.storage.get('password');
+    this.isRegistered = !!this.uuid && !!this.password;
     this.isGenerated = !!this.uuid;
+  }
+
+  async registerWallet() {
+    console.log('registerWallet gestartet');
+    try {
+      const qrData = await this.qrScanService.scanQrCode();
+      console.log('QR-Code Scan abgeschlossen. Daten:', qrData);
+
+      const cameraElement = document.querySelector('.camera-element');
+      if (cameraElement) {
+        cameraElement.classList.add('camera-layer');
+      }
+
+      if (qrData) {
+        // Prüfen, ob die QR-Daten ein Zertifikat darstellen
+        const cert = await parseCertificate(qrData);
+        if (cert) {
+          const san = cert.san;
+          console.log(`SAN-Daten gefunden: ${san}`);
+        } else {
+          console.warn('Keine SAN-Daten gefunden.');
+        }
+
+        // Benutzernamen und Passwort generieren
+        this.generateCredentials();
+        console.log(`Benutzername: ${this.uuid}, Passwort: ${this.password}`);
+
+        // Toast zur Anzeige der Ergebnisse
+      } else {
+        console.error('Keine Daten gescannt.');
+        await this.showToast('Keine Daten gescannt.');
+      }
+    } catch (error) {
+      console.error('Fehler bei der Registrierung der Wallet:', error);
+    }
   }
 
   async generateCredentials() {
@@ -109,8 +152,28 @@ export class MenuComponent  implements OnInit {
     this.isGenerated = false;
   }
 
+  async showAlert(header: string, message: string) {
+    const alert = await this.alertController.create({
+      header,
+      message,
+      buttons: ['OK'],
+    });
 
-    //used in DEBUG to open other tabs not shown in the tabs
+    await alert.present();
+  }
+
+  async showToast(message: string) {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      position: 'top'
+    });
+
+    await toast.present();
+  }
+
+
+  //used in DEBUG to open other tabs not shown in the tabs
     navigateToTab(tabName: string) {
       this.tabsPage.goToTab(tabName);
     }
