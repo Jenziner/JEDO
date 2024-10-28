@@ -6,6 +6,8 @@
 #
 ###############################################################
 up_help() {
+    CONFIG_FILE="./config/infrastructure-dev.yaml"
+
     echo " Use: $(basename S0) [OPTIONS]"
     echo "Options:"
     echo "  -h          show help"
@@ -27,6 +29,12 @@ up_help() {
     echo "Arguments for option -a"
     echo "  go        runs through all sections"
     echo "  pause     pauses after each section"
+    echo ""
+    echo ""
+    echo "********************"
+    echo "Hosts:"
+    get_hosts
+    echo "$hosts_args" | sed 's/ --add-host=/\n--add-host=/g' | sed 's/=/= /g' | sed 's/:/ : /g'
 
     exit 0
 }

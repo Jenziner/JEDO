@@ -39,6 +39,7 @@ for CHANNEL in $CHANNELS; do
             CA_ORG=$ORGANIZATION
         fi
         PEERS=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $CONFIG_FILE)
+        ORG_ADMIN=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Admin.Name" $CONFIG_FILE)
 
         for PEER in $PEERS; do
             ###############################################################
@@ -130,6 +131,7 @@ for CHANNEL in $CHANNELS; do
             -v $FABRIC_BIN_PATH/config/core.yaml:/etc/hyperledger/fabric/core.yaml \
             -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$PEER_NAME/msp:/etc/hyperledger/peer/msp \
             -v ${PWD}/keys/$CHANNEL/_infrastructure/$CA_ORG/$CA_NAME/ca-chain.pem:/etc/hyperledger/peer/msp/ca-chain.pem \
+            -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORG_ADMIN/msp/signcerts/cert.pem:/etc/hyperledger/peer/msp/admincerts/cert.pem \
             -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
             -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$FIRST_ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
             -v ${PWD}/production/$CHANNEL/$ORGANIZATION/$PEER_NAME:/var/hyperledger/production \

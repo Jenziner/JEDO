@@ -65,38 +65,28 @@ EOF
           - $ORDERER:$ORDERER_PORT"
         fi
 
-        ANCHOR_PEERS=""
-        if [[ -n "$PEERS" ]]; then
-            PEER=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[0].Name" $CONFIG_FILE)
-            PEER_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[0].Port1" $CONFIG_FILE)
-            ANCHOR_PEERS="AnchorPeers:
-          - Host: $PEER
-            Port: $PEER_PORT"
-        fi
-
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   - &${ORGANIZATION}
     Name: $ORGANIZATION
-    ID: ${ORGANIZATION}MSP
+    ID: ${ORGANIZATION}
     MSPDir: $PWD/keys/$CHANNEL/_infrastructure/$CA_ORG/$CA/msp
-    Policies:
+    Policies: &${ORGANIZATION}Policies
       Readers:
         Type: Signature
-        Rule: "OR('${ORGANIZATION}MSP.member')"
+        Rule: "OR('${ORGANIZATION}.member')"
       Writers:
         Type: Signature
-        Rule: "OR('${ORGANIZATION}MSP.member')"
+        Rule: "OR('${ORGANIZATION}.member')"
       Admins:
         Type: Signature
-        Rule: "OR('${ORGANIZATION}MSP.admin')"
+        Rule: "OR('${ORGANIZATION}.admin')"
       BlockValidation:
         Type: ImplicitMeta
         Rule: "ANY Writers"
       Endorsement:
         Type: Signature
-        Rule: "OR('${ORGANIZATION}MSP.peer')"
+        Rule: "OR('${ORGANIZATION}.member')"
     $ORDERER_ENDPOINTS
-    $ANCHOR_PEERS
 EOF
     done
 
@@ -129,36 +119,23 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 EOF
     done
 
-    RULE_MEMBER="OR("
-    RULE_ADMIN="OR("
-    RULE_PEER="OR("
-    for ORG in $ORGANIZATIONS; do
-        ORG_MSP="${ORG}MSP"
-        RULE_MEMBER="${RULE_MEMBER}'${ORG_MSP}.member', "
-        RULE_ADMIN="${RULE_ADMIN}'${ORG_MSP}.admin', "
-        RULE_PEER="${RULE_PEER}'${ORG_MSP}.peer', "
-    done
-    RULE_MEMBER="${RULE_MEMBER::-2})"
-    RULE_ADMIN="${RULE_ADMIN::-2})"
-    RULE_PEER="${RULE_PEER::-2})"
-
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-  Policies:
-    Readers:
-      Type: Signature
-      Rule: $RULE_MEMBER
-    Writers:
-      Type: Signature
-      Rule: $RULE_MEMBER
-    Admins:
-      Type: Signature
-      Rule: $RULE_ADMIN
+  Policies: &ApplicationDefaultPolicies
     LifecycleEndorsement:
-      Type: Signature
-      Rule: $RULE_PEER
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
     Endorsement:
-      Type: Signature
-      Rule: $RULE_PEER
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "ANY Admins"
   Capabilities:
     <<: *ApplicationCapabilities
 EOF
@@ -169,6 +146,7 @@ EOF
     ###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Orderer: &OrdererDefaults
+  OrdererType: etcdraft
   Addresses:
 EOF
 
@@ -185,7 +163,6 @@ EOF
     done
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-  OrdererType: etcdraft
   EtcdRaft:
     Consenters:
 EOF
@@ -205,11 +182,6 @@ EOF
     done
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-  BatchTimeout: 2s
-  BatchSize:
-    MaxMessageCount: 10
-    AbsoluteMaxBytes: 99 MB
-    PreferredMaxBytes: 512 kB
   Organizations:
 EOF
 
@@ -229,12 +201,12 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
       Rule: "ANY Writers"
     Admins:
       Type: ImplicitMeta
-      Rule: "MAJORITY Admins"
+      Rule: "ANY Admins"
     BlockValidation:
       Type: ImplicitMeta
       Rule: "ANY Writers"
   Capabilities:
-    V2_0: true
+    <<: *OrdererCapabilities
 EOF
 
 
@@ -266,35 +238,38 @@ Profiles:
   JedoChannel:
     <<: *ChannelDefaults
     Orderer:
-        <<: *OrdererDefaults
-    Application:
-        <<: *ApplicationDefaults
-        Capabilities: 
-          <<: *ApplicationCapabilities
-        Policies:
-          Readers:
-            Type: ImplicitMeta
-            Rule: "ANY Readers"
-          Writers:
-            Type: ImplicitMeta
-            Rule: "ANY Writers"
-          Admins:
-            Type: ImplicitMeta
-            Rule: "ANY Admins"
-          Endorsement:
-            Type: ImplicitMeta
-            Rule: "ANY Endorsement"      
+      <<: *OrdererDefaults
+      OrdererType: etcdraft
+      Organizations:
 EOF
 
+    for ORGANIZATION in $ORGANIZATIONS; do
+cat <<EOF >> $OUTPUT_CONFIGTX_FILE
+        - <<: *$ORGANIZATION
+          Policies:
+            <<: *${ORGANIZATION}Policies
+            Admins:
+              Type: Signature
+              Rule: "OR('$ORGANIZATION.member')"
+EOF
+    done
 
-    ###############################################################
-    # Generate GenesisBlock and ChannelConfiguration
-    ###############################################################
-    # echo_info "$FABRIC_CFG_PATH/$CHANNEL.genesisblock generating..."
-    # $FABRIC_BIN_PATH/bin/configtxgen -profile JedoGenesis -channelID system-channel -outputBlock $FABRIC_CFG_PATH/$CHANNEL.genesisblock
+cat <<EOF >> $OUTPUT_CONFIGTX_FILE
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+EOF
 
-    # echo_info "$FABRIC_CFG_PATH/$CHANNEL.tx generating..."
-    # $FABRIC_BIN_PATH/bin/configtxgen -profile JedoChannel -channelID $CHANNEL -outputCreateChannelTx $FABRIC_CFG_PATH/$CHANNEL.tx
+    for ORGANIZATION in $ORGANIZATIONS; do
+cat <<EOF >> $OUTPUT_CONFIGTX_FILE
+        - <<: *$ORGANIZATION
+          Policies:
+            <<: *${ORGANIZATION}Policies
+            Admins:
+              Type: Signature
+              Rule: "OR('$ORGANIZATION.member')"
+EOF
+    done
 
     echo_info "Genesis block for $CHANNEL generating..."
     $FABRIC_BIN_PATH/bin/configtxgen -profile JedoChannel -channelID $CHANNEL -outputBlock $FABRIC_CFG_PATH/genesis_block.pb

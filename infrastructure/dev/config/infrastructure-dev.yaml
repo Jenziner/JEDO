@@ -28,7 +28,10 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
               OpenSSL: false
           Organizations:
               - Name: Jenziner
-                Consortium: JEDO # Name of consortium if member or null
+                Admin:
+                    Name: admin.jenziner.eu.jedo.dev
+                    Subject: "C=eu,ST=dev,L=jenziner,CN=ca.jenziner.eu.jedo.dev"
+                    Pass: Test1
                 CA:
                     Name: ca.jenziner.eu.jedo.dev
                     Subject: "C=eu,ST=dev,L=jenziner,CN=ca.jenziner.eu.jedo.dev"
@@ -82,7 +85,10 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                           IP: 172.25.1.17
                           Port: 7074
               - Name: Liebiwiler
-                Consortium: # Name of consortium if member or null
+                Admin:
+                    Name: admin.liebiwiler.eu.jedo.dev
+                    Subject: "C=eu,ST=dev,L=liebiwiler,CN=ca.liebiwiler.eu.jedo.dev"
+                    Pass: Test1
                 CA:
                     Name: ca.liebiwiler.eu.jedo.dev
                     Subject: "C=eu,ST=dev,L=liebiwiler,CN=ca.liebiwiler.eu.jedo.dev"
@@ -123,9 +129,13 @@ FabricNetwork: # Make sure every server and ip is set in DNS or /etc/hosts
                           IP: 172.25.2.14
                           Port: 8064
               - Name: Breitschi
-                Consortium: # Name of consortium if member or null
+                Admin:
+                    Name: admin.breitschi.eu.jedo.dev
+                    Subject: "C=eu,ST=dev,L=breitschi,CN=ca.breitschi.eu.jedo.dev"
+                    Pass: Test1
                 CA:
                     Name:
+                    Subject: "C=eu,ST=dev,L=breitschi,CN=ca.breitschi.eu.jedo.dev"
                     Pass: 
                     IP:
                     Port:

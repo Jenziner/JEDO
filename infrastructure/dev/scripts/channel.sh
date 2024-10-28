@@ -5,76 +5,63 @@
 #
 #
 ###############################################################
-source ./scripts/settings.sh
-source ./scripts/help.sh
+source ./utils/utils.sh
+source ./utils/help.sh
 check_script
 
 echo_ok "Creating Channel - see Documentation here: https://hyperledger-fabric.readthedocs.io"
 
-###############################################################
-# Function to echo in colors
-###############################################################
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-function echo_info() {
-    echo -e "${YELLOW}$1${NC}"
-}
-function echo_error() {
-    echo -e "${RED}$1${NC}"
-}
-
 
 ###############################################################
-# Params - from ./config/network-config.yaml
+# Params - from ./configinfrastructure-dev.yaml
 ###############################################################
-export FABRIC_CFG_PATH=./config
-NETWORK_CONFIG_FILE="./config/network-config.yaml"
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' "$NETWORK_CONFIG_FILE")
-CHANNEL=$(yq e '.FabricNetwork.Channel' $NETWORK_CONFIG_FILE)
-ORGANIZATIONS=$(yq e '.FabricNetwork.Organizations[].Name' $NETWORK_CONFIG_FILE)
+CONFIG_FILE="./config/infrastructure-dev.yaml"
+FABRIC_BIN_PATH=$(yq eval '.Fabric.Path' "$CONFIG_FILE")
+DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
+DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
+CHANNELS=$(yq e ".FabricNetwork.Channels[].Name" $CONFIG_FILE)
 
 
-###############################################################
-# Channel
-###############################################################
-FIRST_ORGANIZATION=$(yq e ".FabricNetwork.Organizations[0] | .Name" $NETWORK_CONFIG_FILE)
-FIRST_CA=$(yq e ".FabricNetwork.Organizations[0] | .CA.Name" $NETWORK_CONFIG_FILE)
-FIRST_ORDERER=$(yq e ".FabricNetwork.Organizations[0] | .Orderers[0].Name" $NETWORK_CONFIG_FILE)
-FIRST_ORDERER_PORT=$(yq e ".FabricNetwork.Organizations[0] | .Orderers[0].Port" $NETWORK_CONFIG_FILE)
-FIRST_PEER=$(yq e ".FabricNetwork.Organizations[0] | .Peers[0].Name" $NETWORK_CONFIG_FILE)
+echo ""
+echo_warn "Joins to Channels starting..."
+for CHANNEL in $CHANNELS; do
+    ORGANIZATIONS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[].Name" $CONFIG_FILE)
+    for ORGANIZATION in $ORGANIZATIONS; do
+        ADMIN=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Admin.Name" $CONFIG_FILE)
+        ORDERERS=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
+        for ORDERER in $ORDERERS; do
+            ###############################################################
+            # Channel
+            ###############################################################
+            ORDERER_NAME=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Name" $CONFIG_FILE)
+            ORDERER_IP=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .IP" $CONFIG_FILE)
+            ORDERER_ADMINPORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Admin.Port" $CONFIG_FILE)
 
-#        TLS_ROOTCERTS=$(ls $PWD/keys/$FIRST_ORGANIZATION/$FIRST_ORDERER/tls/tlscacerts/*.pem | xargs -n 1 basename | sed 's|^|/etc/hyperledger/orderer/tls/tlscacerts/|' | tr '\n' ',' | sed 's/,$//')
-
-
-
-CANAME=${FIRST_CA//./-}
-TLS_CA_PATH="$PWD/keys/$FIRST_ORGANIZATION/$FIRST_ORDERER/tls/tlscacerts"
-FIRST_ORDERER_CACERT=$(find "$TLS_CA_PATH" -type f -name "*.pem" -exec basename {} \; | grep "$CANAME")
-TLS_PRIVATE_KEY=$(basename $(ls $PWD/keys/$FIRST_ORGANIZATION/$FIRST_PEER/tls/keystore/*_sk))
-
-docker exec -it cli.$FIRST_PEER peer channel create \
--c $CHANNEL \
--f /tmp/$DOCKER_NETWORK_NAME/config/$CHANNEL.tx \
--o $FIRST_ORDERER:$FIRST_ORDERER_PORT \
---outputBlock /tmp/$DOCKER_NETWORK_NAME/config/$CHANNEL.block \
---tls \
---cafile /etc/hyperledger/fabric/tls/tlscacerts/tls_ca_combined.pem \
---certfile /etc/hyperledger/fabric/tls/signcerts/cert.pem \
---keyfile /etc/hyperledger/fabric/tls/keystore/$TLS_PRIVATE_KEY \
---ordererTLSHostnameOverride $FIRST_ORDERER
+            export PATH=$PATH:$FABRIC_BIN_PATH
+            export FABRIC_CFG_PATH=${PWD}/config/$CHANNEL
+            export OSN_TLS_CA_ROOT_CERT=$(ls ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER/tls/tlsintermediatecerts/*.pem)
+            export ADMIN_TLS_SIGN_CERT=${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ADMIN/msp/signcerts/cert.pem
+            export ADMIN_TLS_PRIVATE_KEY=$(ls ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$ADMIN/msp/keystore/*_sk)
 
 
-for ORGANIZATION in $ORGANIZATIONS; do
-    PEERS_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $NETWORK_CONFIG_FILE)
+echo_info "osnadmin channel join --channelID $CHANNEL --config-block $FABRIC_CFG_PATH/genesis_block.pb -o $ORDERER_IP:$ORDERER_ADMINPORT --ca-file $OSN_TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGN_CERT --client-key $ADMIN_TLS_PRIVATE_KEY"
 
-    for index in $(seq 0 $(($(echo "$PEERS_NAME" | wc -l) - 1))); do
-        PEER_NAME=$(yq e ".FabricNetwork.Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[$index].Name" $NETWORK_CONFIG_FILE)
-
-        # join channel
-        echo_info "ScriptInfo: join channel $CHANNEL with $PEER_NAME"
+            echo ""
+            echo_info "$ORDERER_NAME joins $CHANNEL..."
+            osnadmin channel join \
+            --channelID $CHANNEL --config-block $FABRIC_CFG_PATH/genesis_block.pb \
+            -o $ORDERER_IP:$ORDERER_ADMINPORT \
+            --ca-file $OSN_TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGN_CERT --client-key $ADMIN_TLS_PRIVATE_KEY
+echo_error "TEMP END"
+exit 1
+        done
     done
 done
+echo ""
+echo_warn "Joins to Channels completed..."
+
+
+
 
 
 

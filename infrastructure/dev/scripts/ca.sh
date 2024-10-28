@@ -39,7 +39,7 @@ for CHANNEL in $CHANNELS; do
     for ORGANIZATION in $ORGANIZATIONS; do
         CA_EXT=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Ext" $CONFIG_FILE)
 
-        # skip if external CA is defined
+        # add only affiliation if external CA is defined
         if ! [[ -n "$CA_EXT" ]]; then
             echo ""
             echo_warn "Intermediate-CA for $ORGANIZATION starting... - see Documentation here: https://hyperledger-fabric-ca.readthedocs.io"
@@ -143,6 +143,25 @@ for CHANNEL in $CHANNELS; do
                     docker exec -it $CA_NAME fabric-ca-client affiliation add $ST.jedo.$C.$L.$O -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
                 done
             done
+        else
+            CA_NAME=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_EXT\") | .Name" "$CONFIG_FILE")
+            CA_PASS=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_EXT\") | .Pass" "$CONFIG_FILE")
+            CA_PORT=$(yq eval ".. | select(has(\"CA\")) | .CA | select(.Name == \"$CA_EXT\") | .Port" "$CONFIG_FILE")
+            # get subjext from own organization, not external to build affiliation
+            CA_SUBJECT=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Subject" $CONFIG_FILE)
+
+            echo ""
+            echo_info "Affiliation adding for $ORGANIZATION..."
+
+            # Extract fields from subject
+            C=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
+            ST=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
+            L=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
+            CN=$(echo "$CA_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
+            CSR_NAMES="C=$C,ST=$ST,L=$L"
+            AFFILIATION="$ST.jedo.$C.$L"
+
+            docker exec -it $CA_NAME fabric-ca-client affiliation add $AFFILIATION -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp
         fi
     done
 done

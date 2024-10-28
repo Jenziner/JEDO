@@ -24,6 +24,7 @@ function check_script() {
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
+BLUE='\033[1;34m'
 NC='\033[0m' # No Color
 function echo_error() {
     echo -e "${RED}ScriptInfo: $1${NC}"
@@ -35,7 +36,7 @@ function echo_ok() {
     echo -e "${GREEN}ScriptInfo: $1${NC}"
 }
 function echo_info() {
-    echo -e "ScriptInfo: $1"
+    echo -e "${BLUE}ScriptInfo: $1${NC}"
 }
 
 

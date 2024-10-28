@@ -36,6 +36,7 @@ echo_ok "Register and Enroll identities - see Documentation here: https://hyperl
 # Params - from ./config/network-config.yaml
 ###############################################################
 CONFIG_FILE="./config/infrastructure-dev.yaml"
+DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
 DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
 CHANNELS=$(yq e ".FabricNetwork.Channels[].Name" $CONFIG_FILE)
@@ -73,16 +74,53 @@ for CHANNEL in $CHANNELS; do
             CA_PORT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Port" $CONFIG_FILE)
         fi
 
+
+        ###############################################################
+        # Enroll admin 
+        ###############################################################
+        echo ""
+        echo_info "Admin for $ORGANIZATION enrolling"
+        ADMIN_NAME=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Admin.Name" $CONFIG_FILE)
+        ADMIN_PASS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Admin.Pass" $CONFIG_FILE)
+        ADMIN_SUBJECT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Admin.Subject" $CONFIG_FILE)
+
+        # Extract fields from subject
+        C=$(echo "$ADMIN_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
+        ST=$(echo "$ADMIN_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
+        L=$(echo "$ADMIN_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
+        CN=$(echo "$ADMIN_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
+        CSR_NAMES=$(echo "$ADMIN_SUBJECT" | sed 's/,CN=[^,]*//')
+        CSR_NAMES="$CSR_NAMES,OU=admin"
+        AFFILIATION="$ST.jedo.$C.$L"
+
+        # Register User
+        echo_info "User $ADMIN_NAME registering..."
+        docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \
+            --id.name $ADMIN_NAME --id.secret $ADMIN_PASS --id.type admin --id.affiliation $AFFILIATION \
+
+        # Enroll User
+        echo ""
+        echo_info "User $ADMIN_NAME enrolling..."
+        docker exec -it $CA_NAME fabric-ca-client enroll -u https://$ADMIN_NAME:$ADMIN_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$ORGANIZATION/$ADMIN_NAME/msp \
+            --csr.cn $CN --csr.names "$CSR_NAMES"
+
+        echo_ok "Admin for $ORGANIZATION enrolled."
+
+
+        ###############################################################
         # Enroll orderers 
+        ###############################################################
         echo ""
         echo_info "Orderers for $ORGANIZATION enrolling"
         ORDERERS_NAME=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
         ORDERERS_PASS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Pass" $CONFIG_FILE)
+        ORDERERS_IP=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].IP" $CONFIG_FILE)
         ORDERERS_SUBJECT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Subject" $CONFIG_FILE)
 
         for index in $(seq 0 $(($(echo "$ORDERERS_NAME" | wc -l) - 1))); do
             ORDERER_NAME=$(echo "$ORDERERS_NAME" | sed -n "$((index+1))p")
             ORDERER_PASS=$(echo "$ORDERERS_PASS" | sed -n "$((index+1))p")
+            ORDERER_IP=$(echo "$ORDERERS_IP" | sed -n "$((index+1))p")
             ORDERER_SUBJECT=$(echo "$ORDERERS_SUBJECT" | sed -n "$((index+1))p")
 
             # Extract fields from subject
@@ -108,7 +146,7 @@ for CHANNEL in $CHANNELS; do
             echo ""
             echo_info "User $ORDERER_NAME TLS enrolling..."
             docker exec -it $CA_NAME fabric-ca-client enroll -u https://$ORDERER_NAME:$ORDERER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$ORGANIZATION/$ORDERER_NAME/tls \
-                --enrollment.profile tls --csr.cn $CN --csr.names "$CSR_NAMES"
+                --enrollment.profile tls --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$ORDERER_NAME,$ORDERER_IP,$DOCKER_UNRAID"  
 
             # Generating NodeOUs-File
             echo ""
@@ -133,16 +171,21 @@ EOF
         done
         echo_ok "Orderers for $ORGANIZATION enrolled."
 
+
+        ###############################################################
         # Enroll peers 
+        ###############################################################
         echo ""
         echo_info "Peers for $ORGANIZATION enrolling"
         PEERS_NAME=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $CONFIG_FILE)
         PEERS_PASS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Pass" $CONFIG_FILE)
+        PEERS_IP=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].IP" $CONFIG_FILE)
         PEERS_SUBJECT=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Subject" $CONFIG_FILE)
 
         for index in $(seq 0 $(($(echo "$PEERS_NAME" | wc -l) - 1))); do
             PEER_NAME=$(echo "$PEERS_NAME" | sed -n "$((index+1))p")
             PEER_PASS=$(echo "$PEERS_PASS" | sed -n "$((index+1))p")
+            PEER_IP=$(echo "$PEERS_IP" | sed -n "$((index+1))p")
             PEER_SUBJECT=$(echo "$PEERS_SUBJECT" | sed -n "$((index+1))p")
 
             # Extract fields from subject
@@ -168,7 +211,7 @@ EOF
             echo ""
             echo_info "User $PEER_NAME TLS enrolling..."
             docker exec -it $CA_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$CA_NAME:$CA_PORT --mspdir $KEYS_DIR/$CHANNEL/_infrastructure/$ORGANIZATION/$PEER_NAME/tls \
-                --enrollment.profile tls --csr.cn $CN --csr.names "$CSR_NAMES"
+                --enrollment.profile tls --csr.cn $CN --csr.names "$CSR_NAMES" --csr.hosts "$PEER_NAME,$PEER_IP,$DOCKER_UNRAID"  
 
             # Generating NodeOUs-File
             echo ""

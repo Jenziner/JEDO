@@ -116,7 +116,6 @@ for CHANNEL in $CHANNELS; do
             --restart unless-stopped \
             hyperledger/fabric-orderer:latest
 
-            # Waiting Intermediate-CA startup
             CheckContainer "$ORDERER_NAME" "$DOCKER_CONTAINER_WAIT"
             CheckContainerLog "$ORDERER_NAME" "Beginning to serve requests" "$DOCKER_CONTAINER_WAIT"
         done
