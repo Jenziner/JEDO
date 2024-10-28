@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JEDO-CA-WEB</title>
@@ -97,6 +98,10 @@
             <label for="certFile">Upload Certificate:</label>
             <input type="file" id="certFile" name="certFile" accept=".pem,.crt" required>
             <button type="button" onclick="loadCertificate()">Load Certificate</button>
+            <div id="qrCodeContainer" style="display: none; text-align: center; margin-top: 20px;">
+                <canvas id="qrCode"></canvas>
+            </div>
+            
         </form>
 
         <pre id="certInfo" class="response-box"></pre> <!-- Show needed Certificate-Infos -->
@@ -128,6 +133,8 @@
 
             document.getElementById('region').style.display = 'none';  // Hide by default
 
+            document.getElementById('qrCodeContainer').style.display = 'none';
+
             if (!certFileInput.files.length) {
                 result += 'No certificate file uploaded.\n';
                 document.getElementById('certInfo').textContent = result;
@@ -145,6 +152,16 @@
                 // Extract user attributs
                 customAttrs = extractCustomAttributes(rawCert);
                 result += `Extracted Custom Attributes:\nRole: ${customAttrs.role}\nAPI Port: ${customAttrs.apiPort}\n`;
+
+                // If cert is from issuer, generate QR-code with cert
+                if (customAttrs.role === 'issuer') {
+                    const qr = new QRious({
+                        element: document.getElementById('qrCode'),
+                        value: certText,
+                        size: 400
+                    });
+                    document.getElementById('qrCodeContainer').style.display = 'block';
+                }
 
                 // Show or hide the region field based on the role
                 updateRegionField(customAttrs.role);
