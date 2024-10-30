@@ -30,7 +30,7 @@ export class AppComponent {
     await this.storage.create(); 
 
     await SplashScreen.show({
-      showDuration: 2000,
+      showDuration: 500,
       autoHide: true,
     });
   } 
