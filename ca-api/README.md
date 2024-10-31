@@ -1,3 +1,5 @@
+# Installation:
+Run from /jedo# ./ca-api/ca-api.sh
 
 # Endpoints:
 http://localhost:port/register

@@ -5,7 +5,7 @@
 # 
 #
 ###############################################################
-source ./utils/utils.sh
+source ./dev/utils/utils.sh
 export JEDO_INITIATED="yes"
 check_script
 
@@ -13,7 +13,7 @@ check_script
 ###############################################################
 # Params - from ./jedo-network/config/network-config.yaml
 ###############################################################
-CONFIG_FILE="./config/infrastructure-dev.yaml"
+CONFIG_FILE="./dev/config/infrastructure-dev.yaml"
 DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
 DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
@@ -60,12 +60,12 @@ for CHANNEL in $CHANNELS; do
             echo_warn "API-Server for $CA_NAME starting..."
 
             # Generate jedo-ca-api-config.yaml
-            mkdir -p ${PWD}/production/$CA_API_NAME/config
-            cp ${PWD}/ca-api/package.json ${PWD}/production/$CA_API_NAME/package.json
-            cp ${PWD}/ca-api/server.js ${PWD}/production/$CA_API_NAME/server.js
-            cp ${PWD}/ca-api/utils.js ${PWD}/production/$CA_API_NAME/utils.js
-            cp ${PWD}/ca-api/start.sh ${PWD}/production/$CA_API_NAME/start.sh
-            cat <<EOF > ${PWD}/production/$CA_API_NAME/config/jedo-ca-api-config.yaml
+            mkdir -p ${PWD}/dev/production/$CHANNEL/$ORGANIZATION/$CA_API_NAME/config
+            cp ${PWD}/ca-api/package.json ${PWD}/dev/production/$CHANNEL/$ORGANIZATION/$CA_API_NAME/package.json
+            cp ${PWD}/ca-api/server.js ${PWD}/dev/production/$CHANNEL/$ORGANIZATION/$CA_API_NAME/server.js
+            cp ${PWD}/ca-api/utils.js ${PWD}/dev/production/$CHANNEL/$ORGANIZATION/$CA_API_NAME/utils.js
+            cp ${PWD}/ca-api/start.sh ${PWD}/dev/production/$CHANNEL/$ORGANIZATION/$CA_API_NAME/start.sh
+            cat <<EOF > ${PWD}/dev/production/$CHANNEL/$ORGANIZATION/$CA_API_NAME/config/jedo-ca-api-config.yaml
 ca_name: "${CA_NAME}"
 ca_url: "https://${CA_NAME}:${CA_PORT}"
 ca_pass: "${CA_PASS}"
@@ -88,9 +88,9 @@ EOF
                 --restart=unless-stopped \
                 $hosts_args \
                 -e FABRIC_CA_CLIENT_TLS_CERTFILES=/app/tls/tls-cert.pem \
-                -v ${PWD}/production/$CHANNEL/$ORGANIZATION/$CA_API_NAME:/app \
-                -v ${PWD}/keys:/etc/hyperledger/keys \
-                -v ${PWD}/keys/$CHANNEL/_infrastructure/$ORGANIZATION/$CA_NAME/cli.$CA_NAME/msp:/app/admin \
+                -v ${PWD}/dev/production/$CHANNEL/$ORGANIZATION/$CA_API_NAME:/app \
+                -v ${PWD}/dev/keys:/etc/hyperledger/keys \
+                -v ${PWD}/dev/keys/$CHANNEL/_infrastructure/$ORGANIZATION/cli.$CA_NAME/msp:/app/admin \
                 -w /app \
                 -p $CA_API_PORT:$CA_API_PORT \
                 -p $CA_API_SRV_PORT:$CA_API_SRV_PORT \
