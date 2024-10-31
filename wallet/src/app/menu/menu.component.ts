@@ -15,7 +15,7 @@ import JSZip from 'jszip';
 import { Injectable } from '@angular/core';
 import { Preferences } from '@capacitor/preferences';
 
-import { parseCertificate, getSAN, getSubject } from '../utils/certificate-utils';
+import { parseCertificate, getSAN, getSubject, getAPIPort } from '../utils/certificate-utils';
 
 
 //used in DEBUG to open other tabs not shown in the tabs
@@ -123,21 +123,26 @@ export class MenuComponent  implements OnInit {
       if (qrData) {
         const parsedResult = await parseCertificate(qrData);
         if (parsedResult && parsedResult.certificate) {
-          const certificate = parsedResult.certificate;
-      
-          const san = getSAN(certificate);
+          const san = getSAN(parsedResult.certificate);
           console.log("Subject Alternative Names (SAN):", san);
-      
-          const subject = getSubject(certificate);
-          console.log("Subject Information:", subject);
-        }
 
-        this.uuid = uuidv4();
-        this.password = this.generatePassword();
-        this.owner = "test";
-        await Preferences.set({ key: 'uuid', value: this.uuid });
-        await Preferences.set({ key: 'password', value: this.password });
-        await Preferences.set({ key: 'owner', value: this.owner });
+          this.uuid = uuidv4();
+          this.password = this.generatePassword();
+
+          const apiPort = getAPIPort(parsedResult.certificate);
+          console.log('API-Port:', apiPort);
+          const validApiUrl = await this.findValidApiServer(san, apiPort);
+          
+          if (!validApiUrl) {
+            console.error('Kein gültiger API-Server gefunden. Registrierung abgebrochen.');
+            return;
+          }
+
+          // 8. Benutzer bei gefundenem API-Server registrieren
+          const region = "n/a";  // Hier kannst du die Region anpassen, wenn gewünscht
+          await this.registerUser(validApiUrl, region, this.uuid, this.password, qrData);
+
+        }
 
       }
     } catch (error) {
@@ -221,14 +226,6 @@ export class MenuComponent  implements OnInit {
   }
 
 
-  async generateCredentials() {
-    this.uuid = uuidv4();
-    this.password = this.generatePassword();
-    await Preferences.set({ key: 'uuid', value: this.uuid });
-    await Preferences.set({ key: 'password', value: this.password });
-  }
-
-
   generatePassword(): string {
     // Simple generator, to be changed later
     return Math.random().toString(36).slice(-8);
@@ -248,6 +245,129 @@ export class MenuComponent  implements OnInit {
     await this.initializeAppData();
 
   }
+
+
+  async findValidApiServer(san: string, apiPort: string): Promise<string | null> {
+    // SAN-Daten analysieren, um DNS-Namen und IP-Adressen zu extrahieren
+    const dnsNames: string[] = [];
+    const ipAddresses: string[] = [];
+    
+    // SAN-Daten durch Komma trennen
+    const sanParts = san.split(", ");
+    for (const part of sanParts) {
+      if (part.startsWith("DNS:")) {
+        dnsNames.push(part.replace("DNS:", "").trim());
+      } else if (part.startsWith("IP Address:")) {
+        ipAddresses.push(part.replace("IP Address:", "").trim());
+      }
+    }
+  
+    // Versuch, eine gültige API-URL mit den DNS-Namen zu finden
+    for (const dns of dnsNames) {
+      try {
+        const apiUrl = `http://${dns}:${apiPort}/version`;
+        const response = await this.tryVersionEndpoint(apiUrl);
+        if (response) {
+          console.log(`Gültiger API-Server gefunden: ${apiUrl}`);
+          return apiUrl; // Erfolgreich gefunden
+        }
+      } catch (error) {
+        console.error(`Fehler bei der Verbindung zu ${dns}:`, error);
+      }
+    }
+  
+    // Falls kein gültiger DNS-Name gefunden wurde, versuche es mit den IP-Adressen
+    for (const ip of ipAddresses) {
+      try {
+        const apiUrl = `http://${ip}:${apiPort}/version`;
+        const response = await this.tryVersionEndpoint(apiUrl);
+        if (response) {
+          console.log(`Gültiger API-Server gefunden: ${apiUrl}`);
+          return apiUrl; // Erfolgreich gefunden
+        }
+      } catch (error) {
+        console.error(`Fehler bei der Verbindung zu ${ip}:`, error);
+      }
+    }
+  
+    console.error('Kein gültiger API-Server gefunden.');
+    return null; // Kein gültiger Server gefunden
+  }
+  
+
+  async tryVersionEndpoint(apiUrl: string): Promise<boolean> {
+    try {
+      const response = await fetch(apiUrl);
+      if (response.ok) {
+        return true;
+      }
+    } catch (error) {
+      console.error(`Fehler bei der Verbindung zu ${apiUrl}:`, error);
+    }
+    return false;
+  }
+
+
+  async registerUser(apiUrl: string, region: string, username: string, password: string, certificate: string) {
+    try {
+      const registerResponse = await fetch(`${apiUrl}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ region, username, password, certificate })
+      });
+  
+      if (registerResponse.ok) {
+        const blob = await registerResponse.blob();
+        const fileName = `${username}_certs.zip`;
+  
+        // Verwende Capacitor Plugin, um die Datei lokal zu speichern
+        await this.storeWalletCert(blob);
+        await Preferences.set({ key: 'password', value: password });
+
+  
+        console.log('Registrierung erfolgreich. Zertifikate wurden heruntergeladen.');
+      } else {
+        const errorText = await registerResponse.text();
+        console.error('Registrierung fehlgeschlagen:', errorText);
+      }
+    } catch (error) {
+      console.error('Fehler bei der Registrierung:', error);
+    }
+  }
+  
+  
+  async storeWalletCert(blob: Blob) {
+    try {
+      // Blob in ArrayBuffer konvertieren
+      const fileData = await blob.arrayBuffer();
+  
+      // ZIP-Inhalt mit JSZip extrahieren
+      const zip = await JSZip.loadAsync(fileData);
+      let certificateContent = '';
+      let privateKeyContent = '';
+  
+      // ZIP-Dateien durchlaufen und den Inhalt speichern
+      for (const fileName in zip.files) {
+        const zipFile = zip.files[fileName];
+        if (zipFile.name.endsWith('_cert.pem')) {
+          certificateContent = await zipFile.async('string');
+          await Preferences.set({ key: 'certificateContent', value: certificateContent });
+        } else if (zipFile.name.endsWith('_key.pem')) {
+          privateKeyContent = await zipFile.async('string');
+          await Preferences.set({ key: 'privateKeyContent', value: privateKeyContent });
+        }
+      }
+  
+      // Die gespeicherten Daten initialisieren
+      await this.initializeAppData();
+  
+      console.log('Zertifikat und privater Schlüssel wurden erfolgreich gespeichert.');
+  
+    } catch (error) {
+      console.error('Fehler beim Speichern der Wallet-Zertifikate:', error);
+    }
+  }
+
 
   // Utility function to convert Blob to Base64
   async convertBlobToBase64(blob: Blob): Promise<string> {

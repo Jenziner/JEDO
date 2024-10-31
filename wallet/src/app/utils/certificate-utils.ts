@@ -35,16 +35,40 @@ export async function parseCertificate(certPem: string) {
 
 export function getSAN(certificate: pkijs.Certificate): string {
   let san = '';
+  const dnsNames: string[] = [];
+  const ipAddresses: string[] = [];
+
   if (certificate.extensions) {
     certificate.extensions.forEach(ext => {
       if (ext.extnID === "2.5.29.17" && ext.parsedValue && ext.parsedValue.altNames) {
-        san = ext.parsedValue.altNames.map((altName: any) => altName.value).join(", ");
+        ext.parsedValue.altNames.forEach((altName: any) => {
+          // Prüfen, ob der AltName ein DNS-Name ist
+          if (altName.type === 2) {
+            dnsNames.push(altName.value);
+          }
+          // Prüfen, ob der AltName ein IP-Adress-OCTET ist
+          else if (altName.type === 7) {
+            const ip = convertOctetStringToIP(altName.value.valueBlock.valueHex);
+            if (ip) {
+              ipAddresses.push(ip);
+            }
+          }
+        });
       }
     });
   } else {
     console.warn("Keine Extensions im Zertifikat gefunden.");
   }
-  
+
+  if (dnsNames.length > 0) {
+    san += `DNS: ${dnsNames.join(", ")}`;
+  }
+
+  if (ipAddresses.length > 0) {
+    if (san) san += ", ";
+    san += `IP Address: ${ipAddresses.join(", ")}`;
+  }
+
   if (!san) {
     console.warn('Keine SAN-Daten im Zertifikat gefunden');
   }
@@ -77,4 +101,54 @@ export function getSubject(certificate: pkijs.Certificate): Record<string, strin
   });
   
   return subjectData;
+}
+
+
+export function getAPIPort(certificate: pkijs.Certificate): string {
+  let apiPort = 'Unknown';
+
+  if (certificate.extensions) {
+    // Schleife durch alle Extensions des Zertifikats
+    certificate.extensions.forEach(ext => {
+      // Prüfe, ob die Extension den erwarteten ID-String (OID) enthält
+      if (ext.extnID === '1.2.3.4.5.6.7.8.1') {
+        try {
+          // Die Daten aus der Extension sind in einem ASN.1 Format. Wir nehmen an, dass es ein UTF8String oder ein ähnlicher Typ ist.
+          const valueHexArray = new Uint8Array(ext.extnValue.valueBlock.valueHex);
+          
+          // Uint8Array in number[] konvertieren
+          const jsonString = String.fromCharCode(...valueHexArray);
+
+          // Versuchen, die JSON-Attribute aus der Extension zu parsen
+          const parsedData = JSON.parse(jsonString);
+
+          // Wenn das Attribut 'jedo.apiPort' existiert, den Wert extrahieren
+          if (parsedData.attrs && parsedData.attrs['jedo.apiPort']) {
+            apiPort = parsedData.attrs['jedo.apiPort'];
+          }
+        } catch (error) {
+          console.error('Fehler beim Extrahieren der API-Port-Informationen:', error);
+        }
+      }
+    });
+  } else {
+    console.warn('Keine Extensions im Zertifikat gefunden.');
+  }
+
+  if (apiPort === 'Unknown') {
+    console.warn('API-Port nicht im Zertifikat gefunden.');
+  }
+  
+  return apiPort;
+}
+
+
+function convertOctetStringToIP(octetString: ArrayBuffer): string {
+  const bytes = new Uint8Array(octetString);
+  if (bytes.length === 4) {
+    return `${bytes[0]}.${bytes[1]}.${bytes[2]}.${bytes[3]}`;
+  } else {
+    console.warn("Unerwartete Länge für IP-OCTET STRING:", bytes);
+    return '';
+  }
 }
