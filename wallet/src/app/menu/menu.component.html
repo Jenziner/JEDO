@@ -10,18 +10,17 @@
           <ion-label position="stacked">{{ 'UUID' | translate }}</ion-label>
           <ion-input
             [(ngModel)]="uuid"
-            [readonly]="!isImportMode"
+            [readonly]="true"
             placeholder="No UUID"
           ></ion-input>
         </ion-item>
 
         <ion-item>
-          <ion-label position="stacked">{{ 'PASSWORD' | translate }}</ion-label>
+          <ion-label position="stacked">{{ 'OWNER' | translate }}</ion-label>
           <ion-input
-            [(ngModel)]="password"
-            [readonly]="!isImportMode"
-            placeholder="No Password"
-            type="password"
+            [(ngModel)]="owner"
+            [readonly]="true"
+            placeholder="No owner"
           ></ion-input>
         </ion-item>
       </ion-list>
@@ -30,31 +29,15 @@
         {{ 'REGISTER' | translate }}
       </ion-button>
 
-      <!-- <ion-button expand="block" (click)="importWalletCert()" [disabled]="isRegistered">
+      <ion-button expand="block" (click)="importWalletCert()" [disabled]="isRegistered">
         {{ 'IMPORT' | translate }}
       </ion-button>
 
-      <ion-button expand="block" (click)="exportWalletCert()" [enabled]="isRegistered">
+      <ion-button expand="block" (click)="exportWalletCert()" [disabled]="!isRegistered">
         {{ 'EXPORT' | translate }}
-      </ion-button> -->
-
-
-
-
-
-      <ion-button expand="block" (click)="generateCredentials()" [disabled]="isGenerated">
-        {{ 'GENERATE' | translate }}
       </ion-button>
 
-      <ion-button expand="block" (click)="enableImportMode()" [disabled]="isImportMode || isGenerated">
-        {{ 'IMPORT' | translate }}
-      </ion-button>
-
-      <ion-button expand="block" (click)="saveImportedData()" *ngIf="isImportMode">
-        {{ 'SAFE' | translate }}
-      </ion-button>
-
-      <ion-button expand="block" color="danger" (click)="deleteData()">
+      <ion-button expand="block" (click)="deleteData()" color="danger">
         {{ 'DELETE' | translate }}
       </ion-button>
 
