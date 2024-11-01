@@ -5,8 +5,10 @@
 # Documentation: https://hyperledger-fabric.readthedocs.io
 #
 ###############################################################
-source ./utils/utils.sh
-source ./utils/help.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/help.sh"
+
 export JEDO_INITIATED="yes"
 
 
@@ -59,7 +61,7 @@ done
 ###############################################################
 # Params
 ###############################################################
-CONFIG_FILE="./config/infrastructure-dev.yaml"
+CONFIG_FILE="$SCRIPT_DIR/infrastructure-dev.yaml"
 FABRIC_PATH=$(yq eval '.Fabric.Path' $CONFIG_FILE)
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
 DOCKER_NETWORK_SUBNET=$(yq eval '.Docker.Network.Subnet' $CONFIG_FILE)
@@ -73,7 +75,7 @@ export FABRIC_CFG_PATH=./config
 # Checks
 ###############################################################
 if [[ "$opt_r" == "prereq" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./utils/prereq.sh
+    $SCRIPT_DIR/prereq.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Prerequisites checked."
     fi
@@ -84,7 +86,7 @@ fi
 # Delete previous installation
 ###############################################################
 if $opt_d || [[ "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/down.sh
+    $SCRIPT_DIR/down.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Previous installation deleted."
     fi
@@ -112,7 +114,7 @@ fi
 # Generate Root-CA
 ###############################################################
 if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/root.sh
+    $SCRIPT_DIR/root.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Root-CA started."
     fi

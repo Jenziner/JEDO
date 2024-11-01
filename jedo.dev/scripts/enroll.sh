@@ -96,7 +96,7 @@ for CHANNEL in $CHANNELS; do
         # Register User
         echo_info "User $ADMIN_NAME registering..."
         docker exec -it $CA_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT --mspdir $CA_CLI_DIR/msp \
-            --id.name $ADMIN_NAME --id.secret $ADMIN_PASS --id.type admin --id.affiliation $AFFILIATION \
+            --id.name $ADMIN_NAME --id.secret $ADMIN_PASS --id.type admin --id.affiliation $AFFILIATION 
 
         # Enroll User
         echo ""

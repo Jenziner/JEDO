@@ -6,8 +6,6 @@
 #
 ###############################################################
 up_help() {
-    CONFIG_FILE="./config/infrastructure-dev.yaml"
-
     echo " Use: $(basename S0) [OPTIONS]"
     echo "Options:"
     echo "  -h          show help"

@@ -62,49 +62,43 @@ cool_down() {
 # Define args for hosts-file
 ###############################################################
 get_hosts() {
+    CONFIG_FILE="$SCRIPT_DIR/infrastructure-dev.yaml"
+
     hosts_args=""
 
-    UTIL_CHANNELS=$(yq e ".FabricNetwork.Channels[].Name" $CONFIG_FILE)
+    ROOTCA_NAME=$(yq eval ".Root.CA.Name" "$CONFIG_FILE")
+    ROOTCA_IP=$(yq eval ".Root.CA.IP" "$CONFIG_FILE")
+    UTIL_ORGANIZATIONS=$(yq e ".Organizations[].Name" $CONFIG_FILE)
+    hosts_args+="--add-host=$ROOTCA_NAME:$ROOTCA_IP "
 
-    for UTIL_CHANNEL in $UTIL_CHANNELS; do
-        ROOTCA_NAME=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .RootCA.Name" "$CONFIG_FILE")
-        ROOTCA_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .RootCA.IP" "$CONFIG_FILE")
-        UTIL_ORGANIZATIONS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[].Name" $CONFIG_FILE)
+    for UTIL_ORGANIZATION in $UTIL_ORGANIZATIONS; do
+        UTIL_CA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.Name" $CONFIG_FILE)
+        UTIL_CA_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.IP" $CONFIG_FILE)
+        UTIL_CAAPI_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.CAAPI.Name" $CONFIG_FILE)
+        UTIL_CAAPI_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.CAAPI.IP" $CONFIG_FILE)
+        UTIL_PEERS=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[].Name" $CONFIG_FILE)
+        UTIL_ORDERERS=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
 
-        hosts_args+="--add-host=$ROOTCA_NAME:$ROOTCA_IP "
+        [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
+        [[ -n "$UTIL_CAAPI_NAME" && -n "$UTIL_CAAPI_IP" ]] && hosts_args+="--add-host=$UTIL_CAAPI_NAME:$UTIL_CAAPI_IP "
 
-        for UTIL_ORGANIZATION in $UTIL_ORGANIZATIONS; do
-            CA_NAME=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.Name" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-            CA_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.IP" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-            CAAPI_NAME=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.CAAPI.Name" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-            CAAPI_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.CAAPI.IP" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-            UTIL_PEERS=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[].Name" $CONFIG_FILE)
-            UTIL_ORDERERS=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
+        for UTIL_ORDERER in $UTIL_ORDERERS; do
+            UTIL_ORDERER_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[] | select(.Name == \"$UTIL_ORDERER\") | .Name" $CONFIG_FILE)
+            UTIL_ORDERER_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[] | select(.Name == \"$UTIL_ORDERER\") | .IP" $CONFIG_FILE)
+            [[ -n "$UTIL_ORDERER_NAME" && -n "$UTIL_ORDERER_IP" ]] && hosts_args+="--add-host=$UTIL_ORDERER_NAME:$UTIL_ORDERER_IP "
+        done
 
-            if [[ -n "$CA_NAME" ]]; then
-                hosts_args+="--add-host=$CA_NAME:$CA_IP "
-            fi
 
-            if [[ -n "$CAAPI_NAME" ]]; then
-                hosts_args+="--add-host=$CAAPI_NAME:$CAAPI_IP "
-            fi
-
-            for index in $(seq 0 $(($(echo "$UTIL_PEERS" | wc -l) - 1))); do
-                PEER_NAME=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[$index].Name" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-                PEER_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[$index].IP" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-                DB_NAME=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[$index].DB.Name" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-                DB_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[$index].DB.IP" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-                CLI_NAME=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[$index].Name" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-                CLI_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[$index].CLI" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-                hosts_args+="--add-host=$PEER_NAME:$PEER_IP --add-host=$DB_NAME:$DB_IP --add-host=cli.$CLI_NAME:$CLI_IP "
-            done
-
-            for index in $(seq 0 $(($(echo "$UTIL_ORDERERS" | wc -l) - 1))); do
-                ORDERER_NAME=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[$index].Name" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-                ORDERER_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[$index].IP" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-                ORDERER_ADMIN_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$UTIL_CHANNEL\") | .Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[$index].Admin.IP" $CONFIG_FILE | tr -d '\n' | tr -d '\r')
-                hosts_args+="--add-host=$ORDERER_NAME:$ORDERER_IP --add-host=$ORDERER_NAME:$ORDERER_ADMIN_IP "
-            done
+        for UTIL_PEER in $UTIL_PEERS; do
+            UTIL_PEER_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .Name" $CONFIG_FILE)
+            UTIL_PEER_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .IP" $CONFIG_FILE)
+            UTIL_DB_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .DB.Name" $CONFIG_FILE)
+            UTIL_DB_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .DB.IP" $CONFIG_FILE)
+            UTIL_CLI_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .Name" $CONFIG_FILE)
+            UTIL_CLI_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .CLI" $CONFIG_FILE)
+            [[ -n "$UTIL_PEER_NAME" && -n "$UTIL_PEER_IP" ]] && hosts_args+="--add-host=$UTIL_PEER_NAME:$UTIL_PEER_IP "
+            [[ -n "$UTIL_DB_NAME" && -n "$UTIL_DB_IP" ]] && hosts_args+="--add-host=$UTIL_DB_NAME:$UTIL_DB_IP "
+            [[ -n "$UTIL_CLI_NAME" && -n "$UTIL_CLI_IP" ]] && hosts_args+="--add-host=cli.$UTIL_CLI_NAME:$UTIL_CLI_IP "
         done
     done
 }

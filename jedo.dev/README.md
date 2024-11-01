@@ -30,11 +30,23 @@ This Document describes the setup of a Hyperledger Fabric (https://www.hyperledg
 1. open terminal in UNRAID
 2. download hyperledger fabric samples `wget https://github.com/hyperledger/fabric/releases/download/v2.5.0/hyperledger-fabric-linux-amd64-2.5.0.tar.gz`
 3. extract files `tar -xvzf hyperledger-fabric-linux-amd64-2.5.0.tar.gz`
-4. create folder `mkdir -p /mnt/user/appdata/jedo-network`
-5. move binaries from fabric `mv bin /mnt/user/appdata/fabric/` and `mv config /mnt/user/appdata/fabric/`
-6. copy files from (https://github.com/Jenziner/JEDO/tree/main/jedo-network/jedo-test/) to /mnt/user/appdata/jedo-network
-7. goto jedo-network `cd /mnt/user/appdata/jedo-network`
-8. bring up jedo-network `./scripts/up.sh`
+4. move binaries from fabric `mv bin /mnt/user/appdata/fabric/` and `mv config /mnt/user/appdata/fabric/`
+5. create folder `mkdir -p /mnt/user/appdata/jedo-dev`
+6. copy files from (https://github.com/Jenziner/JEDO/tree/main/jedo-dev/) to /mnt/user/appdata/jedo-dev
+7. copy files from (https://github.com/Jenziner/JEDO/tree/main/ca-api/) to /mnt/user/appdata/jedo-dev
+8. goto jedo-dev `cd /mnt/user/appdata/jedo-dev`
+9. bring up infrastructure `./scripts/jedo.sh -a go`
+10. bring up API-Server `.scripts/ca-api.sh`
+
+# Regist new Issuer
+1. Load ca-web local
+2. Load CA-Certificate
+3. Choose name of (new) region
+4. Create certificate, store it where needed
+
+# Register new Owner / User
+1. Install wallet on smartphone
+2. While registering, scan QR-Code of Issuer (for a new Owner) or Owner (for a new User)
 
 
 # Manual OLD way
