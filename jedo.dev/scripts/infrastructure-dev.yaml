@@ -31,34 +31,38 @@ Docker:
         FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
 Root:
     Name: jedo.dev
-    OrgAdmin:
-        Name: admin.jedo.dev
-        Subject: "C=XX,ST=jedo.dev,L=root,CN=admin.jedo.dev"
+    TLS-CA: 
+        Name: tls-ca.jedo.dev
+        Admin: tls-ca-admin.jedo.dev
         Pass: Test1
-    NodeAdmin:
-        Name: node.jedo.dev
-        Subject: "C=XX,ST=jedo.dev,L=root,CN=node.jedo.dev"
-        Pass: Test1
-    TokenAdmin:
-        Name: token.jedo.dev
-        Subject: "C=XX,ST=jedo.dev,L=root,CN=token.jedo.dev"
-        Pass: Test1
-    TlsAdmin:
-        Name: tls.jedo.dev
-        Subject: "C=XX,ST=jedo.dev,L=root,CN=tls.jedo.dev"
-        Pass: Test1
-    CA: 
-        Name: ca.jedo.dev
-        IP: 172.25.0.2
-        Port: 7054
-        OpPort: 9443
+        IP: 172.25.0.11
+        Port: 7052
         OpenSSL: false
-        Ext:
-        CAAPI:
-            Name:
-            IP:
-            Port:
-            SrvPort:
+    ORG-CA: 
+        Name: org-ca.jedo.dev
+        Admin: org-ca-admin.jedo.dev
+        Pass: Test1
+        IP: 172.25.0.12
+        Port: 7053
+        OpenSSL: false
+Intermediates:
+    - Name: TWS
+      TLS-CA: 
+          Name: tls-ca.tws.jedo.dev
+          Admin: tls-ca-admin.tws.jedo.dev
+          Pass: Test1
+          IP: 172.25.0.21
+          Port: 8052
+          OpPort: 8059
+          OpenSSL: false
+      ORG-CA: 
+          Name: org-ca.tws.jedo.dev
+          Admin: org-ca-admin.tws.jedo.dev
+          Pass: Test1
+          IP: 172.25.0.22
+          Port: 9052
+          OpPort: 9059
+          OpenSSL: false
 Organizations:
     - Name: Jenziner
       OrgAdmin:

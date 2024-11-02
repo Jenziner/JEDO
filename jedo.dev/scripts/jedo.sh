@@ -39,7 +39,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "ca" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" ]]; then
+            if [[ "$OPTARG" != "ca" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -111,7 +111,7 @@ fi
 
 
 ###############################################################
-# Generate Root-CA
+# Run Root-CA
 ###############################################################
 if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/root.sh
@@ -122,12 +122,23 @@ fi
 
 
 ###############################################################
-# Run CA
+# Run Intermediate-CA
+###############################################################
+if [[ "$opt_r" == "intermediate" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    $SCRIPT_DIR/intermediate.sh
+    if [[ "$opt_a" == "pause" ]]; then
+        cool_down "Intermediate-CA started."
+    fi
+fi
+
+
+###############################################################
+# Run Org-CA
 ###############################################################
 if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/ca.sh
     if [[ "$opt_a" == "pause" ]]; then
-        cool_down "CA running."
+        cool_down "Org-CA running."
     fi
 fi
 
