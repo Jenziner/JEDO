@@ -39,7 +39,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "ca" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
+            if [[ "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -114,7 +114,7 @@ fi
 # Run Root-CA
 ###############################################################
 if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    $SCRIPT_DIR/root.sh
+    $SCRIPT_DIR/ca_root.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Root-CA started."
     fi
@@ -125,7 +125,7 @@ fi
 # Run Intermediate-CA
 ###############################################################
 if [[ "$opt_r" == "intermediate" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    $SCRIPT_DIR/intermediate.sh
+    $SCRIPT_DIR/ca_intermediate.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Intermediate-CA started."
     fi
@@ -135,21 +135,10 @@ fi
 ###############################################################
 # Run Org-CA
 ###############################################################
-if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/ca.sh
+if [[ "$opt_r" == "node" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/ca_node.sh
     if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Org-CA running."
-    fi
-fi
-
-
-###############################################################
-# Enroll certificates
-###############################################################
-if [[ "$opt_r" == "enroll" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/enroll.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Certificates enrolled."
+        cool_down "Node-CA started."
     fi
 fi
 
@@ -194,6 +183,17 @@ if [[ "$opt_r" == "channel" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/channel.sh
     if [[ "$opt_a" == "pause" ]]; then
         cool_down "Channel created."
+    fi
+fi
+
+
+###############################################################
+# Enroll certificates
+###############################################################
+if [[ "$opt_r" == "enroll" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/enroll.sh
+    if [[ "$opt_a" == "pause" ]]; then
+        cool_down "Certificates enrolled."
     fi
 fi
 

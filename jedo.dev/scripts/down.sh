@@ -43,7 +43,7 @@ for INTERMEDIATE in $INTERMEDIATS; do
     echo ""
     echo_info "Docker Container from $INTERMEDIATE removing..."
     TLS_CA=$(yq e ".Intermediates[] | select(.Name == \"$INTERMEDIATE\") | .TLS-CA.Name" "$CONFIG_FILE")
-    ID_CA=$(yq e ".Intermediates[] | select(.Name == \"$INTERMEDIATE\") | .ID-CA.Name" "$CONFIG_FILE")
+    ORG_CA=$(yq e ".Intermediates[] | select(.Name == \"$INTERMEDIATE\") | .ORG-CA.Name" "$CONFIG_FILE")
 
     # Remove TLS-CA
     if [[ -n "$TLS_CA" ]]; then
@@ -51,8 +51,8 @@ for INTERMEDIATE in $INTERMEDIATS; do
     fi
 
     # Remove ID-CA
-    if [[ -n "$ID_CA" ]]; then
-        docker rm -f $ID_CA || true
+    if [[ -n "$ORG_CA" ]]; then
+        docker rm -f $ORG_CA || true
     fi
 done
 
@@ -62,20 +62,32 @@ ORGANIZATIONS=$(yq eval ".Organizations[].Name" $CONFIG_FILE)
 for ORGANIZATION in $ORGANIZATIONS; do
     echo ""
     echo_info "Docker Container from $ORGANIZATION removing..."
-    CA=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.Name" "$CONFIG_FILE")
-    CAAPI=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .CA.CAAPI.Name" "$CONFIG_FILE")
+    TLSCA=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .TLS-CA.Name" "$CONFIG_FILE")
+    TLSCAAPI=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .TLS-CA.CAAPI.Name" "$CONFIG_FILE")
+    ORGCA=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .ORG-CA.Name" "$CONFIG_FILE")
+    ORGCAAPI=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .ORG-CA.CAAPI.Name" "$CONFIG_FILE")
     PEERS=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" "$CONFIG_FILE")
     PEERS_DB=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].DB.Name" "$CONFIG_FILE")
     ORDERERS=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" "$CONFIG_FILE")
 
-    # Remove CA
-    if [[ -n "$CA" ]]; then
-        docker rm -f $CA || true
+    # Remove TLS-CA
+    if [[ -n "$TLSCA" ]]; then
+        docker rm -f $TLSCA || true
     fi
 
-    # Remove CA-API
-    if [[ -n "$CAAPI" ]]; then
-        docker rm -f $CAAPI || true
+    # Remove TLSCA-API
+    if [[ -n "$TLSCAAPI" ]]; then
+        docker rm -f $TLSCAAPI || true
+    fi
+
+    # Remove ORG-CA
+    if [[ -n "$ORGCA" ]]; then
+        docker rm -f $ORGCA || true
+    fi
+
+    # Remove ORGCA-API
+    if [[ -n "$ORGCAAPI" ]]; then
+        docker rm -f $ORGCAAPI || true
     fi
 
     # Remove CouchDBs

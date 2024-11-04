@@ -18,7 +18,7 @@ up_help() {
     echo "  net             create docker network"
     echo "  root            run Root-CA"
     echo "  intermediate    run Intermediate-CAs"
-    echo "  ca              run CAs"
+    echo "  node            run Node-CAs"
     echo "  enroll          run enrollment to create certificates"
     echo "  config          run configuration (genesis block & channel configuration)"
     echo "  orderer         run all orderers"

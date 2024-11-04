@@ -68,10 +68,11 @@ get_hosts() {
 
     UTIL_ROOT_TLSCA_NAME=$(yq e ".Root.TLS-CA.Name" $CONFIG_FILE)
     UTIL_ROOT_TLSCA_IP=$(yq e ".Root.TLS-CA.IP" $CONFIG_FILE)
-    hosts_args+="--add-host=$UTIL_ROOT_TLSCA_NAME:$UTIL_ROOT_TLSCA_IP "
+    [[ -n "$UTIL_ROOT_TLSCA_NAME" && -n "$UTIL_ROOT_TLSCA_IP" ]] && hosts_args+="--add-host=$UTIL_ROOT_TLSCA_NAME:$UTIL_ROOT_TLSCA_IP "
+
     UTIL_ROOT_ORGCA_NAME=$(yq e ".Root.ORG-CA.Name" $CONFIG_FILE)
     UTIL_ROOT_ORGCA_IP=$(yq e ".Root.ORG-CA.IP" $CONFIG_FILE)
-    hosts_args+="--add-host=$UTIL_ROOT_ORGCA_NAME:$UTIL_ROOT_ORGCA_IP "
+    [[ -n "$UTIL_ROOT_ORGCA_NAME" && -n "$UTIL_ROOT_ORGCA_IP" ]] && hosts_args+="--add-host=$UTIL_ROOT_ORGCA_NAME:$UTIL_ROOT_ORGCA_IP "
 
 
     UTIL_INTERMEDIATES=$(yq e ".Intermediates[].Name" $CONFIG_FILE)
@@ -86,15 +87,21 @@ get_hosts() {
 
     UTIL_ORGANIZATIONS=$(yq e ".Organizations[].Name" $CONFIG_FILE)
     for UTIL_ORGANIZATION in $UTIL_ORGANIZATIONS; do
-        UTIL_CA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.Name" $CONFIG_FILE)
-        UTIL_CA_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.IP" $CONFIG_FILE)
-        UTIL_CAAPI_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.CAAPI.Name" $CONFIG_FILE)
-        UTIL_CAAPI_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .CA.CAAPI.IP" $CONFIG_FILE)
+        UTIL_TLSCA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .TLS-CA.Name" $CONFIG_FILE)
+        UTIL_TLSCA_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .TLS-CA.IP" $CONFIG_FILE)
+        UTIL_TLSCAAPI_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .TLS-CA.CAAPI.Name" $CONFIG_FILE)
+        UTIL_TLSCAAPI_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .TLS-CA.CAAPI.IP" $CONFIG_FILE)
+        UTIL_ORGCA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .ORG-CA.Name" $CONFIG_FILE)
+        UTIL_ORGCA_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .ORG-CA.IP" $CONFIG_FILE)
+        UTIL_ORGCAAPI_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .ORG-CA.CAAPI.Name" $CONFIG_FILE)
+        UTIL_ORGCAAPI_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .ORG-CA.CAAPI.IP" $CONFIG_FILE)
         UTIL_PEERS=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[].Name" $CONFIG_FILE)
         UTIL_ORDERERS=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
 
-        [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
-        [[ -n "$UTIL_CAAPI_NAME" && -n "$UTIL_CAAPI_IP" ]] && hosts_args+="--add-host=$UTIL_CAAPI_NAME:$UTIL_CAAPI_IP "
+        [[ -n "$UTIL_TLSCA_NAME" && -n "$UTIL_TLSCA_IP" ]] && hosts_args+="--add-host=$UTIL_TLSCA_NAME:$UTIL_TLSCA_IP "
+        [[ -n "$UTIL_TLSCAAPI_NAME" && -n "$UTIL_TLSCAAPI_IP" ]] && hosts_args+="--add-host=$UTIL_TLSCAAPI_NAME:$UTIL_TLSCAAPI_IP "
+        [[ -n "$UTIL_ORGCA_NAME" && -n "$UTIL_ORGCA_IP" ]] && hosts_args+="--add-host=$UTIL_ORGCA_NAME:$UTIL_ORGCA_IP "
+        [[ -n "$UTIL_ORGCAAPI_NAME" && -n "$UTIL_ORGCAAPI_IP" ]] && hosts_args+="--add-host=$UTIL_ORGCAAPI_NAME:$UTIL_ORGCAAPI_IP "
 
         for UTIL_ORDERER in $UTIL_ORDERERS; do
             UTIL_ORDERER_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[] | select(.Name == \"$UTIL_ORDERER\") | .Name" $CONFIG_FILE)
@@ -250,7 +257,7 @@ CheckCouchDB() {
             echo_ok "CouchDB $container_name port test passed."
             break
         fi
-        echo "Waiting for CouchDB $container_name... ($WAIT_TIME seconds)"
+        echo "Waiting for CouchDB $container_name... ($wait_time seconds)"
         sleep 2
         wait_time=$((wait_time + 2))
     done
