@@ -162,6 +162,7 @@ for ORGANIZATION in $ORGANIZATIONS; do
             -e FABRIC_CA_SERVER_HOME=$CA_SRV_DIR \
             -e FABRIC_CA_SERVER_MSPDIR=$CA_SRV_DIR/msp \
             -e FABRIC_CA_SERVER_LISTENADDRESS=$NODEORGCA_PORT \
+            -e FABRIC_CA_SERVER_CSR_CN=$NODEORGCA_NAME \
             -e FABRIC_CA_SERVER_CSR_HOSTS="$NODEORGCA_NAME,$NODEORGCA_IP,localhost,0.0.0.0" \
             -e FABRIC_CA_SERVER_CSR_CA_PATHLENGTH=0 \
             -e FABRIC_CA_SERVER_IDEMIX_CUURVE=gurvy.Bn254 \
@@ -210,6 +211,64 @@ for ORGANIZATION in $ORGANIZATIONS; do
     cp ${PWD}/infrastructure/$ORGANIZATION/$NODEORGCA_NAME/keys/server/ca-cert.pem ${PWD}/infrastructure/$ORGANIZATION/$NODEORGCA_NAME/keys/server/msp/cacerts/
 
     echo_ok "Node-ORG-CA for $ORGANIZATION started."
+
+
+    ###############################################################
+    # Enroll Operators
+    ###############################################################
+    OPERATORS=$(yq eval ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Operators[].Name" $CONFIG_FILE)
+    for OPERATOR in $OPERATORS; do
+        OPERATOR_NAME=$(yq eval ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Operators[] | select(.Name == \"$OPERATOR\") | .Name" $CONFIG_FILE)
+        OPERATOR_PASS=$(yq eval ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Operators[] | select(.Name == \"$OPERATOR\") | .Pass" $CONFIG_FILE)
+        OPERATOR_TYPE=$(yq eval ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Operators[] | select(.Name == \"$OPERATOR\") | .Type" $CONFIG_FILE)
+        OPERATOR_SUBJECT=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Operators[] | select(.Name == \"$OPERATOR\") | .Subject" $CONFIG_FILE)
+
+        # Extract fields from subject
+        C=$(echo "$OPERATOR_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
+        ST=$(echo "$OPERATOR_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
+        L=$(echo "$OPERATOR_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
+        CN=$(echo "$OPERATOR_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
+        CSR_NAMES=$(echo "$OPERATOR_SUBJECT" | sed 's/,CN=[^,]*//')
+
+
+        echo ""
+        echo_info "Operator $OPERATOR registering and enrolling..."
+        docker exec -it $NODEORGCA_NAME fabric-ca-client register -u https://$NODEORGCA_NAME:$NODEORGCA_PASS@$NODEORGCA_NAME:$NODEORGCA_PORT \
+            --id.name $OPERATOR_NAME --id.secret $OPERATOR_PASS --id.type $OPERATOR_TYPE --id.affiliation $AFFILIATION_NODE \
+            --id.attrs 'hf.Registrar.Roles=admin,hf.Registrar.Attributes=*,hf.Revoker=true,hf.AffiliationMgr=true,hf.GenCRL=true'
+        docker exec -it $NODEORGCA_NAME fabric-ca-client enroll -u https://$OPERATOR_NAME:$OPERATOR_PASS@$NODEORGCA_NAME:$NODEORGCA_PORT --mspdir $INFRA_DIR/$ORGANIZATION/_Operators/$OPERATOR_NAME/keys/msp \
+            --enrollment.attrs "hf.Registrar.Roles,hf.Registrar.Attributes,hf.Revoker,hf.AffiliationMgr,hf.GenCRL" \
+            --csr.cn $CN --csr.names "$CSR_NAMES"
+
+        docker exec -it $NODETLSCA_NAME fabric-ca-client register -u https://$NODETLSCA_NAME:$NODETLSCA_PASS@$NODETLSCA_NAME:$NODETLSCA_PORT \
+            --id.name $OPERATOR_NAME --id.secret $OPERATOR_PASS --id.type $OPERATOR_TYPE --id.affiliation $AFFILIATION_NODE
+        docker exec -it $NODETLSCA_NAME fabric-ca-client enroll -u https://$OPERATOR_NAME:$OPERATOR_PASS@$NODETLSCA_NAME:$NODETLSCA_PORT --mspdir $INFRA_DIR/$ORGANIZATION/_Operators/$OPERATOR_NAME/keys/tls \
+            --csr.cn $CN --csr.names "$CSR_NAMES" \
+            --enrollment.profile tls
+
+        # Generating NodeOUs-File
+        echo ""
+        echo_info "NodeOUs-File writing..."
+        CA_CERT_FILE=$(ls ${PWD}/infrastructure/$ORGANIZATION/_Operators/$OPERATOR_NAME/keys/msp/cacerts/*.pem)
+        cat <<EOF > ${PWD}/infrastructure/$ORGANIZATION/_Operators/$OPERATOR_NAME/keys/msp/config.yaml
+NodeOUs:
+  Enable: true
+  ClientOUIdentifier:
+    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    OrganizationalUnitIdentifier: client
+  PeerOUIdentifier:
+    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    OrganizationalUnitIdentifier: peer
+  AdminOUIdentifier:
+    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    OrganizationalUnitIdentifier: admin
+  OrdererOUIdentifier:
+    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    OrganizationalUnitIdentifier: orderer
+EOF
+
+
+    done
 done
 
 

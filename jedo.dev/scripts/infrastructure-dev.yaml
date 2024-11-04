@@ -111,6 +111,11 @@ Organizations:
                 Pass: Test1
                 IP: 172.25.1.22
                 Port: 17164
+      Operators:
+          - Name: admin.jenziner.jedo.dev
+            Pass: Test1
+            Type: admin
+            Subject: "C=ea,ST=jedo.dev,L=jenziner,CN=admin.jenziner.jedo.dev"
 Channels:
     - Name: ea.jedo.dev
       Organizations:
