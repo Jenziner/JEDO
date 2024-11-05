@@ -44,17 +44,29 @@ function echo_info() {
 # Function to pause
 ###############################################################
 cool_down() {
-    local message="$1"
-    while true; do
-        echo_info "${message}  Check console."
-        read -p "Continue? (Y/n): " response
-        response=${response:-Y}  # "Y" if Enter
-        case $response in
-            [Yy]* ) return 0 ;;   # continue
-            [Nn]* ) echo_ok "Work done."; exit 0 ;; # exit
-            * ) echo_info "Choose Y or n." ;;
-        esac
-    done
+    local kind="$1"
+    local message="$2"
+    if [[ "$kind" == "pause" ]]; then
+        while true; do
+            echo_info "${message}  Check console."
+            read -p "Continue? (Y/n): " response
+            response=${response:-Y}  # "Y" if Enter
+            case $response in
+                [Yy]* ) return 0 ;;   # continue
+                [Nn]* ) echo_ok "Work done."; exit 0 ;; # exit
+                * ) echo_info "Choose Y or n." ;;
+            esac
+        done
+    fi
+}
+
+
+###############################################################
+# Function for temporary end
+###############################################################
+temp_end() {
+    echo_error "TEMP END"
+    exit 1
 }
 
 

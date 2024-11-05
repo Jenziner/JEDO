@@ -76,9 +76,7 @@ export FABRIC_CFG_PATH=./config
 ###############################################################
 if [[ "$opt_r" == "prereq" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/prereq.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Prerequisites checked."
-    fi
+    cool_down $opt_a "Prerequisites checked."
 fi
 
 
@@ -87,11 +85,9 @@ fi
 ###############################################################
 if $opt_d || [[ "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/down.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Previous installation deleted."
-    fi
+    cool_down $opt_a "Previous installation deleted."
 fi
-
+temp_end
 
 ###############################################################
 # Create Docker Network
@@ -103,9 +99,7 @@ if [[ "$opt_r" == "net" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
         docker network create --subnet=$DOCKER_NETWORK_SUBNET --gateway=$DOCKER_NETWORK_GATEWAY "$DOCKER_NETWORK_NAME"
     fi
     docker network inspect "$DOCKER_NETWORK_NAME"
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Docker Network started."
-    fi
+    cool_down $opt_a "Docker Network started."
     echo_ok "Docker Network started."
 fi
 
@@ -115,9 +109,7 @@ fi
 ###############################################################
 if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/ca_root.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Root-CA started."
-    fi
+    cool_downv "Root-CA started."
 fi
 
 
@@ -126,9 +118,7 @@ fi
 ###############################################################
 if [[ "$opt_r" == "intermediate" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/ca_intermediate.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Intermediate-CA started."
-    fi
+    cool_down $opt_a "Intermediate-CA started."
 fi
 
 
@@ -137,9 +127,7 @@ fi
 ###############################################################
 if [[ "$opt_r" == "node" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/ca_node.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Node-CA started."
-    fi
+    cool_down $opt_a "Node-CA started."
 fi
 
 
@@ -148,9 +136,7 @@ fi
 ###############################################################
 if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/peer.sh peer
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Peers running."
-    fi
+    cool_down $opt_a "Peers running."
 fi
 
 
@@ -159,9 +145,7 @@ fi
 ###############################################################
 if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/orderer.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Orderers running."
-    fi
+    cool_down $opt_a "Orderers running."
 fi
 
 
@@ -170,9 +154,7 @@ fi
 ###############################################################
 if [[ "$opt_r" == "config" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/config.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Genesis Block and Channel Configuration generated."
-    fi
+    cool_down $opt_a "Genesis Block and Channel Configuration generated."
 fi
 
 
@@ -181,9 +163,7 @@ fi
 ###############################################################
 if [[ "$opt_r" == "channel" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/channel.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Channel created."
-    fi
+    cool_down $opt_a "Channel created."
 fi
 
 
@@ -192,9 +172,8 @@ fi
 ###############################################################
 if [[ "$opt_r" == "enroll" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/enroll.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Certificates enrolled."
-    fi
+    cool_down $opt_a "Certificates enrolled."
+    
 fi
 
 
