@@ -78,13 +78,15 @@ get_hosts() {
 
     hosts_args=""
 
-    UTIL_ROOT_TLSCA_NAME=$(yq e ".Root.TLS-CA.Name" $CONFIG_FILE)
-    UTIL_ROOT_TLSCA_IP=$(yq e ".Root.TLS-CA.IP" $CONFIG_FILE)
-    [[ -n "$UTIL_ROOT_TLSCA_NAME" && -n "$UTIL_ROOT_TLSCA_IP" ]] && hosts_args+="--add-host=$UTIL_ROOT_TLSCA_NAME:$UTIL_ROOT_TLSCA_IP "
+    UTIL_CA_NAME=$(yq e ".Root.Name" $CONFIG_FILE)
+    UTIL_CA_IP=$(yq e ".Root.IP" $CONFIG_FILE)
+    [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
 
-    UTIL_ROOT_ORGCA_NAME=$(yq e ".Root.ORG-CA.Name" $CONFIG_FILE)
-    UTIL_ROOT_ORGCA_IP=$(yq e ".Root.ORG-CA.IP" $CONFIG_FILE)
-    [[ -n "$UTIL_ROOT_ORGCA_NAME" && -n "$UTIL_ROOT_ORGCA_IP" ]] && hosts_args+="--add-host=$UTIL_ROOT_ORGCA_NAME:$UTIL_ROOT_ORGCA_IP "
+    UTIL_CA_NAME=$(yq e ".Root.TLS-CA.Name" $CONFIG_FILE)
+    [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
+
+    UTIL_CA_NAME=$(yq e ".Root.ORG-CA.Name" $CONFIG_FILE)
+    [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
 
 
     UTIL_INTERMEDIATES=$(yq e ".Intermediates[].Name" $CONFIG_FILE)

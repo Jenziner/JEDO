@@ -30,34 +30,34 @@ Docker:
         Wait: 60 # Max waiting time in seconds to start a docker container prior to exit
         FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
 Root:
-    Name: jedo.dev
+    Name: ca.jedo.dev
+    IP: 172.25.0.11
+    OpenSSL: 
     TLS-CA: 
-        Name:
-        Pass:
-        IP:
-        Port:
-        OpenSSL: 
+        Name: tls.ca.jedo.dev
+        Pass: Test1
+        Port: 7154
+        OpPort: 7159
     ORG-CA: 
-        Name:
-        Pass:
-        IP:
-        Port:
-        OpenSSL:
+        Name: org.ca.jedo.dev
+        Pass: Test1
+        Port: 7254
+        OpPort: 7259
 Intermediates:
-    - Name:
+    - Name: TWS
       TLS-CA: 
-          Name:
-          Pass:
-          IP:
-          Port:
-          OpPort:
-          OpenSSL:
+          Name: tls-ca.tws.jedo.dev
+          Pass: Test1
+          IP: 172.25.0.21
+          Port: 7154
+          OpPort: 7159
+          OpenSSL: false
       ORG-CA: 
-          Name:
-          Pass:
-          IP:
-          Port:
-          OpPort:
+          Name: org-ca.tws.jedo.dev
+          Pass: Test1
+          IP: 172.25.0.22
+          Port: 8154
+          OpPort: 8159
           OpenSSL: false
 Organizations:
     - Name: Jenziner

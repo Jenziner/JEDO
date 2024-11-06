@@ -87,7 +87,7 @@ if $opt_d || [[ "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/down.sh
     cool_down $opt_a "Previous installation deleted."
 fi
-temp_end
+
 
 ###############################################################
 # Create Docker Network
@@ -109,9 +109,9 @@ fi
 ###############################################################
 if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/ca_root.sh
-    cool_downv "Root-CA started."
+    cool_down $opt_a "Root-CA started."
 fi
-
+temp_end
 
 ###############################################################
 # Run Intermediate-CA

@@ -26,14 +26,9 @@ echo_warn "$DOCKER_NETWORK_NAME removing..."
 
 # Remove Root-CA
 echo_info "Root-CA removing..."
-ROOT_TLSCA_NAME=$(yq eval ".Root.TLS-CA.Name" "$CONFIG_FILE")
-if [[ -n "$ROOT_TLSCA_NAME" ]]; then
-    docker rm -f $ROOT_TLSCA_NAME || true
-fi
-
-ROOT_ORGCA_NAME=$(yq eval ".Root.ORG-CA.Name" "$CONFIG_FILE")
-if [[ -n "$ROOT_ORGCA_NAME" ]]; then
-    docker rm -f $ROOT_ORGCA_NAME || true
+ROOT_CA_NAME=$(yq eval ".Root.Name" "$CONFIG_FILE")
+if [[ -n "$ROOT_CA_NAME" ]]; then
+    docker rm -f $ROOT_CA_NAME || true
 fi
 
 
@@ -119,6 +114,7 @@ docker network rm  $DOCKER_NETWORK_NAME || true
 echo ""
 echo_info "Folder removing..."
 rm -rf infrastructure
+rm -rf configuration
 rm -rf chaincode
 #rm tokenchaincode/zkatdlog_pp.json
 
