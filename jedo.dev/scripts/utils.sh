@@ -78,25 +78,23 @@ get_hosts() {
 
     hosts_args=""
 
-    UTIL_CA_NAME=$(yq e ".Root.Name" $CONFIG_FILE)
-    UTIL_CA_IP=$(yq e ".Root.IP" $CONFIG_FILE)
+    UTIL_CA_NAME=$(yq eval ".Root.Name" $CONFIG_FILE)
+    UTIL_CA_IP=$(yq eval ".Root.IP" $CONFIG_FILE)
+    [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
+    UTIL_CA_NAME=$(yq eval ".Root.TLS-CA.Name" $CONFIG_FILE)
+    [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
+    UTIL_CA_NAME=$(yq eval ".Root.ORG-CA.Name" $CONFIG_FILE)
     [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
 
-    UTIL_CA_NAME=$(yq e ".Root.TLS-CA.Name" $CONFIG_FILE)
-    [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
-
-    UTIL_CA_NAME=$(yq e ".Root.ORG-CA.Name" $CONFIG_FILE)
-    [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
-
-
-    UTIL_INTERMEDIATES=$(yq e ".Intermediates[].Name" $CONFIG_FILE)
+    UTIL_INTERMEDIATES=$(yq eval ".Intermediates[].Name" $CONFIG_FILE)
     for UTIL_INTERMEDIATE in $UTIL_INTERMEDIATES; do
+        UTIL_INT_CA_NAME=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_INTERMEDIATE\") | .Name" $CONFIG_FILE)
+        UTIL_INT_CA_IP=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_INTERMEDIATE\") | .IP" $CONFIG_FILE)
+        [[ -n "$UTIL_INT_CA_NAME" && -n "$UTIL_INT_CA_IP" ]] && hosts_args+="--add-host=$UTIL_INT_CA_NAME:$UTIL_INT_CA_IP "
         UTIL_INT_TLSCA_NAME=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_INTERMEDIATE\") | .TLS-CA.Name" "$CONFIG_FILE")
-        UTIL_INT_TLSCA_IP=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_INTERMEDIATE\") | .TLS-CA.IP" "$CONFIG_FILE")
-        hosts_args+="--add-host=$UTIL_INT_TLSCA_NAME:$UTIL_INT_TLSCA_IP "
+        [[ -n "$UTIL_INT_TLSCA_NAME" && -n "$UTIL_INT_CA_IP" ]] && hosts_args+="--add-host=$UTIL_INT_TLSCA_NAME:$UTIL_INT_CA_IP "
         UTIL_INT_ORGCA_NAME=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_INTERMEDIATE\") | .ORG-CA.Name" "$CONFIG_FILE")
-        UTIL_INT_ORGCA_IP=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_INTERMEDIATE\") | .ORG-CA.IP" "$CONFIG_FILE")
-        hosts_args+="--add-host=$UTIL_INT_ORGCA_NAME:$UTIL_INT_ORGCA_IP "
+        [[ -n "$UTIL_INT_ORGCA_NAME" && -n "$UTIL_INT_CA_IP" ]] && hosts_args+="--add-host=$UTIL_INT_ORGCA_NAME:$UTIL_INT_CA_IP "
     done
 
     UTIL_ORGANIZATIONS=$(yq e ".Organizations[].Name" $CONFIG_FILE)

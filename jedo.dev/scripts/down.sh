@@ -24,6 +24,20 @@ echo ""
 echo_warn "$DOCKER_NETWORK_NAME removing..."
 
 
+# TLS-CA
+TLSS=$(yq e ".TLS.Hosts[].Name" $CONFIG_FILE)
+for TLS in $TLSS; do
+    echo ""
+    echo_info "Docker Container from $TLS removing..."
+    TLS_HOST_NAME=$(yq e ".TLS.Hosts[] | select(.Name == \"$TLS\") | .Name" "$CONFIG_FILE")
+
+    if [[ -n "$TLS_HOST_NAME" ]]; then
+        docker rm -f $TLS_HOST_NAME || true
+    fi
+
+done
+
+
 # Remove Root-CA
 echo_info "Root-CA removing..."
 ROOT_CA_NAME=$(yq eval ".Root.Name" "$CONFIG_FILE")
@@ -37,18 +51,12 @@ INTERMEDIATS=$(yq e ".Intermediates[].Name" $CONFIG_FILE)
 for INTERMEDIATE in $INTERMEDIATS; do
     echo ""
     echo_info "Docker Container from $INTERMEDIATE removing..."
-    TLS_CA=$(yq e ".Intermediates[] | select(.Name == \"$INTERMEDIATE\") | .TLS-CA.Name" "$CONFIG_FILE")
-    ORG_CA=$(yq e ".Intermediates[] | select(.Name == \"$INTERMEDIATE\") | .ORG-CA.Name" "$CONFIG_FILE")
+    CA_NAME=$(yq e ".Intermediates[] | select(.Name == \"$INTERMEDIATE\") | .Name" "$CONFIG_FILE")
 
-    # Remove TLS-CA
-    if [[ -n "$TLS_CA" ]]; then
-        docker rm -f $TLS_CA || true
+    if [[ -n "$CA_NAME" ]]; then
+        docker rm -f $CA_NAME || true
     fi
 
-    # Remove ID-CA
-    if [[ -n "$ORG_CA" ]]; then
-        docker rm -f $ORG_CA || true
-    fi
 done
 
 

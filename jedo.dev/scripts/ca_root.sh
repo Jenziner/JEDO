@@ -20,7 +20,6 @@ DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
 
 ROOT_CA_NAME=$(yq eval ".Root.Name" "$CONFIG_FILE")
 ROOT_CA_IP=$(yq eval ".Root.IP" "$CONFIG_FILE")
-ROOT_CA_OPPORT=$(yq eval ".Root.OpPort" "$CONFIG_FILE")
 ROOT_CA_OPENSSL=$(yq eval ".Root.OpenSSL" "$CONFIG_FILE")
 
 ROOT_TLSCA_NAME=$(yq eval ".Root.TLS-CA.Name" "$CONFIG_FILE")
@@ -33,11 +32,13 @@ ROOT_ORGCA_PASS=$(yq eval ".Root.ORG-CA.Pass" "$CONFIG_FILE")
 ROOT_ORGCA_PORT=$(yq eval ".Root.ORG-CA.Port" "$CONFIG_FILE")
 ROOT_ORGCA_OPPORT=$(yq eval ".Root.ORG-CA.OpPort" "$CONFIG_FILE")
 
+LOCAL_INFRA_DIR=${PWD}/infrastructure
 LOCAL_TLS_KEYS_DIR=${PWD}/infrastructure/_root/$ROOT_TLSCA_NAME/keys
 LOCAL_ORG_KEYS_DIR=${PWD}/infrastructure/_root/$ROOT_ORGCA_NAME/keys
 LOCAL_SRV_DIR=${PWD}/infrastructure/_root/$ROOT_CA_NAME/server
 LOCAL_CLI_DIR=${PWD}/infrastructure/_root/$ROOT_CA_NAME/client
 
+HOST_INFRA_DIR=/etc/infrastructure
 HOST_TLS_KEYS_DIR=/etc/hyperledger/$ROOT_TLSCA_NAME
 HOST_ORG_KEYS_DIR=/etc/hyperledger/$ROOT_ORGCA_NAME
 HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
@@ -47,6 +48,8 @@ get_hosts
 
 echo ""
 echo_warn "Root-CA starting... (Defaults: https://hyperledger-fabric-ca.readthedocs.io/en/latest/serverconfig.html)"
+
+mkdir -p $LOCAL_TLS_KEYS_DIR/tls $LOCAL_ORG_KEYS_DIR/tls
 
 
 ###############################################################
@@ -107,13 +110,15 @@ signing:
       expiry: 8760h
     profiles:
       tls:
-         usage:
-            - signing
-            - key encipherment
-            - server auth
-            - client auth
-            - key agreement
-         expiry: 8760h
+        usage:
+          - cert sign
+          - crl sign
+          - signing
+          - key encipherment
+          - server auth
+          - client auth
+          - key agreement
+        expiry: 8760h
 
 csr:
    cn: $ROOT_TLSCA_NAME
@@ -127,7 +132,7 @@ csr:
         O: JEDO
         OU: Root
    hosts:
-     - $ROOT_CA_NAME
+     - $ROOT_TLSCA_NAME
      - $ROOT_CA_IP
      - localhost
      - 0.0.0.0
@@ -210,13 +215,13 @@ signing:
       expiry: 8760h
     profiles:
       ca:
-         usage:
-           - cert sign
-           - crl sign
-         expiry: 43800h
-         caconstraint:
-           isca: true
-           maxpathlen: 2
+        usage:
+          - cert sign
+          - crl sign
+        expiry: 43800h
+        caconstraint:
+          isca: true
+          maxpathlen: 2
 
 csr:
    cn: $ROOT_ORGCA_NAME
@@ -230,7 +235,7 @@ csr:
         O: JEDO
         OU: Root
    hosts:
-     - $ROOT_CA_NAME
+     - $ROOT_ORGCA_NAME
      - $ROOT_CA_IP
      - localhost
      - 0.0.0.0
@@ -276,6 +281,7 @@ docker run -d \
     -v $LOCAL_CLI_DIR:$HOST_CLI_DIR \
     -v $LOCAL_TLS_KEYS_DIR:$HOST_TLS_KEYS_DIR \
     -v $LOCAL_ORG_KEYS_DIR:$HOST_ORG_KEYS_DIR \
+    -v $LOCAL_INFRA_DIR:$HOST_INFRA_DIR \
     hyperledger/fabric-ca:latest \
     sh -c "fabric-ca-server start -b $ROOT_TLSCA_NAME:$ROOT_TLSCA_PASS \
     --cafiles $HOST_SRV_DIR/$ROOT_ORGCA_NAME/fabric-ca-server-config.yaml \
@@ -284,11 +290,6 @@ docker run -d \
 # Waiting Root-CA startup
 CheckContainer "$ROOT_CA_NAME" "$DOCKER_CONTAINER_WAIT"
 CheckContainerLog "$ROOT_CA_NAME" "Listening on https://0.0.0.0:$ROOT_TLSCA_PORT" "$DOCKER_CONTAINER_WAIT"
-
-# Copy tls-cert.pem
-mkdir -p $LOCAL_TLS_KEYS_DIR/tls $LOCAL_ORG_KEYS_DIR/tls
-cp $LOCAL_SRV_DIR/tls-cert.pem $LOCAL_TLS_KEYS_DIR/tls/tls-cert.pem
-cp $LOCAL_SRV_DIR/tls-cert.pem $LOCAL_ORG_KEYS_DIR/tls/tls-cert.pem
 
 
 ###############################################################
@@ -325,7 +326,7 @@ url: https://localhost:7054
 mspdir: msp
 
 tls:
-  certfiles: $HOST_SRV_DIR/tls-cert.pem
+  certfiles: $HOST_TLS_KEYS_DIR/tls/tls-cert.pem
   client:
     certfile:
     keyfile:
@@ -362,9 +363,11 @@ EOF
 echo ""
 echo_info "Root-TLS enrolling..."
 
-docker exec -it $ROOT_CA_NAME fabric-ca-client enroll -u https://$ROOT_TLSCA_NAME:$ROOT_TLSCA_PASS@$ROOT_CA_NAME:$ROOT_TLSCA_PORT \
+docker exec -it $ROOT_CA_NAME fabric-ca-client enroll -u https://$ROOT_TLSCA_NAME:$ROOT_TLSCA_PASS@$ROOT_TLSCA_NAME:$ROOT_TLSCA_PORT \
+    --tls.certfiles $HOST_SRV_DIR/tls-cert.pem \
     --home $HOST_CLI_DIR --mspdir $HOST_TLS_KEYS_DIR/msp \
-    --csr.cn $ROOT_TLSCA_NAME --caname $ROOT_TLSCA_NAME
+    --caname $ROOT_TLSCA_NAME --csr.cn $ROOT_TLSCA_NAME --csr.hosts ${ROOT_TLSCA_NAME},${ROOT_CA_IP},localhost,0.0.0.0 \
+    --enrollment.profile tls
 
 
 ###############################################################
@@ -373,15 +376,18 @@ docker exec -it $ROOT_CA_NAME fabric-ca-client enroll -u https://$ROOT_TLSCA_NAM
 echo ""
 echo_info "Root-ORG enrolling..."
 
-docker exec -it $ROOT_CA_NAME fabric-ca-client enroll -u https://$ROOT_ORGCA_NAME:$ROOT_ORGCA_PASS@$ROOT_CA_NAME:$ROOT_ORGCA_PORT \
-    --home $HOST_CLI_DIR --mspdir $HOST_ORG_KEYS_DIR/msp \
-    --csr.cn $ROOT_ORGCA_NAME --caname $ROOT_ORGCA_NAME \
+docker exec -it $ROOT_CA_NAME fabric-ca-client enroll -u https://$ROOT_ORGCA_NAME:$ROOT_ORGCA_PASS@$ROOT_ORGCA_NAME:$ROOT_ORGCA_PORT \
     --tls.certfiles $HOST_SRV_DIR/$ROOT_ORGCA_NAME/tls-cert.pem \
+    --home $HOST_CLI_DIR --mspdir $HOST_ORG_KEYS_DIR/msp \
+    --caname $ROOT_ORGCA_NAME --csr.cn $ROOT_ORGCA_NAME --csr.hosts ${ROOT_ORGCA_NAME},${ROOT_CA_IP},localhost,0.0.0.0 \
     --enrollment.profile ca
 
 
 ###############################################################
 # Last Tasks
 ###############################################################
+cp $LOCAL_SRV_DIR/tls-cert.pem $LOCAL_TLS_KEYS_DIR/tls/tls-cert.pem
+cp $LOCAL_SRV_DIR/$ROOT_ORGCA_NAME/tls-cert.pem $LOCAL_ORG_KEYS_DIR/tls/tls-cert.pem
+
 chmod -R 777 infrastructure
 echo_ok "Root-CA started."
