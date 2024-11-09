@@ -19,8 +19,8 @@ if [[ $# -eq 0 ]]; then
     up_help
 fi
 opt_d=false
-opt_a=""
-opt_r=""
+opt_a="n/a"
+opt_r="n/a"
 while getopts ":hpda:r:" opt; do
     case ${opt} in
         h )
@@ -105,15 +105,6 @@ fi
 
 
 ###############################################################
-# Run TLS-CA
-###############################################################
-if [[ "$opt_r" == "tls" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    $SCRIPT_DIR/ca_tls.sh
-    cool_down $opt_a "TLS-CA started."
-fi
-
-
-###############################################################
 # Run Root-CA
 ###############################################################
 if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
@@ -121,6 +112,15 @@ if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     cool_down $opt_a "Root-CA started."
 fi
 temp_end
+
+###############################################################
+# Run TLS-CA
+###############################################################
+if [[ "$opt_r" == "tls" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    $SCRIPT_DIR/ca_tls.sh
+    cool_down $opt_a "TLS-CA started."
+fi
+
 
 ###############################################################
 # Run Intermediate-CA

@@ -81,10 +81,6 @@ get_hosts() {
     UTIL_CA_NAME=$(yq eval ".Root.Name" $CONFIG_FILE)
     UTIL_CA_IP=$(yq eval ".Root.IP" $CONFIG_FILE)
     [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
-    UTIL_CA_NAME=$(yq eval ".Root.TLS-CA.Name" $CONFIG_FILE)
-    [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
-    UTIL_CA_NAME=$(yq eval ".Root.ORG-CA.Name" $CONFIG_FILE)
-    [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
 
     UTIL_INTERMEDIATES=$(yq eval ".Intermediates[].Name" $CONFIG_FILE)
     for UTIL_INTERMEDIATE in $UTIL_INTERMEDIATES; do

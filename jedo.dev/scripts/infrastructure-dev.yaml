@@ -29,59 +29,39 @@ Docker:
     Container:
         Wait: 60 # Max waiting time in seconds to start a docker container prior to exit
         FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
-TLS:
-    Name: tls.jedo.dev
-    Pass: Test1
-    Hosts: 
-      - Name: ea.tls.jedo.dev
-        IP: 172.25.0.11
-        Port: 50111
-        OpPort: 50119
-        OpenSSL: false
-      - Name: as.tls.jedo.dev
-        IP: 172.25.0.21
-        Port: 50211
-        OpPort: 50219
-        OpenSSL: false
 Root:
     Name: ca.jedo.dev
-    IP: 172.25.0.2
     Pass: Test1
+    IP: 172.25.0.2
     Port: 50021
     OpPort: 50029
-    OpenSSL: false
-Intermediates:
-    - Name: ca.tws.jedo.dev
-      Organization: TWS
-      IP: 172.25.0.21
-      OpenSSL: false
+Realms:
+    - Name: ea.jedo.dev
       TLS-CA: 
-          Name: tls.ca.tws.jedo.dev
+          Name: tls.ea.jedo.dev
           Pass: Test1
-          Port: 8154
-          OpPort: 8159
+          IP: 172.25.0.11
+          Port: 50111
+          OpPort: 50119
       ORG-CA: 
-          Name: org.ca.tws.jedo.dev
+          Name: ca.ea.jedo.dev
           Pass: Test1
-          Port: 8254
-          OpPort: 8259
-          OpenSSL: false
-    - Name: ca.abc.jedo.dev
-      Organization: ABC
-      IP: 172.25.0.31
-      OpenSSL: false
+          IP: 172.25.0.12
+          Port: 50121
+          OpPort: 50129
+    - Name: as.jedo.dev
       TLS-CA: 
-          Name: tls.ca.abc.jedo.dev
+          Name: tls.as.jedo.dev
           Pass: Test1
-          Port: 9154
-          OpPort: 9159
-          OpenSSL: false
+          IP: 172.25.0.21
+          Port: 50211
+          OpPort: 50219
       ORG-CA: 
-          Name: org.ca.abc.jedo.dev
+          Name: ca.as.jedo.dev
           Pass: Test1
-          Port: 9254
-          OpPort: 9259
-          OpenSSL: false
+          IP: 172.25.0.22
+          Port: 50221
+          OpPort: 50229
 Organizations:
     - Name: Jenziner
       Root: 

@@ -24,6 +24,22 @@ echo ""
 echo_warn "$DOCKER_NETWORK_NAME removing..."
 
 
+# Remove Root-TLS
+echo_info "Root-TLS removing..."
+TLS_ROOT_NAME=$(yq eval ".TLS.Root.Name" "$CONFIG_FILE")
+if [[ -n "$TLS_ROOT_NAME" ]]; then
+    docker rm -f $TLS_ROOT_NAME || true
+fi
+
+
+#TLS DB
+DB_NAME=$(yq eval ".TLS.DB.Name" "$CONFIG_FILE")
+if [ "$(docker ps -aq -f name=${DB_NAME})" ]; then
+    docker rm -f ${DB_NAME} || true
+fi
+
+
+
 # TLS-CA
 TLSS=$(yq e ".TLS.Hosts[].Name" $CONFIG_FILE)
 for TLS in $TLSS; do
