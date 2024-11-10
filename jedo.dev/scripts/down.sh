@@ -24,55 +24,39 @@ echo ""
 echo_warn "$DOCKER_NETWORK_NAME removing..."
 
 
-# Remove Root-TLS
-echo_info "Root-TLS removing..."
-TLS_ROOT_NAME=$(yq eval ".TLS.Root.Name" "$CONFIG_FILE")
-if [[ -n "$TLS_ROOT_NAME" ]]; then
-    docker rm -f $TLS_ROOT_NAME || true
+# Remove Root
+echo_info "Root removing..."
+ROOT_TLS_NAME=$(yq eval ".Root.TLS.Name" "$CONFIG_FILE")
+if [[ -n "$ROOT_TLS_NAME" ]]; then
+    docker rm -f $ROOT_TLS_NAME || true
 fi
 
-
-#TLS DB
-DB_NAME=$(yq eval ".TLS.DB.Name" "$CONFIG_FILE")
-if [ "$(docker ps -aq -f name=${DB_NAME})" ]; then
-    docker rm -f ${DB_NAME} || true
-fi
-
-
-
-# TLS-CA
-TLSS=$(yq e ".TLS.Hosts[].Name" $CONFIG_FILE)
-for TLS in $TLSS; do
-    echo ""
-    echo_info "Docker Container from $TLS removing..."
-    TLS_HOST_NAME=$(yq e ".TLS.Hosts[] | select(.Name == \"$TLS\") | .Name" "$CONFIG_FILE")
-
-    if [[ -n "$TLS_HOST_NAME" ]]; then
-        docker rm -f $TLS_HOST_NAME || true
-    fi
-
-done
-
-
-# Remove Root-CA
-echo_info "Root-CA removing..."
-ROOT_CA_NAME=$(yq eval ".Root.Name" "$CONFIG_FILE")
+ROOT_CA_NAME=$(yq eval ".Root.CA.Name" "$CONFIG_FILE")
 if [[ -n "$ROOT_CA_NAME" ]]; then
     docker rm -f $ROOT_CA_NAME || true
 fi
 
+ROOT_TOOLS_NAME=$(yq eval ".Root.Tools.Name" "$CONFIG_FILE")
+if [[ -n "$ROOT_TOOLS_NAME" ]]; then
+    docker rm -f $ROOT_TOOLS_NAME || true
+fi
 
-# Remove Intermediate-CA
-INTERMEDIATS=$(yq e ".Intermediates[].Name" $CONFIG_FILE)
-for INTERMEDIATE in $INTERMEDIATS; do
+
+# Remove Realm-CA
+REALMS=$(yq e ".Realms[].Name" $CONFIG_FILE)
+for REALM in $REALMS; do
     echo ""
-    echo_info "Docker Container from $INTERMEDIATE removing..."
-    CA_NAME=$(yq e ".Intermediates[] | select(.Name == \"$INTERMEDIATE\") | .Name" "$CONFIG_FILE")
+    echo_info "Docker Container from $REALM removing..."
+    TLSCA_NAME=$(yq e ".Realms[] | select(.Name == \"$REALM\") | .TLS-CA.Name" "$CONFIG_FILE")
+    ORGCA_NAME=$(yq e ".Realms[] | select(.Name == \"$REALM\") | .ORG-CA.Name" "$CONFIG_FILE")
 
-    if [[ -n "$CA_NAME" ]]; then
-        docker rm -f $CA_NAME || true
+    if [[ -n "$TLSCA_NAME" ]]; then
+        docker rm -f $TLSCA_NAME || true
     fi
 
+    if [[ -n "$ORGCA_NAME" ]]; then
+        docker rm -f $ORGCA_NAME || true
+    fi
 done
 
 

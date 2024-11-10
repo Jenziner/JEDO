@@ -78,19 +78,26 @@ get_hosts() {
 
     hosts_args=""
 
-    UTIL_CA_NAME=$(yq eval ".Root.Name" $CONFIG_FILE)
-    UTIL_CA_IP=$(yq eval ".Root.IP" $CONFIG_FILE)
+    UTIL_TLS_NAME=$(yq eval ".Root.TLS.Name" $CONFIG_FILE)
+    UTIL_TLS_IP=$(yq eval ".Root.TLS.IP" $CONFIG_FILE)
+    [[ -n "$UTIL_TLS_NAME" && -n "$UTIL_TLS_IP" ]] && hosts_args+="--add-host=$UTIL_TLS_NAME:$UTIL_TLS_IP "
+
+    UTIL_CA_NAME=$(yq eval ".Root.CA.Name" $CONFIG_FILE)
+    UTIL_CA_IP=$(yq eval ".Root.CA.IP" $CONFIG_FILE)
     [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
 
-    UTIL_INTERMEDIATES=$(yq eval ".Intermediates[].Name" $CONFIG_FILE)
-    for UTIL_INTERMEDIATE in $UTIL_INTERMEDIATES; do
-        UTIL_INT_CA_NAME=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_INTERMEDIATE\") | .Name" $CONFIG_FILE)
-        UTIL_INT_CA_IP=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_INTERMEDIATE\") | .IP" $CONFIG_FILE)
-        [[ -n "$UTIL_INT_CA_NAME" && -n "$UTIL_INT_CA_IP" ]] && hosts_args+="--add-host=$UTIL_INT_CA_NAME:$UTIL_INT_CA_IP "
-        UTIL_INT_TLSCA_NAME=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_INTERMEDIATE\") | .TLS-CA.Name" "$CONFIG_FILE")
-        [[ -n "$UTIL_INT_TLSCA_NAME" && -n "$UTIL_INT_CA_IP" ]] && hosts_args+="--add-host=$UTIL_INT_TLSCA_NAME:$UTIL_INT_CA_IP "
-        UTIL_INT_ORGCA_NAME=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_INTERMEDIATE\") | .ORG-CA.Name" "$CONFIG_FILE")
-        [[ -n "$UTIL_INT_ORGCA_NAME" && -n "$UTIL_INT_CA_IP" ]] && hosts_args+="--add-host=$UTIL_INT_ORGCA_NAME:$UTIL_INT_CA_IP "
+    UTIL_TOOLS_NAME=$(yq eval ".Root.Tools.Name" $CONFIG_FILE)
+    UTIL_TOOLS_IP=$(yq eval ".Root.Tools.IP" $CONFIG_FILE)
+    [[ -n "$UTIL_TOOLS_NAME" && -n "$UTIL_TOOLS_IP" ]] && hosts_args+="--add-host=$UTIL_TOOLS_NAME:$UTIL_TOOLS_IP "
+
+    UTIL_REALMS=$(yq eval ".Realms[].Name" $CONFIG_FILE)
+    for UTIL_REALM in $UTIL_REALMS; do
+        UTIL_REALM_TLSCA_NAME=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_REALM\") | .TLS-CA.Name" $CONFIG_FILE)
+        UTIL_REALM_TLSCA_IP=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_REALM\") | .TLS-CA.IP" $CONFIG_FILE)
+        [[ -n "$UTIL_REALM_TLSCA_NAME" && -n "$UTIL_REALM_TLSCA_IP" ]] && hosts_args+="--add-host=$UTIL_REALM_TLSCA_NAME:$UTIL_REALM_TLSCA_IP "
+        UTIL_REALM_ORGCA_NAME=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_REALM\") | .ORG-CA.Name" $CONFIG_FILE)
+        UTIL_REALM_ORGCA_IP=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_REALM\") | .ORG-CA.IP" $CONFIG_FILE)
+        [[ -n "$UTIL_REALM_ORGCA_NAME" && -n "$UTIL_REALM_ORGCA_IP" ]] && hosts_args+="--add-host=$UTIL_REALM_ORGCA_NAME:$UTIL_REALM_ORGCA_IP "
     done
 
     UTIL_ORGANIZATIONS=$(yq e ".Organizations[].Name" $CONFIG_FILE)
@@ -233,7 +240,7 @@ CheckContainerLog() {
     while [ $wait_time -lt $wait_time_limit ]; do
         if docker logs "$container_name" 2>&1 | grep -q "$log_entry"; then
             success=true
-            echo_ok "Expected log entry '$log_entry' found for Docker Container $container_name."
+            echo_ok "Expected log entry found for Docker Container $container_name."
             break
         fi
         echo "Waiting for expected log entry '$log_entry' in $container_name... ($wait_time seconds)"

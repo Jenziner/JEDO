@@ -39,7 +39,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "tls" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
+            if [[ "$OPTARG" != "tools" && "$OPTARG" != "tls" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -105,13 +105,13 @@ fi
 
 
 ###############################################################
-# Run Root-CA
+# Run Fabric Tools
 ###############################################################
-if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    $SCRIPT_DIR/ca_root.sh
-    cool_down $opt_a "Root-CA started."
+if [[ "$opt_r" == "tools" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    $SCRIPT_DIR/tools.sh
+    cool_down $opt_a "Fabric Tools started."
 fi
-temp_end
+
 
 ###############################################################
 # Run TLS-CA
@@ -120,7 +120,16 @@ if [[ "$opt_r" == "tls" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/ca_tls.sh
     cool_down $opt_a "TLS-CA started."
 fi
+temp_end
 
+###############################################################
+# Run Root-CA
+###############################################################
+if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    $SCRIPT_DIR/ca_root.sh
+    cool_down $opt_a "Root-CA started."
+fi
+temp_end
 
 ###############################################################
 # Run Intermediate-CA
