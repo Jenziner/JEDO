@@ -639,8 +639,23 @@ tls:
       certfiles:
 ca:
     name: $REALM_ORG_NAME
-    chainfile: $HOST_INFRA_DIR/_root/$REALM_ORG_NAME/keys/msp/intermediatecerts/ca-chain.pem
+#    chainfile: $HOST_INFRA_DIR/_root/$REALM_ORG_NAME/keys/msp/intermediatecerts/ca-chain.pem
 crl:
+registry:
+    maxenrollments: -1
+    identities:
+        - name: $REALM_ORG_NAME
+          pass: $REALM_ORG_PASS
+          type: client
+          affiliation: "jedo.root"
+          attrs:
+              hf.Registrar.Roles: "*"
+              hf.Registrar.DelegateRoles: "*"
+              hf.Revoker: true
+              hf.IntermediateCA: true
+              hf.GenCRL: true
+              hf.Registrar.Attributes: "*"
+              hf.AffiliationMgr: true
 affiliations:
     jedo:
         - root
@@ -756,6 +771,18 @@ EOF
         --enrollment.profile ca \
         --mspdir $HOST_INFRA_DIR/_root/$REALM_ORG_NAME/keys/msp \
         --csr.hosts ${REALM_ORG_NAME},${REALM_ORG_IP},${ROOT_CA_NAME},${ROOT_CA_IP},${ROOT_TLS_NAME},${ROOT_TLS_IP},*.jedo.dev
+
+echo_error "TEST"
+    # Register Realm-ORG-CA ID identity, enrollment later
+    echo ""
+    echo_info "Realm-ORG-CA ID $REALM_ORG_NAME registering..."
+    docker exec -it $ROOT_TOOLS_NAME fabric-ca-client register -u https://$REALM_ORG_NAME:$REALM_ORG_PASS@$REALM_ORG_NAME:$REALM_ORG_PORT \
+        --home $ROOT_TOOLS_CACLI_DIR \
+        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+        --mspdir $HOST_INFRA_DIR/_root/$REALM_ORG_NAME/keys/msp \
+        --id.name irgendwer --id.secret Test1 --id.type client --id.affiliation jedo.root
+temp_end
+
 
 done
 
@@ -938,5 +965,12 @@ done
 ###############################################################
 chmod -R 777 infrastructure
 echo_ok "Root-CA started."
+
+
+docker exec -it tools.jedo.dev fabric-ca-client getcainfo -u https://ca.ea.jedo.dev:50121 \
+    --home /etc/hyperledger/fabric-ca-client \
+    --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+    --mspdir /etc/infrastructure/_root/ca.ea.jedo.dev/keys/msp
+
 
 

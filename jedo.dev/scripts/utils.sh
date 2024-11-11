@@ -75,69 +75,22 @@ temp_end() {
 ###############################################################
 get_hosts() {
     CONFIG_FILE="$SCRIPT_DIR/infrastructure-dev.yaml"
-
     hosts_args=""
 
-    UTIL_TLS_NAME=$(yq eval ".Root.TLS.Name" $CONFIG_FILE)
-    UTIL_TLS_IP=$(yq eval ".Root.TLS.IP" $CONFIG_FILE)
-    [[ -n "$UTIL_TLS_NAME" && -n "$UTIL_TLS_IP" ]] && hosts_args+="--add-host=$UTIL_TLS_NAME:$UTIL_TLS_IP "
+    local ip_paths
+    ip_paths=$(yq eval '.. | select(tag == "!!map" and has("IP")).IP | path | join(".")' "$CONFIG_FILE")
 
-    UTIL_CA_NAME=$(yq eval ".Root.CA.Name" $CONFIG_FILE)
-    UTIL_CA_IP=$(yq eval ".Root.CA.IP" $CONFIG_FILE)
-    [[ -n "$UTIL_CA_NAME" && -n "$UTIL_CA_IP" ]] && hosts_args+="--add-host=$UTIL_CA_NAME:$UTIL_CA_IP "
+    for ip_path in $ip_paths; do
+        local name_path="${ip_path%.IP}.Name"
+        local name=$(yq eval ".$name_path" "$CONFIG_FILE")
+        local ip=$(yq eval ".$ip_path" "$CONFIG_FILE")
 
-    UTIL_TOOLS_NAME=$(yq eval ".Root.Tools.Name" $CONFIG_FILE)
-    UTIL_TOOLS_IP=$(yq eval ".Root.Tools.IP" $CONFIG_FILE)
-    [[ -n "$UTIL_TOOLS_NAME" && -n "$UTIL_TOOLS_IP" ]] && hosts_args+="--add-host=$UTIL_TOOLS_NAME:$UTIL_TOOLS_IP "
-
-    UTIL_REALMS=$(yq eval ".Realms[].Name" $CONFIG_FILE)
-    for UTIL_REALM in $UTIL_REALMS; do
-        UTIL_REALM_TLSCA_NAME=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_REALM\") | .TLS-CA.Name" $CONFIG_FILE)
-        UTIL_REALM_TLSCA_IP=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_REALM\") | .TLS-CA.IP" $CONFIG_FILE)
-        [[ -n "$UTIL_REALM_TLSCA_NAME" && -n "$UTIL_REALM_TLSCA_IP" ]] && hosts_args+="--add-host=$UTIL_REALM_TLSCA_NAME:$UTIL_REALM_TLSCA_IP "
-        UTIL_REALM_ORGCA_NAME=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_REALM\") | .ORG-CA.Name" $CONFIG_FILE)
-        UTIL_REALM_ORGCA_IP=$(yq eval ".Intermediates[] | select(.Name == \"$UTIL_REALM\") | .ORG-CA.IP" $CONFIG_FILE)
-        [[ -n "$UTIL_REALM_ORGCA_NAME" && -n "$UTIL_REALM_ORGCA_IP" ]] && hosts_args+="--add-host=$UTIL_REALM_ORGCA_NAME:$UTIL_REALM_ORGCA_IP "
-    done
-
-    UTIL_ORGANIZATIONS=$(yq e ".Organizations[].Name" $CONFIG_FILE)
-    for UTIL_ORGANIZATION in $UTIL_ORGANIZATIONS; do
-        UTIL_TLSCA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .TLS-CA.Name" $CONFIG_FILE)
-        UTIL_TLSCA_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .TLS-CA.IP" $CONFIG_FILE)
-        UTIL_TLSCAAPI_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .TLS-CA.CAAPI.Name" $CONFIG_FILE)
-        UTIL_TLSCAAPI_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .TLS-CA.CAAPI.IP" $CONFIG_FILE)
-        UTIL_ORGCA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .ORG-CA.Name" $CONFIG_FILE)
-        UTIL_ORGCA_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .ORG-CA.IP" $CONFIG_FILE)
-        UTIL_ORGCAAPI_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .ORG-CA.CAAPI.Name" $CONFIG_FILE)
-        UTIL_ORGCAAPI_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .ORG-CA.CAAPI.IP" $CONFIG_FILE)
-        UTIL_PEERS=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[].Name" $CONFIG_FILE)
-        UTIL_ORDERERS=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
-
-        [[ -n "$UTIL_TLSCA_NAME" && -n "$UTIL_TLSCA_IP" ]] && hosts_args+="--add-host=$UTIL_TLSCA_NAME:$UTIL_TLSCA_IP "
-        [[ -n "$UTIL_TLSCAAPI_NAME" && -n "$UTIL_TLSCAAPI_IP" ]] && hosts_args+="--add-host=$UTIL_TLSCAAPI_NAME:$UTIL_TLSCAAPI_IP "
-        [[ -n "$UTIL_ORGCA_NAME" && -n "$UTIL_ORGCA_IP" ]] && hosts_args+="--add-host=$UTIL_ORGCA_NAME:$UTIL_ORGCA_IP "
-        [[ -n "$UTIL_ORGCAAPI_NAME" && -n "$UTIL_ORGCAAPI_IP" ]] && hosts_args+="--add-host=$UTIL_ORGCAAPI_NAME:$UTIL_ORGCAAPI_IP "
-
-        for UTIL_ORDERER in $UTIL_ORDERERS; do
-            UTIL_ORDERER_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[] | select(.Name == \"$UTIL_ORDERER\") | .Name" $CONFIG_FILE)
-            UTIL_ORDERER_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Orderers[] | select(.Name == \"$UTIL_ORDERER\") | .IP" $CONFIG_FILE)
-            [[ -n "$UTIL_ORDERER_NAME" && -n "$UTIL_ORDERER_IP" ]] && hosts_args+="--add-host=$UTIL_ORDERER_NAME:$UTIL_ORDERER_IP "
-        done
-
-
-        for UTIL_PEER in $UTIL_PEERS; do
-            UTIL_PEER_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .Name" $CONFIG_FILE)
-            UTIL_PEER_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .IP" $CONFIG_FILE)
-            UTIL_DB_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .DB.Name" $CONFIG_FILE)
-            UTIL_DB_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .DB.IP" $CONFIG_FILE)
-            UTIL_CLI_NAME=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .Name" $CONFIG_FILE)
-            UTIL_CLI_IP=$(yq eval ".Organizations[] | select(.Name == \"$UTIL_ORGANIZATION\") | .Peers[] | select(.Name == \"$UTIL_PEER\") | .CLI" $CONFIG_FILE)
-            [[ -n "$UTIL_PEER_NAME" && -n "$UTIL_PEER_IP" ]] && hosts_args+="--add-host=$UTIL_PEER_NAME:$UTIL_PEER_IP "
-            [[ -n "$UTIL_DB_NAME" && -n "$UTIL_DB_IP" ]] && hosts_args+="--add-host=$UTIL_DB_NAME:$UTIL_DB_IP "
-            [[ -n "$UTIL_CLI_NAME" && -n "$UTIL_CLI_IP" ]] && hosts_args+="--add-host=cli.$UTIL_CLI_NAME:$UTIL_CLI_IP "
-        done
+        if [[ -n "$name" && -n "$ip" ]]; then
+            hosts_args+="--add-host=$name:$ip "
+        fi
     done
 }
+
 
 ###############################################################
 # Function to check Docker Container

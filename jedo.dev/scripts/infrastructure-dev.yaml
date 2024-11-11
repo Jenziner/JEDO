@@ -76,6 +76,53 @@ Realms:
           Port: 50221
           OpPort: 50229
 Organizations:
+    - Name: JEDO
+      Administration:
+          Position: orbis # gens, ager, regnum, orbis
+          Contact: Nik
+          Mail: nik@jedo.me
+          Phone: +41791234567
+      LDAP:
+          Name: ldap.jedo.dev
+          Pass: Test1 # authenticate with: "cn=admin,dc=jedo,dc=dev" in phpLDAPadmin @ http://192.168.0.13:51021/
+          IP: 172.25.1.1
+          Port: 51011
+          PortSSL: 51012
+          Domain: jedo.dev
+      LDAP-Admin:
+          Name: admin.ldap.jedo.dev
+          IP: 172.25.1.2
+          Port: 51021
+      TLS:
+          Name: tls.jedo.dev
+          Pass: Test1
+          IP: 172.25.1.3
+          Port: 51031
+          OpPort: 51039
+      CA:
+          Name: ca.jedo.dev
+          Pass: Test1
+          IP: 172.25.1.4
+          Port: 51041
+          OpPort: 51049
+      Tools:
+          Name: tools.jedo.dev
+          Pass: Test1
+          IP: 172.25.1.9
+          Port: 51091
+    - Name: TWS
+      Administration:
+          Position: regnum # gens, ager, regnum, orbis
+          Contact: Nik
+          Mail: nik@jedo.me
+          Phone: +41791234567
+      LDAP:
+          Name: ldap.tws.jedo.dev
+          Pass: Test1
+          IP: 172.25.2.1
+          Port: 52011
+          PortSSL: 52012
+          Domain: jedo.dev
     - Name: Jenziner
       Root: 
       TLS-CA: 
