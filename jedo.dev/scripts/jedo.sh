@@ -120,7 +120,7 @@ if [[ "$opt_r" == "ldap" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/ldap.sh
     cool_down $opt_a "LDAP started."
 fi
-temp_end
+
 
 ###############################################################
 # Run TLS-CA

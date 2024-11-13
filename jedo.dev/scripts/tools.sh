@@ -43,8 +43,8 @@ for ORGANIZATION in $ORGANIZATIONS; do
     [[ "$TOOLS_NAME" == "null" ]] && continue
 
     LOCAL_INFRA_DIR=${PWD}/infrastructure
-    LOCAL_CACLI_DIR=${PWD}/infrastructure/_root/$TOOLS_NAME/ca-client
-    LOCAL_TLSROOT_DIR=${PWD}/infrastructure/_root/tls.jedo.dev
+    LOCAL_CACLI_DIR=${PWD}/infrastructure/$ORGANIZATION/$TOOLS_NAME/ca-client
+    LOCAL_TLSROOT_DIR=${PWD}/infrastructure/$ORGANIZATION/tls.jedo.dev
 
     HOST_INFRA_DIR=/etc/infrastructure
     HOST_CACLI_DIR=/etc/hyperledger/fabric-ca-client

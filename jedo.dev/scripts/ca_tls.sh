@@ -18,38 +18,50 @@ DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
 DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
 
-ROOT_TOOLS_NAME=$(yq eval '.Root.Tools.Name' $CONFIG_FILE)
-ROOT_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
-
 get_hosts
 
 echo ""
-echo_warn "Root-CA starting... (Defaults: https://hyperledger-fabric-ca.readthedocs.io/en/latest/serverconfig.html)"
+echo_warn "Orbis-CA starting... (Defaults: https://hyperledger-fabric-ca.readthedocs.io/en/latest/serverconfig.html)"
 
 
 ###############################################################
-# Root-TLS-CA
+# Orbis-TLS-CA
 ###############################################################
-ROOT_TLS_NAME=$(yq eval ".Root.TLS.Name" "$CONFIG_FILE")
-ROOT_TLS_PASS=$(yq eval ".Root.TLS.Pass" "$CONFIG_FILE")
-ROOT_TLS_IP=$(yq eval ".Root.TLS.IP" "$CONFIG_FILE")
-ROOT_TLS_PORT=$(yq eval ".Root.TLS.Port" "$CONFIG_FILE")
-ROOT_TLS_OPPORT=$(yq eval ".Root.TLS.OpPort" "$CONFIG_FILE")
+ORBISS=$(yq eval '.Organizations[] | select(.Administration.Position == "orbis") | .Name' "$CONFIG_FILE")
+ORBIS_COUNT=$(echo "$ORBISS" | wc -l)
+
+# only 1 orbis is allowed
+if [ "$ORBIS_COUNT" -ne 1 ]; then
+    echo_error "Illegal number of orbis-organizations ($ORBIS_COUNT)."
+    exit 1
+fi
+
+
+for ORBIS in $ORBISS; do
+    # Params for orbis
+    ORBIS_TOOLS_NAME=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .Tools.Name" "$CONFIG_FILE")
+    ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
+
+    ORBIS_TLS_NAME=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .TLS.Name" "$CONFIG_FILE")
+    ORBIS_TLS_PASS=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .TLS.Pass" "$CONFIG_FILE")
+    ORBIS_TLS_IP=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .TLS.IP" "$CONFIG_FILE")
+    ORBIS_TLS_PORT=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .TLS.Port" "$CONFIG_FILE")
+    ORBIS_TLS_OPPORT=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .TLS.OpPort" "$CONFIG_FILE")
     
-LOCAL_INFRA_DIR=${PWD}/infrastructure
-LOCAL_SRV_DIR=${PWD}/infrastructure/_root/$ROOT_TLS_NAME/server
+    LOCAL_INFRA_DIR=${PWD}/infrastructure
+    LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$ORBIS_TLS_NAME/server
 
-HOST_INFRA_DIR=/etc/infrastructure
-HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
+    HOST_INFRA_DIR=/etc/infrastructure
+    HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
 
-mkdir -p $LOCAL_SRV_DIR
+    mkdir -p $LOCAL_SRV_DIR
 
 
-# Write Root-TLS-CA SERVER config
-cat <<EOF > $LOCAL_SRV_DIR/fabric-ca-server-config.yaml
+    # Write Orbis-TLS-CA SERVER config
+    cat <<EOF > $LOCAL_SRV_DIR/fabric-ca-server-config.yaml
 ---
 version: 0.0.1
-port: $ROOT_TLS_PORT
+port: $ORBIS_TLS_PORT
 debug: true
 tls:
     enabled: true
@@ -57,13 +69,13 @@ tls:
       type: noclientcert
       certfiles:
 ca:
-    name: $ROOT_TLS_NAME
+    name: $ORBIS_TLS_NAME
 crl:
 registry:
     maxenrollments: -1
     identities:
-        - name: $ROOT_TLS_NAME
-          pass: $ROOT_TLS_PASS
+        - name: $ORBIS_TLS_NAME
+          pass: $ORBIS_TLS_PASS
           type: client
           affiliation: "jedo.root"
           attrs:
@@ -99,7 +111,7 @@ signing:
                 - key agreement
             expiry: 8760h
 csr:
-    cn: $ROOT_TLS_NAME
+    cn: $ORBIS_TLS_NAME
     keyrequest:
         algo: ecdsa
         size: 384
@@ -110,15 +122,15 @@ csr:
           O: JEDO
           OU: Root
     hosts:
-        - $ROOT_TLS_NAME
-        - $ROOT_TLS_IP
+        - $ORBIS_TLS_NAME
+        - $ORBIS_TLS_IP
     ca:
         expiry: 131400h
         pathlength: 1
 idemix:
     curve: gurvy.Bn254
 operations:
-    listenAddress: $ROOT_TLS_IP:$ROOT_TLS_OPPORT
+    listenAddress: $ORBIS_TLS_IP:$ORBIS_TLS_OPPORT
     tls:
         enabled: false
 #        cert:
@@ -131,170 +143,191 @@ operations:
 EOF
 
 
-# Start Root-TLS-CA Containter
-echo ""
-echo_info "Docker Container $ROOT_TLS_NAME starting..."
-docker run -d \
-    --name $ROOT_TLS_NAME \
-    --network $DOCKER_NETWORK_NAME \
-    --ip $ROOT_TLS_IP \
-    $hosts_args \
-    --restart=on-failure:1 \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/src/fabric_ca_logo.png" \
-    -p $ROOT_TLS_PORT:$ROOT_TLS_PORT \
-    -p $ROOT_TLS_OPPORT:$ROOT_TLS_OPPORT \
-    -v $LOCAL_SRV_DIR:$HOST_SRV_DIR \
-    -v $LOCAL_INFRA_DIR:$HOST_INFRA_DIR \
-    hyperledger/fabric-ca:latest \
-    sh -c "fabric-ca-server start -b $ROOT_TLS_NAME:$ROOT_TLS_PASS \
-    --home $HOST_SRV_DIR"
+    # Start Orbis-TLS-CA Containter
+    echo ""
+    echo_info "Docker Container $ORBIS_TLS_NAME starting..."
+    docker run -d \
+        --name $ORBIS_TLS_NAME \
+        --network $DOCKER_NETWORK_NAME \
+        --ip $ORBIS_TLS_IP \
+        $hosts_args \
+        --restart=on-failure:1 \
+        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/src/fabric_ca_logo.png" \
+        -p $ORBIS_TLS_PORT:$ORBIS_TLS_PORT \
+        -p $ORBIS_TLS_OPPORT:$ORBIS_TLS_OPPORT \
+        -v $LOCAL_SRV_DIR:$HOST_SRV_DIR \
+        -v $LOCAL_INFRA_DIR:$HOST_INFRA_DIR \
+        hyperledger/fabric-ca:latest \
+        sh -c "fabric-ca-server start -b $ORBIS_TLS_NAME:$ORBIS_TLS_PASS \
+        --home $HOST_SRV_DIR"
 
 
-# Waiting Root-TLS-CA Host startup
-CheckContainer "$ROOT_TLS_NAME" "$DOCKER_CONTAINER_WAIT"
-CheckContainerLog "$ROOT_TLS_NAME" "Listening on https://0.0.0.0:$ROOT_TLS_PORT" "$DOCKER_CONTAINER_WAIT"
+    # Waiting Orbis-TLS-CA Host startup
+    CheckContainer "$ORBIS_TLS_NAME" "$DOCKER_CONTAINER_WAIT"
+    CheckContainerLog "$ORBIS_TLS_NAME" "Listening on https://0.0.0.0:$ORBIS_TLS_PORT" "$DOCKER_CONTAINER_WAIT"
 
 
-# copy ca-cert.pem to TLS-key directory
-cp $LOCAL_SRV_DIR/ca-cert.pem $LOCAL_INFRA_DIR/_root/$ROOT_TLS_NAME/tls-ca-cert.pem
+    # copy ca-cert.pem to TLS-key directory
+    cp $LOCAL_SRV_DIR/ca-cert.pem $LOCAL_INFRA_DIR/$ORBIS/$ORBIS_TLS_NAME/tls-ca-cert.pem
 
 
-# Enroll Root-TLS-CA TLS certs
-echo ""
-echo_info "Root-TLS-CA enrolling..."
-docker exec -it $ROOT_TOOLS_NAME fabric-ca-client enroll -u https://$ROOT_TLS_NAME:$ROOT_TLS_PASS@$ROOT_TLS_NAME:$ROOT_TLS_PORT \
-    --home $ROOT_TOOLS_CACLI_DIR \
-    --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-    --enrollment.profile tls \
-    --mspdir $HOST_INFRA_DIR/_root/$ROOT_TLS_NAME/keys/tls \
+    # Enroll Orbis-TLS-CA TLS certs
+    echo ""
+    echo_info "Orbis-TLS-CA enrolling..."
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
+        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+        --enrollment.profile tls \
+        --mspdir $HOST_INFRA_DIR/$ORBIS/$ORBIS_TLS_NAME/keys/tls \
    
 
-###############################################################
-# Register and entroll Root-CA TLS certs
-###############################################################
-ROOT_CA_NAME=$(yq eval ".Root.CA.Name" "$CONFIG_FILE")
-ROOT_CA_PASS=$(yq eval ".Root.CA.Pass" "$CONFIG_FILE")
-ROOT_CA_IP=$(yq eval ".Root.CA.IP" "$CONFIG_FILE")
+    ###############################################################
+    # Register and entroll Orbis-CA TLS certs
+    ###############################################################
+    ORBIS_CA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .CA.Name" "$CONFIG_FILE")
+    ORBIS_CA_PASS=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .CA.Pass" "$CONFIG_FILE")
+    ORBIS_CA_IP=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .CA.IP" "$CONFIG_FILE")
 
-# Register Root-CA identity
-echo ""
-echo_info "Root-CA registering..."
-docker exec -it $ROOT_TOOLS_NAME fabric-ca-client register -u https://$ROOT_TLS_NAME:$ROOT_TLS_PASS@$ROOT_TLS_NAME:$ROOT_TLS_PORT \
-    --home $ROOT_TOOLS_CACLI_DIR \
-    --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-    --mspdir $HOST_INFRA_DIR/_root/$ROOT_TLS_NAME/keys/tls \
-    --id.name $ROOT_CA_NAME --id.secret $ROOT_CA_PASS --id.type client --id.affiliation jedo.root \
-
-# Enroll Root-CA TLS certs
-echo ""
-echo_info "Root-CA TLS enrolling..."
-docker exec -it $ROOT_TOOLS_NAME fabric-ca-client enroll -u https://$ROOT_CA_NAME:$ROOT_CA_PASS@$ROOT_TLS_NAME:$ROOT_TLS_PORT \
-    --home $ROOT_TOOLS_CACLI_DIR \
-    --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-    --enrollment.profile tls \
-    --mspdir $HOST_INFRA_DIR/_root/$ROOT_CA_NAME/keys/tls \
-    --csr.hosts ${ROOT_CA_NAME},${ROOT_CA_IP},${ROOT_TLS_NAME},${ROOT_TLS_IP},*.jedo.dev
-
-
-###############################################################
-# Register and entroll Realms-CA TLS certs
-###############################################################
-REALMS=$(yq eval ".Realms[].Name" $CONFIG_FILE)
-for REALM in $REALMS; do
-    REALM_CA_NAME=$(yq eval ".Realms[] | select(.Name == \"$REALM\") | .ORG-CA.Name" "$CONFIG_FILE")
-    REALM_CA_PASS=$(yq eval ".Realms[] | select(.Name == \"$REALM\") | .ORG-CA.Pass" "$CONFIG_FILE")
-    REALM_CA_IP=$(yq eval ".Realms[] | select(.Name == \"$REALM\") | .ORG-CA.IP" "$CONFIG_FILE")
-
-    # Register Realm-CA identity
+    # Register Orbis-CA identity
     echo ""
-    echo_info "Realm-CA $REALM_CA_NAME registering..."
-    docker exec -it $ROOT_TOOLS_NAME fabric-ca-client register -u https://$ROOT_TLS_NAME:$ROOT_TLS_PASS@$ROOT_TLS_NAME:$ROOT_TLS_PORT \
-        --home $ROOT_TOOLS_CACLI_DIR \
+    echo_info "Orbis-CA $ORBIS_CA_NAME registering and enrolling..."
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $HOST_INFRA_DIR/_root/$ROOT_TLS_NAME/keys/tls \
-        --id.name $REALM_CA_NAME --id.secret $REALM_CA_PASS --id.type client --id.affiliation jedo.root \
-
-    # Enroll Realm-CA TLS certs
-    echo ""
-    echo_info "Realm-CA TLS enrolling..."
-    docker exec -it $ROOT_TOOLS_NAME fabric-ca-client enroll -u https://$REALM_CA_NAME:$REALM_CA_PASS@$ROOT_TLS_NAME:$ROOT_TLS_PORT \
-        --home $ROOT_TOOLS_CACLI_DIR \
+        --mspdir $HOST_INFRA_DIR/$ORBIS/$ORBIS_TLS_NAME/keys/tls \
+        --id.name $ORBIS_CA_NAME --id.secret $ORBIS_CA_PASS --id.type client --id.affiliation jedo.root
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
         --enrollment.profile tls \
-        --mspdir $HOST_INFRA_DIR/_root/$REALM_CA_NAME/keys/tls \
-        --csr.hosts ${REALM_CA_NAME},${REALM_CA_IP},${ROOT_CA_NAME},${ROOT_CA_IP},${ROOT_TLS_NAME},${ROOT_TLS_IP},*.jedo.dev
+        --mspdir $HOST_INFRA_DIR/$ORBIS/$ORBIS_CA_NAME/keys/tls \
+        --csr.hosts ${ORBIS_CA_NAME},${ORBIS_CA_IP},${ORBIS_TLS_NAME},${ORBIS_TLS_IP},*.jedo.dev
 done
 
 
 ###############################################################
-# Register and entroll Organization-CA TLS certs
+# Register and entroll Regnums-CA TLS certs
 ###############################################################
-ORGS=$(yq eval ".Organizations[].Name" $CONFIG_FILE)
-for ORG in $ORGS; do
-    ORG_CA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$ORG\") | .ORG-CA.Name" "$CONFIG_FILE")
-    ORG_CA_PASS=$(yq eval ".Organizations[] | select(.Name == \"$ORG\") | .ORG-CA.Pass" "$CONFIG_FILE")
-    ORG_CA_IP=$(yq eval ".Organizations[] | select(.Name == \"$ORG\") | .ORG-CA.IP" "$CONFIG_FILE")
+REGNUMS=$(yq eval '.Organizations[] | select(.Administration.Position == "regnum") | .Name' "$CONFIG_FILE")
+REGNUM_COUNT=$(echo "$REGNUMS" | wc -l)
 
-    # Register Organization-CA identity
+# exit when no regnum is defined
+if [ "$REGNUM_COUNT" -eq 0 ]; then
+    echo_error "No regnum defined."
+    exit 1
+fi
+
+
+for REGNUM in $REGNUMS; do
+    # Params for regnum
+    REGNUM_CA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM\") | .CA.Name" "$CONFIG_FILE")
+    REGNUM_CA_PASS=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM\") | .CA.Pass" "$CONFIG_FILE")
+    REGNUM_CA_IP=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM\") | .CA.IP" "$CONFIG_FILE")
+
+    # Register Regnum-CA identity
     echo ""
-    echo_info "Organization-CA $ORG_CA_NAME registering..."
-    docker exec -it $ROOT_TOOLS_NAME fabric-ca-client register -u https://$ROOT_TLS_NAME:$ROOT_TLS_PASS@$ROOT_TLS_NAME:$ROOT_TLS_PORT \
-        --home $ROOT_TOOLS_CACLI_DIR \
+    echo_info "Regnum-CA $REGNUM_CA_NAME registering and enrolling..."
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $HOST_INFRA_DIR/_root/$ROOT_TLS_NAME/keys/tls \
-        --id.name $ORG_CA_NAME --id.secret $ORG_CA_PASS --id.type client --id.affiliation jedo.root \
-
-    # Enroll Organization-CA TLS certs
-    echo ""
-    echo_info "Organization-CA TLS enrolling..."
-    docker exec -it $ROOT_TOOLS_NAME fabric-ca-client enroll -u https://$ORG_CA_NAME:$ORG_CA_PASS@$ROOT_TLS_NAME:$ROOT_TLS_PORT \
-        --home $ROOT_TOOLS_CACLI_DIR \
+        --mspdir $HOST_INFRA_DIR/$ORBIS/$ORBIS_TLS_NAME/keys/tls \
+        --id.name $REGNUM_CA_NAME --id.secret $REGNUM_CA_PASS --id.type client --id.affiliation jedo.root
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
         --enrollment.profile tls \
-        --mspdir $HOST_INFRA_DIR/_root/$ORG_CA_NAME/keys/tls \
-        --csr.hosts ${ORG_CA_NAME},${ORG_CA_IP},${ROOT_CA_NAME},${ROOT_CA_IP},${ROOT_TLS_NAME},${ROOT_TLS_IP},*.jedo.dev
+        --mspdir $HOST_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/tls \
+        --csr.hosts ${REGNUM_CA_NAME},${REGNUM_CA_IP},${ORBIS_CA_NAME},${ORBIS_CA_IP},${ORBIS_TLS_NAME},${ORBIS_TLS_IP},*.jedo.dev
 done
 
 
 ###############################################################
-# Root-CA
+# Register and entroll Ager-CA TLS certs
 ###############################################################
-ROOT_CA_NAME=$(yq eval ".Root.CA.Name" "$CONFIG_FILE")
-ROOT_CA_PASS=$(yq eval ".Root.CA.Pass" "$CONFIG_FILE")
-ROOT_CA_IP=$(yq eval ".Root.CA.IP" "$CONFIG_FILE")
-ROOT_CA_PORT=$(yq eval ".Root.CA.Port" "$CONFIG_FILE")
-ROOT_CA_OPPORT=$(yq eval ".Root.CA.OpPort" "$CONFIG_FILE")
+AGERS=$(yq eval '.Organizations[] | select(.Administration.Position == "ager") | .Name' "$CONFIG_FILE")
+AGER_COUNT=$(echo "$AGERS" | wc -l)
+
+# exit when no regnum is defined
+if [ "$AGER_COUNT" -eq 0 ]; then
+    echo_error "No regnum defined."
+    exit 1
+fi
+
+
+for AGER in $AGERS; do
+    # Params for ager
+    AGER_CA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .CA.Name" "$CONFIG_FILE")
+    AGER_CA_PASS=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .CA.Pass" "$CONFIG_FILE")
+    AGER_CA_IP=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .CA.IP" "$CONFIG_FILE")
+
+    # Register Ager-CA identity
+    echo ""
+    echo_info "Organization-CA $AGER_CA_NAME registering and enrolling..."
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
+        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+        --mspdir $HOST_INFRA_DIR/$ORBIS/$ORBIS_TLS_NAME/keys/tls \
+        --id.name $AGER_CA_NAME --id.secret $AGER_CA_PASS --id.type client --id.affiliation jedo.root
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$AGER_CA_NAME:$AGER_CA_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
+        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+        --enrollment.profile tls \
+        --mspdir $HOST_INFRA_DIR/$AGER/$AGER_CA_NAME/keys/tls \
+        --csr.hosts ${AGER_CA_NAME},${AGER_CA_IP},${ORBIS_CA_NAME},${ORBIS_CA_IP},${ORBIS_TLS_NAME},${ORBIS_TLS_IP},*.jedo.dev
+done
+
+
+###############################################################
+# ORBIS-CA
+###############################################################
+ORBISS=$(yq eval '.Organizations[] | select(.Administration.Position == "orbis") | .Name' "$CONFIG_FILE")
+ORBIS_COUNT=$(echo "$ORBISS" | wc -l)
+
+# only 1 orbis is allowed
+if [ "$ORBIS_COUNT" -ne 1 ]; then
+    echo_error "Illegal number of orbis-organizations ($ORBIS_COUNT)."
+    exit 1
+fi
+
+
+for ORBIS in $ORBISS; do
+    # Params for orbis
+    ORBIS_CA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .CA.Name" "$CONFIG_FILE")
+    ORBIS_CA_PASS=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .CA.Pass" "$CONFIG_FILE")
+    ORBIS_CA_IP=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .CA.IP" "$CONFIG_FILE")
+    ORBIS_CA_PORT=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .CA.Port" "$CONFIG_FILE")
+    ORBIS_CA_OPPORT=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .CA.OpPort" "$CONFIG_FILE")
     
-LOCAL_INFRA_DIR=${PWD}/infrastructure
-LOCAL_SRV_DIR=${PWD}/infrastructure/_root/$ROOT_CA_NAME/server
+    LOCAL_INFRA_DIR=${PWD}/infrastructure
+    LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$ORBIS_CA_NAME/server
 
-HOST_INFRA_DIR=/etc/infrastructure
-HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
+    HOST_INFRA_DIR=/etc/infrastructure
+    HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
 
-mkdir -p $LOCAL_SRV_DIR
+    mkdir -p $LOCAL_SRV_DIR
 
 
-# Write Root-CA SERVER config
-cat <<EOF > $LOCAL_SRV_DIR/fabric-ca-server-config.yaml
+    # Write Root-CA SERVER config
+    cat <<EOF > $LOCAL_SRV_DIR/fabric-ca-server-config.yaml
 ---
 version: 0.0.1
-port: $ROOT_CA_PORT
+port: $ORBIS_CA_PORT
 debug: true
 tls:
     enabled: true
-    certfile: $HOST_INFRA_DIR/_root/$ROOT_CA_NAME/keys/tls/signcerts/cert.pem
-    keyfile: $HOST_INFRA_DIR/_root/$ROOT_CA_NAME/keys/tls/keystore/$(basename $(ls $LOCAL_INFRA_DIR/_root/$ROOT_CA_NAME/keys/tls/keystore/*_sk | head -n 1))
+    certfile: $HOST_INFRA_DIR/$ORBIS/$ORBIS_CA_NAME/keys/tls/signcerts/cert.pem
+    keyfile: $HOST_INFRA_DIR/$ORBIS/$ORBIS_CA_NAME/keys/tls/keystore/$(basename $(ls $LOCAL_INFRA_DIR/$ORBIS/$ORBIS_CA_NAME/keys/tls/keystore/*_sk | head -n 1))
     clientauth:
       type: noclientcert
       certfiles:
 ca:
-    name: $ROOT_CA_NAME
+    name: $ORBIS_CA_NAME
 crl:
 registry:
     maxenrollments: -1
     identities:
-        - name: $ROOT_CA_NAME
-          pass: $ROOT_CA_PASS
+        - name: $ORBIS_CA_NAME
+          pass: $ORBIS_CA_PASS
           type: client
           affiliation: "jedo.root"
           attrs:
@@ -338,7 +371,7 @@ signing:
                 - key agreement
             expiry: 8760h
 csr:
-    cn: $ROOT_CA_NAME
+    cn: $ORBIS_CA_NAME
     keyrequest:
         algo: ecdsa
         size: 384
@@ -349,8 +382,8 @@ csr:
           O: JEDO
           OU: Root
     hosts:
-        - $ROOT_CA_NAME
-        - $ROOT_CA_IP
+        - $ORBIS_CA_NAME
+        - $ORBIS_CA_IP
         - '*.jedo.dev'
     ca:
         expiry: 131400h
@@ -358,7 +391,7 @@ csr:
 idemix:
     curve: gurvy.Bn254
 operations:
-    listenAddress: $ROOT_CA_IP:$ROOT_CA_OPPORT
+    listenAddress: $ORBIS_CA_IP:$ORBIS_CA_OPPORT
     tls:
         enabled: false
 #        cert:
@@ -371,39 +404,39 @@ operations:
 EOF
 
 
-# Start Root-CA Containter
-echo ""
-echo_info "Docker Container $ROOT_CA_NAME starting..."
-docker run -d \
-    --name $ROOT_CA_NAME \
-    --network $DOCKER_NETWORK_NAME \
-    --ip $ROOT_CA_IP \
-    $hosts_args \
-    --restart=on-failure:1 \
-    --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/src/fabric_ca_logo.png" \
-    -p $ROOT_CA_PORT:$ROOT_CA_PORT \
-    -p $ROOT_CA_OPPORT:$ROOT_CA_OPPORT \
-    -v $LOCAL_SRV_DIR:$HOST_SRV_DIR \
-    -v $LOCAL_INFRA_DIR:$HOST_INFRA_DIR \
-    hyperledger/fabric-ca:latest \
-    sh -c "fabric-ca-server start -b $ROOT_CA_NAME:$ROOT_CA_PASS \
-    --home $HOST_SRV_DIR"
+    # Start Orbis-CA Containter
+    echo ""
+    echo_info "Docker Container $ORBIS_CA_NAME starting..."
+    docker run -d \
+        --name $ORBIS_CA_NAME \
+        --network $DOCKER_NETWORK_NAME \
+        --ip $ORBIS_CA_IP \
+        $hosts_args \
+        --restart=on-failure:1 \
+        --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/src/fabric_ca_logo.png" \
+        -p $ORBIS_CA_PORT:$ORBIS_CA_PORT \
+        -p $ORBIS_CA_OPPORT:$ORBIS_CA_OPPORT \
+        -v $LOCAL_SRV_DIR:$HOST_SRV_DIR \
+        -v $LOCAL_INFRA_DIR:$HOST_INFRA_DIR \
+        hyperledger/fabric-ca:latest \
+        sh -c "fabric-ca-server start -b $ORBIS_CA_NAME:$ORBIS_CA_PASS \
+        --home $HOST_SRV_DIR"
 
 
-# Waiting Root-CA Host startup
-CheckContainer "$ROOT_CA_NAME" "$DOCKER_CONTAINER_WAIT"
-CheckContainerLog "$ROOT_CA_NAME" "Listening on https://0.0.0.0:$ROOT_CA_PORT" "$DOCKER_CONTAINER_WAIT"
+    # Waiting Orbis-CA Host startup
+    CheckContainer "$ORBIS_CA_NAME" "$DOCKER_CONTAINER_WAIT"
+    CheckContainerLog "$ORBIS_CA_NAME" "Listening on https://0.0.0.0:$ORBIS_CA_PORT" "$DOCKER_CONTAINER_WAIT"
 
 
-# Enroll Root-CA ID certs
-echo ""
-echo_info "Root-ORG-CA enrolling..."
-docker exec -it $ROOT_TOOLS_NAME fabric-ca-client enroll -u https://$ROOT_CA_NAME:$ROOT_CA_PASS@$ROOT_CA_NAME:$ROOT_CA_PORT \
-    --home $ROOT_TOOLS_CACLI_DIR \
-    --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-    --enrollment.profile ca \
-    --mspdir $HOST_INFRA_DIR/_root/$ROOT_CA_NAME/keys/msp \
-    
+    # Enroll Orbis-CA ID certs
+    echo ""
+    echo_info "Orbis-ORG-CA enrolling..."
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
+        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+        --enrollment.profile ca \
+        --mspdir $HOST_INFRA_DIR/$ORBIS/$ORBIS_CA_NAME/keys/msp
+done    
 
 ###############################################################
 # Realms-TLS-CA
@@ -594,18 +627,29 @@ docker exec -it $ROOT_TOOLS_NAME fabric-ca-client enroll -u https://$ROOT_CA_NAM
 
 
 ###############################################################
-# Realms-ORG-CA
+# Regnums-CA
 ###############################################################
-REALMS=$(yq eval ".Realms[].Name" $CONFIG_FILE)
-for REALM in $REALMS; do
-    REALM_ORG_NAME=$(yq eval ".Realms[] | select(.Name == \"$REALM\") | .ORG-CA.Name" "$CONFIG_FILE")
-    REALM_ORG_PASS=$(yq eval ".Realms[] | select(.Name == \"$REALM\") | .ORG-CA.Pass" "$CONFIG_FILE")
-    REALM_ORG_IP=$(yq eval ".Realms[] | select(.Name == \"$REALM\") | .ORG-CA.IP" "$CONFIG_FILE")
-    REALM_ORG_PORT=$(yq eval ".Realms[] | select(.Name == \"$REALM\") | .ORG-CA.Port" "$CONFIG_FILE")
-    REALM_ORG_OPPORT=$(yq eval ".Realms[] | select(.Name == \"$REALM\") | .ORG-CA.OpPort" "$CONFIG_FILE")
+REGNUMS=$(yq eval '.Organizations[] | select(.Administration.Position == "regnum") | .Name' "$CONFIG_FILE")
+REGNUM_COUNT=$(echo "$REGNUMS" | wc -l)
+
+# exit when no regnum is defined
+if [ "$REGNUM_COUNT" -eq 0 ]; then
+    echo_error "No regnum defined."
+    exit 1
+fi
+
+
+for REGNUM in $REGNUMS; do
+    # Params for regnum
+    # Params for regnum
+    REGNUM_CA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM\") | .CA.Name" "$CONFIG_FILE")
+    REGNUM_CA_PASS=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM\") | .CA.Pass" "$CONFIG_FILE")
+    REGNUM_CA_IP=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM\") | .CA.IP" "$CONFIG_FILE")
+    REGNUM_CA_PORT=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM\") | .CA.Port" "$CONFIG_FILE")
+    REGNUM_CA_OPPORT=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM\") | .CA.OpPort" "$CONFIG_FILE")
 
     LOCAL_INFRA_DIR=${PWD}/infrastructure
-    LOCAL_SRV_DIR=${PWD}/infrastructure/_root/$REALM_ORG_NAME/server
+    LOCAL_SRV_DIR=${PWD}/infrastructure/$REGNUM/$REGNUM_CA_NAME/server
 
     HOST_INFRA_DIR=/etc/infrastructure
     HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
@@ -613,39 +657,41 @@ for REALM in $REALMS; do
     mkdir -p $LOCAL_SRV_DIR
 
 
-    # Register Realm-ORG-CA ID identity, enrollment later
+    # Register Regnum-CA ID identity, enrollment later
     echo ""
-    echo_info "Realm-ORG-CA ID $REALM_ORG_NAME registering..."
-    docker exec -it $ROOT_TOOLS_NAME fabric-ca-client register -u https://$ROOT_CA_NAME:$ROOT_CA_PASS@$ROOT_CA_NAME:$ROOT_CA_PORT \
-        --home $ROOT_TOOLS_CACLI_DIR \
+    echo_info "Regnum-CA ID $REGNUM_CA_NAME registering..."
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $HOST_INFRA_DIR/_root/$ROOT_CA_NAME/keys/msp \
-        --id.name $REALM_ORG_NAME --id.secret $REALM_ORG_PASS --id.type client --id.affiliation jedo.root \
+        --mspdir $HOST_INFRA_DIR/$ORBIS/$ORBIS_CA_NAME/keys/msp \
+        --id.name $REGNUM_CA_NAME --id.secret $REGNUM_CA_PASS --id.type client --id.affiliation jedo.root \
         --id.attrs '"hf.Registrar.Roles=user,admin","hf.Revoker=true","hf.IntermediateCA=true"'
 
 
-    # Write Realm-ORG-CA SERVER config
+    # Write Regnum-CA SERVER config
     cat <<EOF > $LOCAL_SRV_DIR/fabric-ca-server-config.yaml
 ---
 version: 0.0.1
-port: $REALM_ORG_PORT
+port: $REGNUM_CA_PORT
 debug: true
 tls:
     enabled: true
-    certfile: $HOST_INFRA_DIR/_root/$REALM_ORG_NAME/keys/tls/signcerts/cert.pem
-    keyfile: $HOST_INFRA_DIR/_root/$REALM_ORG_NAME/keys/tls/keystore/$(basename $(ls $LOCAL_INFRA_DIR/_root/$REALM_ORG_NAME/keys/tls/keystore/*_sk | head -n 1))
+    certfile: $HOST_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/tls/signcerts/cert.pem
+    keyfile: $HOST_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/tls/keystore/$(basename $(ls $LOCAL_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/tls/keystore/*_sk | head -n 1))
     clientauth:
       type: noclientcert
       certfiles:
 ca:
-    name: $REALM_ORG_NAME
-#    chainfile: $HOST_INFRA_DIR/_root/$REALM_ORG_NAME/keys/msp/intermediatecerts/ca-chain.pem
+    name: $REGNUM_CA_NAME
+#    certfile: $HOST_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/msp/signcerts/cert.pem
+#    keyfile: $HOST_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/msp/keystore/$(basename $(ls $LOCAL_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/msp/keystore/*_sk | head -n 1))
+#    chainfile: $HOST_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/msp/intermediatecerts/ca-chain.pem
 crl:
 registry:
     maxenrollments: -1
     identities:
-        - name: $REALM_ORG_NAME
-          pass: $REALM_ORG_PASS
+        - name: $REGNUM_CA_NAME
+          pass: $REGNUM_CA_PASS
           type: client
           affiliation: "jedo.root"
           attrs:
@@ -700,27 +746,27 @@ csr:
           O: JEDO
           OU: Root
     hosts:
-        - $REALM_ORG_NAME
-        - $REALM_ORG_IP
+        - $REGNUM_CA_NAME
+        - $REGNUM_CA_IP
     ca:
         expiry: 131400h
         pathlength: 1
 intermediate:
     parentserver:
-        url: https://$ROOT_CA_NAME:$ROOT_CA_PASS@$ROOT_CA_NAME:$ROOT_CA_PORT
-        caname: $ROOT_CA_NAME
+        url: https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT
+        caname: $ORBIS_CA_NAME
     enrollment:
         hosts: 
-            - $ROOT_CA_NAME
-            - $ROOT_CA_IP
+            - $ORBIS_CA_NAME
+            - $ORBIS_CA_IP
             - '*.jedo.dev'
         profile: ca
     tls:
-        certfiles: $HOST_INFRA_DIR/_root/tls.jedo.dev/tls-ca-cert.pem
+        certfiles: $HOST_INFRA_DIR/$ORBIS/tls.jedo.dev/tls-ca-cert.pem
 idemix:
     curve: gurvy.Bn254
 operations:
-    listenAddress: $REALM_ORG_IP:$REALM_ORG_OPPORT
+    listenAddress: $REGNUM_CA_IP:$REGNUM_CA_OPPORT
     tls:
         enabled: false
 #        cert:
@@ -733,54 +779,61 @@ operations:
 EOF
 
 
-    # Start Realm-ORG-CA Containter
+    # Start Regnum-CA Containter
     echo ""
-    echo_info "Docker Container $REALM_ORG_NAME starting..."
+    echo_info "Docker Container $REGNUM_CA_NAME starting..."
     docker run -d \
-        --name $REALM_ORG_NAME \
+        --name $REGNUM_CA_NAME \
         --network $DOCKER_NETWORK_NAME \
-        --ip $REALM_ORG_IP \
+        --ip $REGNUM_CA_IP \
         $hosts_args \
         --restart=on-failure:1 \
         --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/src/fabric_ca_logo.png" \
-        -p $REALM_ORG_PORT:$REALM_ORG_PORT \
-        -p $REALM_ORG_OPPORT:$REALM_ORG_OPPORT \
+        -p $REGNUM_CA_PORT:$REGNUM_CA_PORT \
+        -p $REGNUM_CA_OPPORT:$REGNUM_CA_OPPORT \
         -v $LOCAL_SRV_DIR:$HOST_SRV_DIR \
         -v $LOCAL_INFRA_DIR:$HOST_INFRA_DIR \
         hyperledger/fabric-ca:latest \
-        sh -c "fabric-ca-server start -b $REALM_ORG_NAME:$REALM_ORG_PASS \
+        sh -c "fabric-ca-server start -b $REGNUM_CA_NAME:$REGNUM_CA_PASS \
         --home $HOST_SRV_DIR"
 
 
-    # Waiting Realm-ORG-CA Host startup
-    CheckContainer "$REALM_ORG_NAME" "$DOCKER_CONTAINER_WAIT"
-    CheckContainerLog "$REALM_ORG_NAME" "Listening on https://0.0.0.0:$REALM_ORG_PORT" "$DOCKER_CONTAINER_WAIT"
+    # Waiting Regnum-CA Host startup
+    CheckContainer "$REGNUM_CA_NAME" "$DOCKER_CONTAINER_WAIT"
+    CheckContainerLog "$REGNUM_CA_NAME" "Listening on https://0.0.0.0:$REGNUM_CA_PORT" "$DOCKER_CONTAINER_WAIT"
 
 
     # copy ca-chain.pem to MSP-key directory
-    mkdir -p $LOCAL_INFRA_DIR/_root/$REALM_ORG_NAME/keys/msp/intermediatecerts
-    cp $LOCAL_SRV_DIR/ca-chain.pem $LOCAL_INFRA_DIR/_root/$REALM_ORG_NAME/keys/msp/intermediatecerts/ca-chain.pem
+    mkdir -p $LOCAL_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/msp/intermediatecerts
+    cp $LOCAL_SRV_DIR/ca-chain.pem $LOCAL_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/msp/intermediatecerts/ca-chain.pem
 
 
-    # Enroll Realm-ORG-CA certs
+    # Enroll Regnum-ORG-CA certs
     echo ""
-    echo_info "Realm-CA ORG enrolling..."
-    docker exec -it $ROOT_TOOLS_NAME fabric-ca-client enroll -u https://$REALM_ORG_NAME:$REALM_ORG_PASS@$ROOT_CA_NAME:$ROOT_CA_PORT \
-        --home $ROOT_TOOLS_CACLI_DIR \
+    echo_info "Regnum-CA ORG enrolling..."
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
         --enrollment.profile ca \
-        --mspdir $HOST_INFRA_DIR/_root/$REALM_ORG_NAME/keys/msp \
-        --csr.hosts ${REALM_ORG_NAME},${REALM_ORG_IP},${ROOT_CA_NAME},${ROOT_CA_IP},${ROOT_TLS_NAME},${ROOT_TLS_IP},*.jedo.dev
+        --mspdir $HOST_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/msp \
+        --csr.hosts ${REGNUM_CA_NAME},${REGNUM_CA_IP},${ORBIS_CA_NAME},${ORBIS_CA_IP},${ORBIS_TLS_NAME},${ORBIS_TLS_IP},*.jedo.dev
 
+
+
+chmod -R 777 infrastructure
 echo_error "TEST"
-    # Register Realm-ORG-CA ID identity, enrollment later
-    echo ""
-    echo_info "Realm-ORG-CA ID $REALM_ORG_NAME registering..."
-    docker exec -it $ROOT_TOOLS_NAME fabric-ca-client register -u https://$REALM_ORG_NAME:$REALM_ORG_PASS@$REALM_ORG_NAME:$REALM_ORG_PORT \
-        --home $ROOT_TOOLS_CACLI_DIR \
+echo_info "RUN:    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$REGNUM_CA_NAME:$REGNUM_CA_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $HOST_INFRA_DIR/_root/$REALM_ORG_NAME/keys/msp \
+        --mspdir $HOST_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/msp \
+        --id.name irgendwer --id.secret Test1 --id.type client --id.affiliation jedo.root"
+
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$REGNUM_CA_NAME:$REGNUM_CA_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
+        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+        --mspdir $HOST_INFRA_DIR/$REGNUM/$REGNUM_CA_NAME/keys/msp \
         --id.name irgendwer --id.secret Test1 --id.type client --id.affiliation jedo.root
+chmod -R 777 infrastructure
 temp_end
 
 
@@ -846,6 +899,8 @@ tls:
 ca:
     name: $ORG_ORG_NAME
 crl:
+registry:
+    maxenrollments: -1
 affiliations:
     jedo:
         - root
