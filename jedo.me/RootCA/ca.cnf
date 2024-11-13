@@ -1,0 +1,169 @@
+###############################################################
+# OpenSSL root CA configuration file
+###############################################################
+# How to use:
+#
+# Preparation
+# ===========
+# 1. mkdir jedo
+# 2. cp ca.cnf ./jedo/ca.cnf
+# 3. cd /jedo
+# 4. touch index.txt serial
+# 5. echo 1000 > serial
+# 6. echo 1000 > crlnumber
+#
+# Root-CA
+# =======
+# 1. openssl ecparam -name prime256v1 -genkey -noout -out rca.key
+# 2. openssl req -config ca.cnf -new -x509 -sha256 -extensions v3_ca -key rca.key -out rca.cert -days 3650 -subj "/C=XX/ST=prod/L=orbis/O=JEDO/CN=rca.jedo.me"
+#
+# Orbis-CA
+# ========
+# ca.jedo.me:
+# 1. openssl ecparam -name prime256v1 -genkey -noout -out ca-jedo-me.key
+# 2. openssl req -new -sha256 -key ca-jedo-me.key -out ca-jedo-me.csr -subj "/C=XX/ST=prod/L=orbis/O=JEDO/CN=ca.jedo.me"
+# 3. openssl ca -batch -config ca.cnf -extensions v3_intermediate_ca -days 365 -notext -md sha256 -in ca-jedo-me.csr -out ca-jedo-me.cert
+# 4. cat ca-jedo-me.cert rca.cert > ca-jedo-me-chain.cert
+#
+# ca.jedo.cc:
+# 1. openssl ecparam -name prime256v1 -genkey -noout -out ca-jedo-cc.key
+# 2. openssl req -new -sha256 -key ca-jedo-cc.key -out ca-jedo-cc.csr -subj "/C=XX/ST=demo/L=orbis/O=JEDO/CN=ca.jedo.cc"
+# 3. openssl ca -batch -config ca.cnf -extensions v3_intermediate_ca -days 365 -notext -md sha256 -in ca-jedo-cc.csr -out ca-jedo-cc.cert
+# 4. cat ca-jedo-cc.cert rca.cert > ca-jedo-cc-chain.cert
+#
+# ca.jedo.dev:
+# 1. openssl ecparam -name prime256v1 -genkey -noout -out ca-jedo-dev.key
+# 2. openssl req -new -sha256 -key ca-jedo-dev.key -out ca-jedo-dev.csr -subj "/C=XX/ST=dev/L=orbis/O=JEDO/CN=ca.jedo.dev"
+# 3. openssl ca -batch -config ca.cnf -extensions v3_intermediate_ca -days 365 -notext -md sha256 -in ca-jedo-dev.csr -out ca-jedo-dev.cert
+# 4. cat ca-jedo-dev.cert rca.cert > ca-jedo-dev-chain.cert
+###############################################################
+
+[ ca ]
+# `man ca`
+default_ca = CA_default
+
+[ CA_default ]
+# Directory and file locations.
+dir               = .
+certs             = $dir
+crl_dir           = $dir
+new_certs_dir     = $dir
+database          = $dir/index.txt
+serial            = $dir/serial
+RANDFILE          = $dir/.rand
+
+# The root key and root certificate.
+private_key       = $dir/rca.key
+certificate       = $dir/rca.cert
+
+# For certificate revocation lists.
+crlnumber         = $dir/crlnumber
+crl               = $dir/rca.crl
+crl_extensions    = crl_ext
+default_crl_days  = 30
+
+# SHA-1 is deprecated, so use SHA-2 instead.
+default_md        = sha512
+
+name_opt          = ca_default
+cert_opt          = ca_default
+default_days      = 375
+preserve          = no
+policy            = policy_strict
+
+[ policy_strict ]
+# The root CA should only sign intermediate certificates that match.
+# See the POLICY FORMAT section of `man ca`.
+countryName             = match
+stateOrProvinceName     = optional
+localityName		    = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ policy_loose ]
+# Allow the intermediate CA to sign a more diverse range of certificates.
+# See the POLICY FORMAT section of the `ca` man page.
+countryName             = optional
+stateOrProvinceName     = optional
+localityName            = optional
+organizationName        = optional
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ req ]
+# Options for the `req` tool (`man req`).
+default_bits        = 4096
+distinguished_name  = req_distinguished_name
+string_mask         = utf8only
+
+# SHA-1 is deprecated, so use SHA-2 instead.
+default_md          = sha512
+
+# Extension to add when the -x509 option is used.
+x509_extensions     = v3_ca
+
+[ req_distinguished_name ]
+countryName                     = XX
+stateOrProvinceName             = jedo.me
+localityName                    = orbis
+0.organizationName              = JEDO
+organizationalUnitName          =
+commonName                      = 
+emailAddress                    = 
+
+# Optionally, specify some defaults.
+#countryName_default             = [2 letter contry code]
+#stateOrProvinceName_default     = [State or Province]
+#localityName_default            = [City or Town]
+#0.organizationName_default      = [Name of the organization]
+#organizationalUnitName_default  = [Unit]
+#emailAddress_default            = [your email address]
+
+[ v3_ca ]
+# Extensions for a typical CA (`man x509v3_config`).
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+[ v3_intermediate_ca ]
+# Extensions for a typical intermediate CA (`man x509v3_config`).
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true, pathlen:2
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+[ usr_cert ]
+# Extensions for client certificates (`man x509v3_config`).
+basicConstraints = CA:FALSE
+nsCertType = client, email
+nsComment = "OpenSSL Generated Client Certificate"
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth, emailProtection
+
+[ server_cert ]
+# Extensions for server certificates (`man x509v3_config`).
+basicConstraints = CA:FALSE
+nsCertType = server
+nsComment = "OpenSSL Generated Server Certificate"
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer:always
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+
+[ crl_ext ]
+# Extension for CRLs (`man x509v3_config`).
+authorityKeyIdentifier=keyid:always
+
+[ ocsp ]
+# Extension for OCSP signing certificates (`man ocsp`).
+basicConstraints = CA:FALSE
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage = critical, digitalSignature
+extendedKeyUsage = critical, OCSPSigning
