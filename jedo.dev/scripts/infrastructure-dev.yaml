@@ -30,6 +30,10 @@ Docker:
         Wait: 60 # Max waiting time in seconds to start a docker container prior to exit
         FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
 Organizations:
+    - Name: Root
+      CA:
+          Name: rca.jedo.dev
+          IP: 192.168.0.13
     - Name: JEDO
       Administration:
           Position: orbis # gens, ager, regnum, orbis
@@ -59,6 +63,7 @@ Organizations:
           IP: 172.25.1.4
           Port: 51041
           OpPort: 51049
+          Parent: rca.jedo.dev
       Tools:
           Name: tools.jedo.dev
           Pass: Test1
@@ -89,6 +94,7 @@ Organizations:
           IP: 172.25.2.4
           Port: 52041
           OpPort: 52049
+          Parent: ca.jedo.dev
     - Name: Jenziner
       Administration:
           Position: ager # gens, ager, regnum, orbis
