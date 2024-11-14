@@ -39,7 +39,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "tls" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
+            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -114,7 +114,7 @@ fi
 
 
 ###############################################################
-# Run Fabric Tools
+# Run LDAP
 ###############################################################
 if [[ "$opt_r" == "ldap" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/ldap.sh
@@ -123,40 +123,40 @@ fi
 
 
 ###############################################################
-# Run TLS-CA
+# Run CA
 ###############################################################
-if [[ "$opt_r" == "tls" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    $SCRIPT_DIR/ca_tls.sh
-    cool_down $opt_a "TLS-CA started."
+if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    $SCRIPT_DIR/ca.sh
+    cool_down $opt_a "CA started."
 fi
 temp_end
 
-###############################################################
-# Run Root-CA
-###############################################################
-if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    $SCRIPT_DIR/ca_root.sh
-    cool_down $opt_a "Root-CA started."
-fi
-temp_end
+# ###############################################################
+# # Run Root-CA
+# ###############################################################
+# if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+#     $SCRIPT_DIR/ca_root.sh
+#     cool_down $opt_a "Root-CA started."
+# fi
+# temp_end
 
-###############################################################
-# Run Intermediate-CA
-###############################################################
-if [[ "$opt_r" == "intermediate" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    $SCRIPT_DIR/ca_intermediate.sh
-    cool_down $opt_a "Intermediate-CA started."
-fi
-temp_end
+# ###############################################################
+# # Run Intermediate-CA
+# ###############################################################
+# if [[ "$opt_r" == "intermediate" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+#     $SCRIPT_DIR/ca_intermediate.sh
+#     cool_down $opt_a "Intermediate-CA started."
+# fi
+# temp_end
 
 
-###############################################################
-# Run Org-CA
-###############################################################
-if [[ "$opt_r" == "node" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/ca_node.sh
-    cool_down $opt_a "Node-CA started."
-fi
+# ###############################################################
+# # Run Org-CA
+# ###############################################################
+# if [[ "$opt_r" == "node" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+#     ./scripts/ca_node.sh
+#     cool_down $opt_a "Node-CA started."
+# fi
 
 
 ###############################################################
