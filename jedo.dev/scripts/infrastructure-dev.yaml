@@ -32,7 +32,7 @@ Docker:
 Organizations:
     - Name: Root
       CA:
-          Name: rca.jedo.dev
+          Name: rca.jedo.me # Root is always rca.jedo.me, independant of the environment
           IP: 192.168.0.13
     - Name: JEDO
       Administration:
@@ -63,7 +63,7 @@ Organizations:
           IP: 172.25.1.4
           Port: 51041
           OpPort: 51049
-          Parent: rca.jedo.dev
+          Parent: rca.jedo.me
       Tools:
           Name: tools.jedo.dev
           Pass: Test1
@@ -124,25 +124,25 @@ Organizations:
           - Name: orderer.jenziner.jedo.dev
             Subject: "C=ea,ST=jedo.dev,L=jenziner,CN=orderer.jenziner.jedo.dev"
             Pass: Test1
-            IP: 172.25.1.11
-            Port: 17150
-            ClusterPort: 17152
-            OpPort: 17159
-            AdminPort: 17153
+            IP: 172.25.3.11
+            Port: 53111
+            ClusterPort: 53112
+            OpPort: 53119
+            AdminPort: 53113
       Peers: # first peer will be used as AnchorPeer
           - Name: peer0.jenziner.jedo.dev
             Subject: "C=ea,ST=jedo.dev,L=jenziner,CN=peer0.jenziner.jedo.dev"
             Pass: Test1
-            IP: 172.25.1.21
-            Port1: 17161
-            Port2: 17162
-            OpPort: 17169
-            CLI: 172.25.1.23
+            IP: 172.25.3.21
+            Port1: 53211
+            Port2: 53212
+            OpPort: 53219
+            CLI: 172.25.3.23
             DB: 
                 Name: db.peer0.jenziner.jedo.dev
                 Pass: Test1
-                IP: 172.25.1.22
-                Port: 17164
+                IP: 172.25.3.22
+                Port: 53221
       Operators:
           - Name: admin.jenziner.jedo.dev
             Pass: Test1

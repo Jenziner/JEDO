@@ -95,7 +95,7 @@ for AGER in $AGERS; do
         HOST_INFRA_DIR=/etc/infrastructure
         HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
 
-
+ 
         # Extract fields from subject
         C=$(echo "$PEER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
         ST=$(echo "$PEER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^ST=/) {sub(/^ST=/, "", $i); print $i}}')
@@ -118,7 +118,7 @@ for AGER in $AGERS; do
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $HOST_INFRA_DIR/$AGER/$PEER_NAME/msp \
-            --csr.hosts ${REGNUM_CA_NAME},${REGNUM_CA_IP},*.jedo.dev \
+            --csr.hosts ${REGNUM_CA_NAME},${REGNUM_CA_IP},*.jedo.dev,*.jedo.me \
             --csr.cn $CN --csr.names "$CSR_NAMES"
 
 
@@ -133,7 +133,7 @@ for AGER in $AGERS; do
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --enrollment.profile tls \
             --mspdir $HOST_INFRA_DIR/$AGER/$PEER_NAME/tls \
-            --csr.hosts ${REGNUM_CA_NAME},${REGNUM_CA_IP},*.jedo.dev \
+            --csr.hosts ${REGNUM_CA_NAME},${REGNUM_CA_IP},*.jedo.dev,*.jedo.me \
             --csr.cn $CN --csr.names "$CSR_NAMES"
 
 
@@ -357,15 +357,15 @@ chaincode:
   id:
     path:
     name:
-  builder: $(DOCKER_NS)/fabric-ccenv:$(TWO_DIGIT_VERSION)
+#  builder: $(DOCKER_NS)/fabric-ccenv:$(TWO_DIGIT_VERSION)
   pull: false
   golang:
-    runtime: $(DOCKER_NS)/fabric-baseos:$(TWO_DIGIT_VERSION)
+#    runtime: $(DOCKER_NS)/fabric-baseos:$(TWO_DIGIT_VERSION)
     dynamicLink: false
   java:
-    runtime: $(DOCKER_NS)/fabric-javaenv:2.5
+#    runtime: $(DOCKER_NS)/fabric-javaenv:2.5
   node:
-    runtime: $(DOCKER_NS)/fabric-nodeenv:2.5
+#    runtime: $(DOCKER_NS)/fabric-nodeenv:2.5
   externalBuilders:
     - name: ccaas_builder
       path: /opt/hyperledger/ccaas_builder
@@ -477,7 +477,7 @@ EOF
             -p $PEER_PORT1:$PEER_PORT1 \
             -p $PEER_PORT2:$PEER_PORT2 \
             -p $PEER_OPPORT:$PEER_OPPORT \
-            -v $FABRIC_BIN_PATH/config/core.yaml:/etc/hyperledger/fabric/core.yaml \
+            -v ${PWD}/infrastructure/$AGER/$PEER_NAME/core.yaml:/etc/hyperledger/fabric/core.yaml \
             -v ${PWD}/infrastructure/$AGER/$PEER_NAME/msp:/etc/hyperledger/peer/msp \
             -v ${PWD}/infrastructure/$AGER/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
             -v ${PWD}/infrastructure/$AGER/$FIRST_ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
