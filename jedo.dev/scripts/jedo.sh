@@ -129,7 +129,7 @@ if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/ca.sh
     cool_down $opt_a "CA started."
 fi
-temp_end
+
 
 # ###############################################################
 # # Run Root-CA

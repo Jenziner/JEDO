@@ -5,6 +5,20 @@
 # 
 #
 ###############################################################
+# 
+# Test certificate chain:
+# openssl verify -CAfile cacert.pem -untrusted intermediatecert.pem cert.pem
+# 
+# Display certificate:
+# openssl x509 -in cert.pem -text -noout
+#
+# Display certificate content:
+# openssl x509 -in cert.pem -text -noout | grep -A 1 "Authority Key Identifier"
+# openssl x509 -in cert.pem -text -noout | grep -A 1 "Subject Key Identifier"
+# 
+###############################################################
+
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
 source "$SCRIPT_DIR/ca_utils.sh"
