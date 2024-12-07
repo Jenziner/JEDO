@@ -15,22 +15,24 @@ source "$SCRIPT_DIR/utils.sh"
 function ca_start() {
     local cn="$1"
     local cfg="$2"
+    local dir="$3"
 
     #Init
     DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' "$cfg")
     DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' "$cfg")
 
-    CONTAINER_ORG=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .Name" "$cfg")
-    CONTAINER_NAME=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .CA.Name" "$cfg")
-    CONTAINER_PASS=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .CA.Pass" "$cfg")
-    CONTAINER_IP=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .CA.IP" "$cfg")
-    CONTAINER_PORT=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .CA.Port" "$cfg")
-    CONTAINER_OPPORT=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .CA.OpPort" "$cfg")
+    CONTAINER_ORG=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .Name" "$cfg")
+    CONTAINER_NAME=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .CA.Name" "$cfg")
+    CONTAINER_PASS=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .CA.Pass" "$cfg")
+    CONTAINER_IP=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .CA.IP" "$cfg")
+    CONTAINER_PORT=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .CA.Port" "$cfg")
+    CONTAINER_OPPORT=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .CA.OpPort" "$cfg")
 
-    LOCAL_INFRA_DIR=${PWD}/infrastructure
-    LOCAL_SRV_DIR=${PWD}/infrastructure/$CONTAINER_ORG/$CONTAINER_NAME
+#    LOCAL_INFRA_DIR=${PWD}/infrastructure
+#    LOCAL_SRV_DIR=${PWD}/infrastructure/$CONTAINER_ORG/$CONTAINER_NAME
+    LOCAL_SRV_DIR=$dir
 
-    HOST_INFRA_DIR=/etc/infrastructure
+ #   HOST_INFRA_DIR=/etc/infrastructure
     HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
 
     mkdir -p $LOCAL_SRV_DIR
@@ -51,7 +53,6 @@ function ca_start() {
         -p $CONTAINER_PORT:$CONTAINER_PORT \
         -p $CONTAINER_OPPORT:$CONTAINER_OPPORT \
         -v $LOCAL_SRV_DIR:$HOST_SRV_DIR \
-        -v $LOCAL_INFRA_DIR:$HOST_INFRA_DIR \
         hyperledger/fabric-ca:latest \
         sh -c "fabric-ca-server start -b $CONTAINER_NAME:$CONTAINER_PASS \
         --home $HOST_SRV_DIR"
@@ -67,36 +68,37 @@ function ca_start() {
 # Function to write a fabric-ca-server-config.yaml File
 ###############################################################
 function ca_writeCfg() {
-    local cn="$1"
-    local cfg="$2"
+    local type="$1"
+    local cn="$2"
+    local cfg="$3"
+    local dir="$4"
 
     #Init
-    CA_ORG=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .Name" "$cfg")
-    CA_POS=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .Administration.Position" "$cfg")
-    CA_NAME=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .CA.Name" "$cfg")
-    CA_PASS=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .CA.Pass" "$cfg")
-    CA_IP=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .CA.IP" "$cfg")
-    CA_PORT=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .CA.Port" "$cfg")
-    CA_OPPORT=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .CA.OpPort" "$cfg")
-    CA_PARENT=$(yq eval ".Organizations[] | select(.CA.Name == \"$cn\") | .CA.Parent" "$cfg")
+    CA_ORG=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .Name" "$cfg")
+    CA_ORG_PARENT=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .Administration.Parent" "$cfg")
+    CA_NAME=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .CA.Name" "$cfg")
+    CA_PASS=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .CA.Pass" "$cfg")
+    CA_IP=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .CA.IP" "$cfg")
+    CA_PORT=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .CA.Port" "$cfg")
+    CA_OPPORT=$(yq eval-all ".. | select(.CA? and .CA.Name == \"$cn\") | .CA.OpPort" "$cfg")
 
     CA_NAME_FORMATTED="${CA_NAME//./-}"
+    PARENT_NAME=$(yq eval-all '.. | select(has("Name") and .Name == "'"$CA_ORG_PARENT"'") | .CA?.Name // ""' "$cfg" | grep -v "^null$" | xargs echo -n)
+    PARENT_PASS=$(yq eval-all '.. | select(has("Name") and .Name == "'"$CA_ORG_PARENT"'") | .CA?.Pass // ""' "$cfg" | grep -v "^null$" | xargs echo -n)
+    PARENT_IP=$(yq eval-all '.. | select(has("Name") and .Name == "'"$CA_ORG_PARENT"'") | .CA?.IP // ""' "$cfg" | grep -v "^null$" | xargs echo -n)
+    PARENT_PORT=$(yq eval-all '.. | select(has("Name") and .Name == "'"$CA_ORG_PARENT"'") | .CA?.Port // ""' "$cfg" | grep -v "^null$" | xargs echo -n)
 
-    PARENT_NAME=$(yq eval ".Organizations[] | select(.CA.Name == \"$CA_PARENT\") | .CA.Name" "$cfg")
-    PARENT_PASS=$(yq eval ".Organizations[] | select(.CA.Name == \"$CA_PARENT\") | .CA.Pass" "$cfg")
-    PARENT_IP=$(yq eval ".Organizations[] | select(.CA.Name == \"$CA_PARENT\") | .CA.IP" "$cfg")
-    PARENT_PORT=$(yq eval ".Organizations[] | select(.CA.Name == \"$CA_PARENT\") | .CA.Port" "$cfg")
-
-    if [ "$CA_POS" = "orbis" ]; then
+    if [ "$CA_ORG_PARENT" = "root" ]; then
         PARENT_URL=""
     else
         PARENT_URL="https://$PARENT_NAME:$PARENT_PASS@$PARENT_NAME:$PARENT_PORT"
     fi
 
-    LOCAL_INFRA_DIR=${PWD}/infrastructure
-    LOCAL_SRV_DIR=${PWD}/infrastructure/$CA_ORG/$CA_NAME
+    # LOCAL_INFRA_DIR=${PWD}/infrastructure
+    # LOCAL_SRV_DIR=${PWD}/infrastructure/$CA_ORG/$CA_NAME
+    LOCAL_SRV_DIR=$dir
 
-    HOST_INFRA_DIR=/etc/infrastructure
+    # HOST_INFRA_DIR=/etc/infrastructure
     HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
 
     mkdir -p $LOCAL_SRV_DIR
@@ -111,16 +113,16 @@ port: $CA_PORT
 debug: true
 tls:
     enabled: true
-    certfile: $HOST_INFRA_DIR/$CA_ORG/$CA_NAME/tls/signcerts/cert.pem
-    keyfile: $HOST_INFRA_DIR/$CA_ORG/$CA_NAME/tls/keystore/$(basename $(ls $LOCAL_INFRA_DIR/$CA_ORG/$CA_NAME/tls/keystore/*_sk | head -n 1))
+    certfile: $HOST_SRV_DIR/tls/signcerts/cert.pem
+    keyfile: $HOST_SRV_DIR/tls/keystore/$(basename $(ls $LOCAL_SRV_DIR/tls/keystore/*_sk | head -n 1))
     clientauth:
       type: noclientcert
       certfiles:
 ca:
     name: $CA_NAME
-    certfile: $HOST_INFRA_DIR/$CA_ORG/$CA_NAME/$CA_NAME_FORMATTED.cert
-    keyfile: $HOST_INFRA_DIR/$CA_ORG/$CA_NAME/$CA_NAME_FORMATTED.key
-    chainfile: $HOST_INFRA_DIR/$CA_ORG/$CA_NAME/$CA_NAME_FORMATTED-chain.cert
+    certfile: $HOST_SRV_DIR/$CA_NAME_FORMATTED.cert
+    keyfile: $HOST_SRV_DIR/$CA_NAME_FORMATTED.key
+    chainfile: $HOST_SRV_DIR/$CA_NAME_FORMATTED-chain.cert
 crl:
 registry:
     maxenrollments: -1
@@ -160,9 +162,9 @@ signing:
                 isca: true
 EOF
 
-    if [ "$CA_POS" = "orbis" ]; then
+    if [ "$type" = "orbis" ]; then
         echo "                maxpathlen: 2" >> "$LOCAL_SRV_DIR/fabric-ca-server-config.yaml"
-    elif [ "$CA_POS" = "regnum" ]; then
+    elif [ "$type" = "regnum" ]; then
         echo "                maxpathlen: 1" >> "$LOCAL_SRV_DIR/fabric-ca-server-config.yaml"
     else
         echo "                maxpathlen: 0" >> "$LOCAL_SRV_DIR/fabric-ca-server-config.yaml"
@@ -225,7 +227,7 @@ cat <<EOF >> $LOCAL_SRV_DIR/fabric-ca-server-config.yaml
             - '*.jedo.dev'
         profile: ca
     tls:
-        certfiles: $HOST_INFRA_DIR/$CA_ORG/$CA_NAME/tls/tlscacerts/$(basename $(ls $LOCAL_INFRA_DIR/$CA_ORG/$CA_NAME/tls/tlscacerts/*.pem | head -n 1))
+        certfiles: $HOST_SRV_DIR/tls/tlscacerts/$(basename $(ls $LOCAL_SRV_DIR/tls/tlscacerts/*.pem | head -n 1))
 idemix:
     curve: gurvy.Bn254
 operations:

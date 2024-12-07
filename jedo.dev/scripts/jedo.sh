@@ -116,10 +116,10 @@ fi
 ###############################################################
 # Run LDAP
 ###############################################################
-if [[ "$opt_r" == "ldap" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    $SCRIPT_DIR/ldap.sh
-    cool_down $opt_a "LDAP started."
-fi
+# if [[ "$opt_r" == "ldap" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+#     $SCRIPT_DIR/ldap.sh
+#     cool_down $opt_a "LDAP started."
+# fi
 
 
 ###############################################################
@@ -129,34 +129,6 @@ if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/ca.sh
     cool_down $opt_a "CA started."
 fi
-
-
-# ###############################################################
-# # Run Root-CA
-# ###############################################################
-# if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-#     $SCRIPT_DIR/ca_root.sh
-#     cool_down $opt_a "Root-CA started."
-# fi
-# temp_end
-
-# ###############################################################
-# # Run Intermediate-CA
-# ###############################################################
-# if [[ "$opt_r" == "intermediate" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-#     $SCRIPT_DIR/ca_intermediate.sh
-#     cool_down $opt_a "Intermediate-CA started."
-# fi
-# temp_end
-
-
-# ###############################################################
-# # Run Org-CA
-# ###############################################################
-# if [[ "$opt_r" == "node" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-#     ./scripts/ca_node.sh
-#     cool_down $opt_a "Node-CA started."
-# fi
 
 
 ###############################################################

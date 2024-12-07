@@ -20,7 +20,6 @@ DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
 DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
 
 INFRA_DIR=/etc/hyperledger/infrastructure
-export FABRIC_CFG_PATH=${PWD}/infrastructure
 
 ROOT_NAME=$(yq eval ".Root.Name" "$CONFIG_FILE")
 AFFILIATION_ROOT=${ROOT_NAME##*.}.${ROOT_NAME%%.*}
@@ -31,68 +30,53 @@ get_hosts
 ###############################################################
 # Get Orbis TLS-CA
 ###############################################################
-ORBISS=$(yq eval '.Organizations[] | select(.Administration.Position == "orbis") | .Name' "$CONFIG_FILE")
-ORBIS_COUNT=$(echo "$ORBISS" | wc -l)
+ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
+ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
 
-# only 1 orbis is allowed
-if [ "$ORBIS_COUNT" -ne 1 ]; then
-    echo_error "Illegal number of orbis-organizations ($ORBIS_COUNT)."
-    exit 1
-fi
+ORBIS_TLS_NAME=$(yq eval ".Orbis.TLS.Name" "$CONFIG_FILE")
+ORBIS_TLS_PASS=$(yq eval ".Orbis.TLS.Pass" "$CONFIG_FILE")
+ORBIS_TLS_PORT=$(yq eval ".Orbis.TLS.Port" "$CONFIG_FILE")
 
-
-for ORBIS in $ORBISS; do
-    # Params for orbis
-    ORBIS_TOOLS_NAME=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .Tools.Name" "$CONFIG_FILE")
-    ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
-
-    ORBIS_TLS_NAME=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .TLS.Name" "$CONFIG_FILE")
-    ORBIS_TLS_PASS=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .TLS.Pass" "$CONFIG_FILE")
-    ORBIS_TLS_PORT=$(yq eval ".Organizations[] | select(.Name == \"$ORBIS\") | .TLS.Port" "$CONFIG_FILE")
-done
+ORBIS_NAME=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
+ORBIS_CA_NAME=$(yq eval ".Orbis.CA.Name" "$CONFIG_FILE")
+ORBIS_CA_PASS=$(yq eval ".Orbis.CA.Pass" "$CONFIG_FILE")
+ORBIS_CA_IP=$(yq eval ".Orbis.CA.IP" "$CONFIG_FILE")
+ORBIS_CA_PORT=$(yq eval ".Orbis.CA.Port" "$CONFIG_FILE")
 
 
 ###############################################################
-# Params for ager
+# Params for regnum
 ###############################################################
-AGERS=$(yq eval '.Organizations[] | select(.Administration.Position == "ager") | .Name' "$CONFIG_FILE")
-for AGER in $AGERS; do
-    REGNUM_ORG=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Administration.Parent" "$CONFIG_FILE")
-    REGNUM_CA_NAME=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM_ORG\") | .CA.Name" "$CONFIG_FILE")
-    REGNUM_CA_PASS=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM_ORG\") | .CA.Pass" "$CONFIG_FILE")
-    REGNUM_CA_IP=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM_ORG\") | .CA.IP" "$CONFIG_FILE")
-    REGNUM_CA_PORT=$(yq eval ".Organizations[] | select(.Name == \"$REGNUM_ORG\") | .CA.Port" "$CONFIG_FILE")
+REGNUMS=$(yq eval '.Regnum[] | .Name' "$CONFIG_FILE")
+for REGNUM in $REGNUMS; do
 
-    AFFILIATION_NODE=$AFFILIATION_ROOT.${AGER,,}
+    AFFILIATION_NODE=$AFFILIATION_ROOT.${REGNUM,,}
 
-    PEERS=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[].Name" $CONFIG_FILE)
+    PEERS=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[].Name" $CONFIG_FILE)
     for PEER in $PEERS; do
         ###############################################################
         # Params
         ###############################################################
         echo ""
         echo_warn "Peer $PEER starting..."
-        PEER_NAME=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Name" $CONFIG_FILE)
-        PEER_SUBJECT=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Subject" $CONFIG_FILE)
-        PEER_PASS=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Pass" $CONFIG_FILE)
-        PEER_IP=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .IP" $CONFIG_FILE)
-        PEER_PORT1=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Port1" $CONFIG_FILE)
-        PEER_PORT2=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Port2" $CONFIG_FILE)
-        PEER_OPPORT=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .OpPort" $CONFIG_FILE)
-        PEER_CLI=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .CLI" $CONFIG_FILE)
+        PEER_NAME=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .Name" $CONFIG_FILE)
+        PEER_SUBJECT=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .Subject" $CONFIG_FILE)
+        PEER_PASS=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .Pass" $CONFIG_FILE)
+        PEER_IP=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .IP" $CONFIG_FILE)
+        PEER_PORT1=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .Port1" $CONFIG_FILE)
+        PEER_PORT2=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .Port2" $CONFIG_FILE)
+        PEER_OPPORT=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .OpPort" $CONFIG_FILE)
+        PEER_CLI=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .CLI" $CONFIG_FILE)
 
-        PEER_DB_NAME=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .DB.Name" $CONFIG_FILE)
-        PEER_DB_PASS=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .DB.Pass" $CONFIG_FILE)
-        PEER_DB_IP=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .DB.IP" $CONFIG_FILE)
-        PEER_DB_PORT=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .DB.Port" $CONFIG_FILE)
+        PEER_DB_NAME=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .DB.Name" $CONFIG_FILE)
+        PEER_DB_PASS=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .DB.Pass" $CONFIG_FILE)
+        PEER_DB_IP=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .DB.IP" $CONFIG_FILE)
+        PEER_DB_PORT=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[] | select(.Name == \"$PEER\") | .DB.Port" $CONFIG_FILE)
 
-        FIRST_ORDERER_NAME=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Orderers[0].Name" $CONFIG_FILE)
-        FIRST_ORDERER_PORT=$(yq eval ".Organizations[] | select(.Name == \"$AGER\") | .Orderers[0].Port" $CONFIG_FILE)
+        FIRST_ORDERER_NAME=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Orderers[0].Name" $CONFIG_FILE)
+        FIRST_ORDERER_PORT=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Orderers[0].Port" $CONFIG_FILE)
 
-        LOCAL_INFRA_DIR=${PWD}/infrastructure
-        LOCAL_SRV_DIR=${PWD}/infrastructure/$AGER/$PEER_NAME/
-
-        HOST_INFRA_DIR=/etc/infrastructure
+        LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME
         HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
 
  
@@ -109,16 +93,16 @@ for AGER in $AGERS; do
         ###############################################################
         echo ""
         echo_info "$PEER_NAME registering and enrolling..."
-        docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$REGNUM_CA_NAME:$REGNUM_CA_PORT \
+        docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-            --mspdir $HOST_INFRA_DIR/$REGNUM_ORG/$REGNUM_CA_NAME/msp \
+            --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS_NAME/$ORBIS_CA_NAME/msp \
             --id.name $PEER_NAME --id.secret $PEER_PASS --id.type peer --id.affiliation jedo.root #ToDo Affiliation
-        docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$REGNUM_CA_NAME:$REGNUM_CA_PORT \
+        docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-            --mspdir $HOST_INFRA_DIR/$AGER/$PEER_NAME/msp \
-            --csr.hosts ${REGNUM_CA_NAME},${REGNUM_CA_IP},*.jedo.dev,*.jedo.me \
+            --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/msp \
+            --csr.hosts ${ORBIS_CA_NAME},${ORBIS_CA_IP},*.jedo.dev,*.jedo.me \
             --csr.cn $CN --csr.names "$CSR_NAMES"
 
 
@@ -126,35 +110,35 @@ for AGER in $AGERS; do
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-            --mspdir $HOST_INFRA_DIR/$ORBIS/$ORBIS_TLS_NAME/tls \
+            --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS_NAME/$ORBIS_TLS_NAME/tls \
             --id.name $PEER_NAME --id.secret $PEER_PASS --id.type client --id.affiliation jedo.root
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --enrollment.profile tls \
-            --mspdir $HOST_INFRA_DIR/$AGER/$PEER_NAME/tls \
-            --csr.hosts ${REGNUM_CA_NAME},${REGNUM_CA_IP},*.jedo.dev,*.jedo.me \
+            --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/tls \
+            --csr.hosts ${ORBIS_CA_NAME},${ORBIS_CA_IP},*.jedo.dev,*.jedo.me \
             --csr.cn $CN --csr.names "$CSR_NAMES"
 
 
         # Generating NodeOUs-File
         echo ""
         echo_info "NodeOUs-File writing..."
-        CA_CERT_FILE=$(ls ${PWD}/infrastructure/$AGER/$PEER_NAME/msp/cacerts/*.pem)
-        cat <<EOF > ${PWD}/infrastructure/$AGER/$PEER_NAME/msp/config.yaml
+        CA_CERT_FILE=$(ls ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/msp/intermediatecerts/*.pem)
+        cat <<EOF > ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/msp/config.yaml
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: client
   PeerOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: peer
   AdminOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: admin
   OrdererOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: orderer
 EOF
 
@@ -164,8 +148,8 @@ EOF
         ###############################################################
         # Write core.yaml
         ###############################################################
-        TLS_PRIVATEKEY_FILE=$(basename $(ls ${PWD}/infrastructure/$AGER/$PEER_NAME/tls/keystore/*_sk))
-        TLS_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$AGER/$PEER_NAME/tls/tlscacerts/*.pem))
+        TLS_PRIVATEKEY_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/tls/keystore/*_sk))
+        TLS_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/tls/tlscacerts/*.pem))
 
         echo ""
         echo_info "Server-Config for $PEER_NAME writing..."
@@ -174,9 +158,9 @@ cat <<EOF > $LOCAL_SRV_DIR/core.yaml
 peer:
   id: $PEER_NAME
   networkId: $DOCKER_NETWORK_NAME
-  listenAddress: 0.0.0.0:$PEER_PORT1
-  chaincodeListenAddress: 0.0.0.0:$PEER_PORT2
-  chaincodeAddress: 0.0.0.0:$PEER_PORT2
+  listenAddress: $PEER_IP:$PEER_PORT1
+  chaincodeListenAddress: $PEER_IP:$PEER_PORT2
+  chaincodeAddress: $PEER_IP:$PEER_PORT2
   address: $PEER_NAME:$PEER_PORT1
   addressAutoDetect: false
   gateway:
@@ -199,7 +183,7 @@ peer:
     useLeaderElection: false
     orgLeader: true
     membershipTrackerInterval: 5s
-    endpoint: 0.0.0.0:$PEER_PORT1
+    endpoint: $PEER_NAME:$PEER_PORT1
     maxBlockCountToStore: 10
     maxPropagationBurstLatency: 10ms
     maxPropagationBurstSize: 10
@@ -224,7 +208,7 @@ peer:
     reconnectInterval: 25s
     maxConnectionAttempts: 120
     msgExpirationFactor: 20
-    externalEndpoint:
+    externalEndpoint: $PEER_NAME:$PEER_PORT1
     election:
       startupGracePeriod: 15s
       membershipSampleInterval: 1s
@@ -286,7 +270,7 @@ peer:
       AltID:
       KeyIds:
   mspConfigPath: /etc/hyperledger/peer/msp
-  localMspId: ${AGER}
+  localMspId: ${REGNUM}
   client:
     connTimeout: 3s
   deliveryclient:
@@ -306,7 +290,6 @@ peer:
     authFilters:
       - name: DefaultAuth
       - name: ExpirationCheck # This filter checks identity x509 certificate expiration
-      - name: TimeWindowCheck # This filter checks the timestamp of an proposal request with the peer.authentication.timewindow parameter from core.yaml
     decorators:
       - name: DefaultDecorator
     endorsers:
@@ -357,15 +340,15 @@ chaincode:
   id:
     path:
     name:
-#  builder: $(DOCKER_NS)/fabric-ccenv:$(TWO_DIGIT_VERSION)
+  builder: "$(DOCKER_NS)/fabric-ccenv:$(TWO_DIGIT_VERSION)"
   pull: false
   golang:
-#    runtime: $(DOCKER_NS)/fabric-baseos:$(TWO_DIGIT_VERSION)
+    runtime: "$(DOCKER_NS)/fabric-baseos:$(TWO_DIGIT_VERSION)"
     dynamicLink: false
   java:
-#    runtime: $(DOCKER_NS)/fabric-javaenv:2.5
+    runtime: "$(DOCKER_NS)/fabric-javaenv:2.5"
   node:
-#    runtime: $(DOCKER_NS)/fabric-nodeenv:2.5
+    runtime: "$(DOCKER_NS)/fabric-nodeenv:2.5"
   externalBuilders:
     - name: ccaas_builder
       path: /opt/hyperledger/ccaas_builder
@@ -432,10 +415,6 @@ metrics:
 EOF
 
 
-
-
-
-
         ###############################################################
         # CouchDB
         ###############################################################
@@ -449,8 +428,8 @@ EOF
         --label net.unraid.docker.icon="https://raw.githubusercontent.com/apache/couchdb/main/branding/logo/CouchDB_Logo_192px.png" \
         -e COUCHDB_USER=$PEER_DB_NAME \
         -e COUCHDB_PASSWORD=$PEER_DB_PASS \
-        -v ${PWD}/infrastructure/$AGER/$PEER_DB_NAME:/opt/couchdb/data \
-        -v ${PWD}/infrastructure/$AGER/$PEER_DB_NAME:/opt/couchdb/etc/local.d \
+        -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_DB_NAME:/opt/couchdb/data \
+        -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_DB_NAME:/opt/couchdb/etc/local.d \
         -p $PEER_DB_PORT:5984 \
         --restart unless-stopped \
         couchdb:latest
@@ -467,6 +446,7 @@ EOF
         ###############################################################
         echo ""
         echo_info "Peer $PEER_NAME starting..."
+        export FABRIC_CFG_PATH=/etc/hyperledger/fabric
         docker run -d \
             --name $PEER_NAME \
             --network $DOCKER_NETWORK_NAME \
@@ -477,11 +457,11 @@ EOF
             -p $PEER_PORT1:$PEER_PORT1 \
             -p $PEER_PORT2:$PEER_PORT2 \
             -p $PEER_OPPORT:$PEER_OPPORT \
-            -v ${PWD}/infrastructure/$AGER/$PEER_NAME/core.yaml:/etc/hyperledger/fabric/core.yaml \
-            -v ${PWD}/infrastructure/$AGER/$PEER_NAME/msp:/etc/hyperledger/peer/msp \
-            -v ${PWD}/infrastructure/$AGER/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
-            -v ${PWD}/infrastructure/$AGER/$FIRST_ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
-            -v ${PWD}/infrastructure/$AGER/$PEER_NAME/production:/var/hyperledger/production \
+            -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME:/etc/hyperledger/fabric \
+            -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/msp:/etc/hyperledger/peer/msp \
+            -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
+            -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$FIRST_ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
+            -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/production:/var/hyperledger/production \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -e CORE_VM_ENDPOINT=unix:///var/run/docker.sock \
             hyperledger/fabric-peer:latest
@@ -503,17 +483,17 @@ EOF
             $hosts_args \
             --restart=on-failure:1 \
             --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/infrastructure/src/fabric_cli_logo.png" \
-            -v ${PWD}/infrastructure/$AGER/$PEER_NAME/msp:/etc/hyperledger/peer/msp \
-            -v ${PWD}/infrastructure/$AGER/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
-            -v ${PWD}/infrastructure/$AGER/$FIRST_ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
-            -v ${PWD}/infrastructure/$AGER/$PEER_NAME/production:/var/hyperledger/production \
-            -v ${PWD}/infrastructure/$AGER/$PEER_NAME:/opt/gopath/src/github.com/hyperledger/fabric/chaincode \
+            -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/msp:/etc/hyperledger/peer/msp \
+            -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
+            -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$FIRST_ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
+            -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/production:/var/hyperledger/production \
+            -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME:/opt/gopath/src/github.com/hyperledger/fabric/chaincode \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w /opt/gopath/src/github.com/hyperledger/fabric \
             -e GOPATH=/opt/gopath \
             -e CORE_PEER_ID=cli.$PEER_NAME \
             -e CORE_PEER_ADDRESS=$PEER_NAME:$PEER_PORT1 \
-            -e CORE_PEER_LOCALMSPID=${AGER}MSP \
+            -e CORE_PEER_LOCALMSPID=${REGNUM} \
             -e CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp \
             -e CORE_PEER_TLS_ENABLED=true \
             -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/signcerts/cert.pem \
