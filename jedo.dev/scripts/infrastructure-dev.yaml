@@ -71,9 +71,12 @@ Orbis:
         Port: 51091
 Regnum:
     - Name: ea.jedo.dev
+      Organization: ea
       Administration:
           Parent: jedo.dev
           Contact: Nik
+          Subject: "C=jd,ST=dev,O=ea,CN=nik.ea.jedo.dev"
+          Pass: Test1
           Mail: nik@jedo.me
           Phone: +41791234567
       LDAP:
@@ -97,7 +100,7 @@ Regnum:
           OpPort: 52049
       Orderers:
           - Name: orderer0.ea.jedo.dev
-            Subject: "C=jd,ST=dev,O=ea.jedo.dev,CN=orderer0.ea.jedo.dev"
+            Subject: "C=jd,ST=dev,O=ea,CN=orderer0.ea.jedo.dev"
             Pass: Test1
             IP: 172.25.2.11
             Port: 52111
@@ -106,7 +109,7 @@ Regnum:
             AdminPort: 52113
       Peers: # first peer will be used as AnchorPeer
           - Name: peer0.ea.jedo.dev
-            Subject: "C=jd,ST=dev,O=ea.jedo.dev,CN=peer0.ea.jedo.dev"
+            Subject: "C=jd,ST=dev,O=ea,CN=peer0.ea.jedo.dev"
             Pass: Test1
             IP: 172.25.2.21
             Port1: 52211

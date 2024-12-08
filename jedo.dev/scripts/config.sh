@@ -15,7 +15,8 @@ check_script
 ###############################################################
 CONFIG_FILE="$SCRIPT_DIR/infrastructure-dev.yaml"
 FABRIC_BIN_PATH=$(yq eval '.Fabric.Path' "$CONFIG_FILE")
-CHANNELS=$(yq e ".Channels[].Name" $CONFIG_FILE)
+ORBIS_NAME=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
+CHANNELS=$(yq e ".Regnum[].Name" $CONFIG_FILE)
 
 for CHANNEL in $CHANNELS; do
     echo ""
@@ -24,7 +25,9 @@ for CHANNEL in $CHANNELS; do
     export FABRIC_CFG_PATH=${PWD}/configuration/$CHANNEL
     mkdir -p $FABRIC_CFG_PATH
     OUTPUT_CONFIGTX_FILE="$FABRIC_CFG_PATH/configtx.yaml"
-    ORGANIZATIONS=$(yq eval ".Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[].Name" $CONFIG_FILE)
+    ORGCA=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .CA.Name" $CONFIG_FILE)
+    ORGANIZATION=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Organization" $CONFIG_FILE)
+    ORDERERS=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[].Name" $CONFIG_FILE)
 
 
     ###############################################################
@@ -44,40 +47,18 @@ cat <<EOF > $OUTPUT_CONFIGTX_FILE
 Organizations:
 EOF
 
-    for ORGANIZATION in $ORGANIZATIONS; do
-        CA_EXT=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .ORG-CA.Ext" $CONFIG_FILE)
-        if [[ -n "$CA_EXT" ]]; then
-            CA=$(yq eval ".. | select(has(\"CA\")) | .ORG-CA | select(.Name == \"$CA_EXT\") | .Name" "$CONFIG_FILE")
-            CA_ORG=$(yq eval ".Organizations[] | select(.ORG-CA.Name == \"$CA\") | .Name" "$CONFIG_FILE")
-        else
-            CA=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .ORG-CA.Name" $CONFIG_FILE)
-            CA_ORG=$ORGANIZATION
-        fi
-
-        ORDERERS=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
-        PEERS=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[].Name" $CONFIG_FILE)
-        ORDERER_ENDPOINTS=""
-        if [[ -n "$ORDERERS" ]]; then
-            ORDERER=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Name" $CONFIG_FILE)
-            ORDERER_PORT=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Port" $CONFIG_FILE)
-            ORDERER_ENDPOINTS="OrdererEndpoints:
-          - $ORDERER:$ORDERER_PORT"
-        fi
-        ANCHOR_PEERS=""
-        if [[ -n "$PEERS" ]]; then
-            PEER=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[0].Name" $CONFIG_FILE)
-            PEER_PORT=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Peers[0].Port" $CONFIG_FILE)
-            ANCHOR_PEERS="AnchorPeers:
-          - Host: $ORDERER
-            Port: $ORDERER_PORT"
-        fi
+    ORDERER_ENDPOINTS="OrdererEndpoints:"
+    for ORDERER in $ORDERERS; do
+        ORDERER_PORT=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
+        ORDERER_ENDPOINTS="$ORDERER_ENDPOINTS"$'\n'"      - $ORDERER:$ORDERER_PORT"
+    done
 
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   - &${ORGANIZATION}
     Name: $ORGANIZATION
     ID: ${ORGANIZATION}
-    MSPDir: $PWD/infrastructure/$CA_ORG/$CA/keys/server/msp
+    MSPDir: $PWD/infrastructure/$ORBIS_NAME/$CHANNEL/$ORGCA/msp
     Policies: &${ORGANIZATION}Policies
       Readers:
         Type: Signature
@@ -95,9 +76,7 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
         Type: Signature
         Rule: "OR('${ORGANIZATION}.member')"
     $ORDERER_ENDPOINTS
-    $ANCHOR_PEERS
 EOF
-    done
 
 
     ###############################################################
@@ -120,15 +99,7 @@ EOF
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Application: &ApplicationDefaults
   Organizations:
-EOF
-
-    for ORGANIZATION in $ORGANIZATIONS; do
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
     - *$ORGANIZATION
-EOF
-    done
-
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   Policies: &ApplicationDefaultPolicies
     LifecycleEndorsement:
       Type: ImplicitMeta
@@ -156,20 +127,16 @@ EOF
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Orderer: &OrdererDefaults
   OrdererType: etcdraft
-  Addresses:
 EOF
 
-    for ORGANIZATION in $ORGANIZATIONS; do
-        ORDERERS=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
-      
-        if [[ -n "$ORDERERS" ]]; then
-            ORDERER=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Name" $CONFIG_FILE)
-            ORDERER_PORT=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Port" $CONFIG_FILE)
-        fi
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-    - $ORDERER:$ORDERER_PORT
-EOF
+    ORDERER_ADDRESSES="Addresses:"
+    for ORDERER in $ORDERERS; do
+        ORDERER_PORT=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
+        ORDERER_ADDRESSES="$ORDERER_ADDRESSES"$'\n'"    - $ORDERER:$ORDERER_PORT"
     done
+cat <<EOF >> $OUTPUT_CONFIGTX_FILE
+  $ORDERER_ADDRESSES
+EOF
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   BatchTimeout: 2s
@@ -182,17 +149,13 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
     Consenters:
 EOF
 
-    for ORGANIZATION in $ORGANIZATIONS; do
-        ORDERERS=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[].Name" $CONFIG_FILE)
-        if [[ -n "$ORDERERS" ]]; then
-            ORDERER=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Name" $CONFIG_FILE)
-            ORDERER_PORT=$(yq e ".Organizations[] | select(.Name == \"$ORGANIZATION\") | .Orderers[0].Port" $CONFIG_FILE)
-        fi
+    for ORDERER in $ORDERERS; do
+        ORDERER_PORT=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
       - Host: $ORDERER
         Port: $ORDERER_PORT
-        ClientTLSCert: ${PWD}/infrastructure/$ORGANIZATION/$ORDERER/keys/server/tls/signcerts/cert.pem
-        ServerTLSCert: ${PWD}/infrastructure/$ORGANIZATION/$ORDERER/keys/server/tls/signcerts/cert.pem
+        ClientTLSCert: ${PWD}/infrastructure/$ORBIS_NAME/$CHANNEL/$ORDERER/tls/signcerts/cert.pem
+        ServerTLSCert: ${PWD}/infrastructure/$ORBIS_NAME/$CHANNEL/$ORDERER/tls/signcerts/cert.pem
 EOF
     done
 
@@ -204,15 +167,7 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
       MaxInflightBlocks: 5
       SnapshotIntervalSize: 16 MB
   Organizations:
-EOF
-
-    for ORGANIZATION in $ORGANIZATIONS; do
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
       - *$ORGANIZATION
-EOF
-    done
-
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   Policies:
     Readers:
       Type: ImplicitMeta
@@ -262,27 +217,15 @@ Profiles:
       <<: *OrdererDefaults
       OrdererType: etcdraft
       Organizations:
-EOF
-
-    for ORGANIZATION in $ORGANIZATIONS; do
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
         - <<: *$ORGANIZATION
           Policies:
             <<: *${ORGANIZATION}Policies
             Admins:
               Type: Signature
               Rule: "OR('$ORGANIZATION.member')"
-EOF
-    done
-
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
     Application:
       <<: *ApplicationDefaults
       Organizations:
-EOF
-
-    for ORGANIZATION in $ORGANIZATIONS; do
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
         - <<: *$ORGANIZATION
           Policies:
             <<: *${ORGANIZATION}Policies
@@ -290,7 +233,6 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
               Type: Signature
               Rule: "OR('$ORGANIZATION.member')"
 EOF
-    done
 
     echo_info "Genesis block for $CHANNEL generating..."
     $FABRIC_BIN_PATH/bin/configtxgen -configPath $FABRIC_CFG_PATH -profile JedoChannel -channelID $CHANNEL -outputBlock $FABRIC_CFG_PATH/genesis_block.pb

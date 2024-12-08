@@ -102,7 +102,7 @@ for REGNUM in $REGNUMS; do
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/msp \
-            --csr.hosts ${ORBIS_CA_NAME},${ORBIS_CA_IP},*.jedo.dev,*.jedo.me \
+            --csr.hosts ${PEER_NAME},${PEER_IP},*.jedo.dev,*.jedo.me \
             --csr.cn $CN --csr.names "$CSR_NAMES"
 
 
@@ -117,7 +117,7 @@ for REGNUM in $REGNUMS; do
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --enrollment.profile tls \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/tls \
-            --csr.hosts ${ORBIS_CA_NAME},${ORBIS_CA_IP},*.jedo.dev,*.jedo.me \
+            --csr.hosts ${PEER_NAME},${PEER_IP},*.jedo.dev,*.jedo.me \
             --csr.cn $CN --csr.names "$CSR_NAMES"
 
 
