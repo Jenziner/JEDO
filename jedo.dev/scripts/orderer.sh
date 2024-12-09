@@ -113,12 +113,6 @@ for REGNUM in $REGNUMS; do
             --csr.cn $CN --csr.names "$CSR_NAMES"
 
 
-        #TEMP: Needed to join channel later
-        echo_error "CHECK IF COPY STILL NEEDED - orderer.sh"
-        mkdir -p ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$ORDERER_NAME/msp/tlscacerts
-        cp ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$ORDERER_NAME/tls/tlscacerts/* ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$ORDERER_NAME/msp/tlscacerts
-
-
         # Generating NodeOUs-File
         echo ""
         echo_info "NodeOUs-File writing..."
@@ -148,6 +142,7 @@ EOF
         ###############################################################
         TLS_PRIVATEKEY_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$ORDERER_NAME/tls/keystore/*_sk))
         TLS_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$ORDERER_NAME/tls/tlscacerts/*.pem))
+        CLIENT_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Admin/tls/tlscacerts/*.pem))
 
         echo ""
         echo_info "Server-Config for $ORDERER_NAME writing..."
@@ -164,7 +159,7 @@ General:
           - /etc/hyperledger/orderer/tls/tlscacerts/$TLS_TLSCACERT_FILE
         ClientAuthRequired: false
         ClientRootCAs:
-          - /etc/hyperledger/orderer/tls/tlscacerts/$TLS_TLSCACERT_FILE
+          - /etc/hyperledger/clientadmin/tls/$CLIENT_TLSCACERT_FILE
     Keepalive:
         ServerMinInterval: 60s
         ServerInterval: 7200s
@@ -173,12 +168,12 @@ General:
     MaxSendMsgSize: 104857600
     Cluster:
         SendBufferSize: 100
-        ClientCertificate: /etc/hyperledger/orderer/tls/signcerts/cert.pem
-        ClientPrivateKey: /etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATEKEY_FILE
-        ListenPort: $ORDERER_CLPORT
-        ListenAddress: $ORDERER_IP
-        ServerCertificate: /etc/hyperledger/orderer/tls/signcerts/cert.pem
-        ServerPrivateKey: /etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATEKEY_FILE
+        ClientCertificate: 
+        ClientPrivateKey: 
+        ListenPort: 
+        ListenAddress: 
+        ServerCertificate: 
+        ServerPrivateKey: 
     BootstrapMethod: none
     BootstrapFile:
     LocalMSPDir: /etc/hyperledger/orderer/msp
@@ -263,8 +258,9 @@ Admin:
         Enabled: true
         Certificate: /etc/hyperledger/orderer/tls/signcerts/cert.pem
         PrivateKey: /etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATEKEY_FILE
+        RootCAs: /etc/hyperledger/orderer/tls/tlscacerts/$TLS_TLSCACERT_FILE
         ClientAuthRequired: true
-        ClientRootCAs: [/etc/hyperledger/orderer/tls/tlscacerts/$TLS_TLSCACERT_FILE]
+        ClientRootCAs: [/etc/hyperledger/clientadmin/tls/tlscacerts/$CLIENT_TLSCACERT_FILE]
 ChannelParticipation:
     Enabled: true
     MaxRequestBodySize: 1 MB
@@ -295,6 +291,7 @@ EOF
             -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$ORDERER_NAME/msp:/etc/hyperledger/orderer/msp \
             -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
             -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$ORDERER_NAME/production:/var/hyperledger/production \
+            -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Admin/tls:/etc/hyperledger/clientadmin/tls \
             hyperledger/fabric-orderer:latest
 
         CheckContainer "$ORDERER_NAME" "$DOCKER_CONTAINER_WAIT"
@@ -307,6 +304,5 @@ done
 ###############################################################
 # Last Tasks
 ###############################################################
-
 
 

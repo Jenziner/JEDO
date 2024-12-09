@@ -244,6 +244,15 @@ for REGNUM in $REGNUMS; do
         --csr.hosts ${REGNUM_CA_NAME},${REGNUM_CA_IP},${ORBIS_CA_NAME},${ORBIS_CA_IP},${ORBIS_TLS_NAME},${ORBIS_TLS_IP},*.jedo.dev
 
 
+    #Copy files to Organization msp
+    echo_info "Organization msp creating (TLS)..."
+    mkdir -p ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Organization/msp/tlscacerts
+    cp ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$REGNUM_CA_NAME/tls/tlscacerts/* ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Organization/msp/tlscacerts
+    # Not yet in use
+    # mkdir -p ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/Organization/msp/tlsintermediatecerts
+    # cp ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$REGNUM_CA_NAME/tls/tlsintermediatecerts/* ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/Organization/msp/tlsintermediatecerts
+
+
     # Params for admin
     REGNUM_ADMIN_NAME=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Administration.Contact" "$CONFIG_FILE")
     REGNUM_ADMIN_PASS=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Administration.Pass" "$CONFIG_FILE")
@@ -270,10 +279,15 @@ for REGNUM in $REGNUMS; do
         --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
         --enrollment.profile tls \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS_NAME/$REGNUM/Admin/$REGNUM_ADMIN_NAME/tls \
+        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS_NAME/$REGNUM/_Admin/$REGNUM_ADMIN_NAME/tls \
         --csr.hosts ${REGNUM_CA_NAME},${REGNUM_CA_IP},${ORBIS_CA_NAME},${ORBIS_CA_IP},${ORBIS_TLS_NAME},${ORBIS_TLS_IP},*.jedo.dev \
         --csr.cn $CN --csr.names "$CSR_NAMES"
 
+
+    # copy admin-client tlscacerts
+    echo_info "Admin Client tlscacerts copying..."
+    mkdir -p ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Admin/tls/tlscacerts
+    cp ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Admin/$REGNUM_ADMIN_NAME/tls/tlscacerts/* ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Admin/tls/tlscacerts
 done
 
 
@@ -416,6 +430,15 @@ NodeOUs:
     Certificate: cacerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: orderer
 EOF
+
+
+    #Copy files to Organization msp
+    echo_info "Organization msp creating (CA)..."
+    mkdir -p ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Organization/msp/cacerts
+    cp ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$REGNUM_CA_NAME/msp/cacerts/* ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Organization/msp/cacerts
+    mkdir -p ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Organization/msp/intermediatecerts
+    cp ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$REGNUM_CA_NAME/msp/intermediatecerts/* ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Organization/msp/intermediatecerts
+    cp ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$REGNUM_CA_NAME/msp/config.yaml ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Organization/msp
 
 
     # Start Regnum-CA

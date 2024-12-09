@@ -58,7 +58,7 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   - &${ORGANIZATION}
     Name: $ORGANIZATION
     ID: ${ORGANIZATION}
-    MSPDir: $PWD/infrastructure/$ORBIS_NAME/$CHANNEL/$ORGCA/msp
+    MSPDir: $PWD/infrastructure/$ORBIS_NAME/$CHANNEL/_Organization/msp
     Policies: &${ORGANIZATION}Policies
       Readers:
         Type: Signature

@@ -132,15 +132,6 @@ fi
 
 
 ###############################################################
-# Run Peer
-###############################################################
-if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/peer.sh peer
-    cool_down $opt_a "Peers running."
-fi
-
-
-###############################################################
 # Run Orderer
 ###############################################################
 if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
@@ -164,6 +155,15 @@ fi
 if [[ "$opt_r" == "channel" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/channel.sh
     cool_down $opt_a "Channel created."
+fi
+
+
+###############################################################
+# Run Peer
+###############################################################
+if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/peer.sh peer
+    cool_down $opt_a "Peers running."
 fi
 
 

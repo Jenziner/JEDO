@@ -99,28 +99,44 @@ Regnum:
           Port: 52041
           OpPort: 52049
       Orderers:
-          - Name: orderer0.ea.jedo.dev
-            Subject: "C=jd,ST=dev,O=ea,CN=orderer0.ea.jedo.dev"
+          - Name: orderer1.ea.jedo.dev
+            Subject: "C=jd,ST=dev,O=ea,CN=orderer1.ea.jedo.dev"
             Pass: Test1
             IP: 172.25.2.11
             Port: 52111
             ClusterPort: 52112
             OpPort: 52119
             AdminPort: 52113
-      Peers: # first peer will be used as AnchorPeer
-          - Name: peer0.ea.jedo.dev
-            Subject: "C=jd,ST=dev,O=ea,CN=peer0.ea.jedo.dev"
+          - Name: orderer2.ea.jedo.dev
+            Subject: "C=jd,ST=dev,O=ea,CN=orderer2.ea.jedo.dev"
             Pass: Test1
             IP: 172.25.2.21
-            Port1: 52211
-            Port2: 52212
+            Port: 52211
+            ClusterPort: 52212
             OpPort: 52219
-            CLI: 172.25.2.23
+            AdminPort: 52213
+          - Name: orderer3.ea.jedo.dev
+            Subject: "C=jd,ST=dev,O=ea,CN=orderer3.ea.jedo.dev"
+            Pass: Test1
+            IP: 172.25.2.31
+            Port: 52311
+            ClusterPort: 52312
+            OpPort: 52319
+            AdminPort: 52313
+      Peers: # first peer will be used as AnchorPeer
+          - Name: peer1.ea.jedo.dev
+            Subject: "C=jd,ST=dev,O=ea,CN=peer0.ea.jedo.dev"
+            Pass: Test1
+            IP: 172.25.2.51
+            Port1: 52511
+            Port2: 52512
+            OpPort: 52519
+            CLI: 172.25.2.53
             DB: 
                 Name: db.peer0.ea.jedo.dev
                 Pass: Test1
-                IP: 172.25.2.22
-                Port: 52221
+                IP: 172.25.2.52
+                Port: 52521
 Ager:
     - Name: alps.ea.jedo.dev
       Administration:

@@ -51,6 +51,7 @@ REGNUMS=$(yq eval '.Regnum[] | .Name' "$CONFIG_FILE")
 for REGNUM in $REGNUMS; do
 
     AFFILIATION_NODE=$AFFILIATION_ROOT.${REGNUM,,}
+    ORGANIZATION=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Organization" $CONFIG_FILE)
 
     PEERS=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Peers[].Name" $CONFIG_FILE)
     for PEER in $PEERS; do
@@ -270,7 +271,7 @@ peer:
       AltID:
       KeyIds:
   mspConfigPath: /etc/hyperledger/peer/msp
-  localMspId: ${REGNUM}
+  localMspId: ${ORGANIZATION}
   client:
     connTimeout: 3s
   deliveryclient:
@@ -476,6 +477,9 @@ EOF
         echo ""
         echo_info "CLI  cli.$PEER_NAME starting..."
 
+        ORG_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/_Organization/msp/tlscacerts/*.pem))
+        export FABRIC_CFG_PATH=/etc/hyperledger/fabric
+
         docker run -d \
             --name cli.$PEER_NAME \
             --network $DOCKER_NETWORK_NAME \
@@ -488,12 +492,14 @@ EOF
             -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$FIRST_ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
             -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME/production:/var/hyperledger/production \
             -v ${PWD}/infrastructure/$ORBIS_NAME/$REGNUM/$PEER_NAME:/opt/gopath/src/github.com/hyperledger/fabric/chaincode \
+            -v ${PWD}/infrastructure:/var/hyperledger/infrastructure \
+            -v ${PWD}/configuration:/var/hyperledger/configuration \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w /opt/gopath/src/github.com/hyperledger/fabric \
             -e GOPATH=/opt/gopath \
             -e CORE_PEER_ID=cli.$PEER_NAME \
             -e CORE_PEER_ADDRESS=$PEER_NAME:$PEER_PORT1 \
-            -e CORE_PEER_LOCALMSPID=${REGNUM} \
+            -e CORE_PEER_LOCALMSPID=${ORGANIZATION} \
             -e CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp \
             -e CORE_PEER_TLS_ENABLED=true \
             -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/signcerts/cert.pem \
@@ -507,6 +513,27 @@ EOF
 
         CheckContainer "cli.$PEER_NAME" "$DOCKER_CONTAINER_WAIT"
 
+
+        echo_error "TEST: Channel List"
+        docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel list --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
+        --tls --cafile /var/hyperledger/infrastructure/$ORBIS_NAME/$REGNUM/_Organization/msp/tlscacerts/$ORG_TLSCACERT_FILE
+
+        echo_error "TEST: Channel Fetch"
+        docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel fetch config genesis_block.pb --channelID $REGNUM --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
+        --tls --cafile /var/hyperledger/infrastructure/$ORBIS_NAME/$REGNUM/_Organization/msp/tlscacerts/$ORG_TLSCACERT_FILE
+        
+#        bash peer channel list
+
+# 2024-12-09 17:07:47.133 UTC 0032 WARN [msp] validateIdentity -> Could not validate identity: could not validate identity's OUs: certifiersIdentifier does not match: 
+# [jedo(86F565D2037187C9) peer(86F565D2037187C9) root(86F565D2037187C9)], 
+# MSP: [ea] (certificate subject=CN=peer1.ea.jedo.dev,OU=jedo+OU=peer+OU=root,O=ea,ST=dev,C=jd issuer=CN=ca.jedo.dev,O=JEDO,L=orbis,ST=dev,C=XX serialnumber=480824256698855961778230763129674567072230188588)
+
+# 2024-12-09 17:07:47.135 UTC 0033 WARN [orderer.common.msgprocessor] Apply -> SigFilter evaluation failed error="implicit policy evaluation failed - 0 sub-policies were satisfied, but this policy requires 1 of the 'Readers' sub-policies to be satisfied" 
+# ConsensusState=STATE_NORMAL policyName=/Channel/Readers signingIdentity=
+# "(mspid=ea subject=CN=peer1.ea.jedo.dev,OU=jedo+OU=peer+OU=root,O=ea,ST=dev,C=jd issuer=CN=ca.jedo.dev,O=JEDO,L=orbis,ST=dev,C=XX serialnumber=480824256698855961778230763129674567072230188588)"
+
+# 2024-12-09 17:07:47.135 UTC 0034 WARN [common.deliver] deliverBlocks -> [channel: ea.jedo.dev] Client 172.25.2.53:43990 is not authorized: implicit policy evaluation failed - 
+# 0 sub-policies were satisfied, but this policy requires 1 of the 'Readers' sub-policies to be satisfied: permission denied
 
         echo ""
         echo_ok "Peer $PEER started."

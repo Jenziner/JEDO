@@ -24,24 +24,27 @@ for CHANNEL in $CHANNELS; do
 
     ORGANIZATION=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Administration.Organization" $CONFIG_FILE)
     ADMIN=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Administration.Contact" $CONFIG_FILE)
+
+    export PATH=$PATH:$FABRIC_BIN_PATH
+    export FABRIC_CFG_PATH=${PWD}/configuration/$CHANNEL
+    export OSN_TLS_CA_ROOT_CERT=$(ls ${PWD}/infrastructure/$ORBIS_NAME/$CHANNEL/_Admin/tls/tlscacerts/*.pem)
+    export ADMIN_TLS_SIGNCERT=${PWD}/infrastructure/$ORBIS_NAME/$CHANNEL/_Admin/$ADMIN/tls/signcerts/cert.pem
+    export ADMIN_TLS_PRIVATEKEY=$(ls ${PWD}/infrastructure/$ORBIS_NAME/$CHANNEL/_Admin/$ADMIN/tls/keystore/*_sk)
+
     ORDERERS=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[].Name" $CONFIG_FILE)
     for ORDERER in $ORDERERS; do
         ###############################################################
-        # Channel
+        # Channel Join for Orderers
         ###############################################################
         ORDERER_NAME=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Name" $CONFIG_FILE)
         ORDERER_IP=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[] | select(.Name == \"$ORDERER\") | .IP" $CONFIG_FILE)
         ORDERER_ADMINPORT=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[] | select(.Name == \"$ORDERER\") | .AdminPort" $CONFIG_FILE)
 
-        export PATH=$PATH:$FABRIC_BIN_PATH
-        export FABRIC_CFG_PATH=${PWD}/configuration/$CHANNEL
-        export OSN_TLS_CA_ROOT_CERT=$(ls ${PWD}/infrastructure/$ORBIS_NAME/$CHANNEL/$ORDERER_NAME/tls/tlscacerts/*.pem)
-        export ADMIN_TLS_SIGNCERT=${PWD}/infrastructure/$ORBIS_NAME/$CHANNEL/Admin/$ADMIN/tls/signcerts/cert.pem
-        export ADMIN_TLS_PRIVATEKEY=$(ls ${PWD}/infrastructure/$ORBIS_NAME/$CHANNEL/Admin/$ADMIN/tls/keystore/*_sk)
 
         # Uncomment for genesis-file debug
         # echo_info "List Genesis-File"
         # configtxlator proto_decode --input=$FABRIC_CFG_PATH/genesis_block.pb --type=common.Block
+
 
         echo ""
         echo_info "$ORDERER_NAME joins $CHANNEL..."
@@ -54,11 +57,5 @@ done
 echo ""
 echo_warn "Joins to Channels completed..."
 
-
-
-
-
-
-# echo_info "osnadmin channel join --channelID $CHANNEL --config-block $FABRIC_CFG_PATH/genesis_block.pb -o $ORDERER_IP:$ORDERER_ADMINPORT --ca-file $OSN_TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGN_CERT --client-key $ADMIN_TLS_PRIVATE_KEY"
 
 
