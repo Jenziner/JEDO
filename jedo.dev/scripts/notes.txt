@@ -83,3 +83,7 @@ docker exec -it cli.ca.jedo.test ls /etc/hyperledger/production/admin.ca.jedo.te
 docker exec -it peer0.jenziner.jedo.test openssl x509 -in /etc/hyperledger/fabric/msp/signcerts/cert.pem -text -noout
 openssl crl2pkcs7 -nocrl -certfile ca-chain.pem | openssl pkcs7 -print_certs -text -noout
 
+
+
+
+/mnt/user/appdata/fabric/bin/configtxgen -configPath /mnt/user/appdata/jedo-dev/configuration/ea.jedo.dev -profile JedoChannel -channelID ea.jedo.dev -outputBlock /mnt/user/appdata/jedo-dev/configuration/ea.jedo.dev/genesis_block.pb

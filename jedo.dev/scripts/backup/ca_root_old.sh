@@ -5,32 +5,26 @@
 # 
 #
 ###############################################################
-source ./utils/utils.sh
-source ./utils/help.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/utils.sh"
 check_script
 
 
 ###############################################################
 # Params - from ./config/network-config.yaml
 ###############################################################
-CONFIG_FILE="./config/infrastructure-dev.yaml"
+CONFIG_FILE="$SCRIPT_DIR/infrastructure-dev.yaml"
 DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
 DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
-CHANNELS=$(yq e ".FabricNetwork.Channels[].Name" $CONFIG_FILE)
 
-for CHANNEL in $CHANNELS; do
     echo ""
-    echo_warn "Root-CA starting for $CHANNEL... - see Documentation here: https://hyperledger-fabric-ca.readthedocs.io"
+    echo_warn "Root-CA starting... "
 
-    ROOTCA_NAME=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .RootCA.Name" "$CONFIG_FILE")
-    ROOTCA_SUBJECT=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .RootCA.Subject" "$CONFIG_FILE")
-    ROOTCA_PASS=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .RootCA.Pass" "$CONFIG_FILE")
-    ROOTCA_IP=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .RootCA.IP" "$CONFIG_FILE")
-    ROOTCA_PORT=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .RootCA.Port" "$CONFIG_FILE")
-    ROOTCA_OPPORT=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .RootCA.OpPort" "$CONFIG_FILE")
-    ROOTCA_OPENSSL=$(yq eval ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .RootCA.OpenSSL" "$CONFIG_FILE")
-    ORGANIZATIONS=$(yq e ".FabricNetwork.Channels[] | select(.Name == \"$CHANNEL\") | .Organizations[].Name" $CONFIG_FILE)
+    ROOTCA_NAME=$(yq eval ".Root.Name" "$CONFIG_FILE")
+    ROOTCA_PASS=$(yq eval ".Root.Pass" "$CONFIG_FILE")
+    ROOTCA_IP=$(yq eval ".Root.IP" "$CONFIG_FILE")
+    ROOTCA_PORT=$(yq eval ".Root.Port" "$CONFIG_FILE")
 
     ROOTCA_SRV_DIR=/etc/hyperledger/fabric-ca-server
     ROOTCA_CLI_DIR=/etc/hyperledger/fabric-ca-client
@@ -58,16 +52,14 @@ for CHANNEL in $CHANNELS; do
         -e FABRIC_CA_SERVER_CSR_HOSTS="$ROOTCA_NAME,localhost" \
         -e FABRIC_CA_SERVER_TLS_ENABLED=true \
         -e FABRIC_CA_SERVER_IDEMIX_CUURVE=gurvy.Bn254 \
-        -e FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS=0.0.0.0:$ROOTCA_OPPORT \
         -e FABRIC_CA_CLIENT=$ROOTCA_CLI_DIR \
         -e FABRIC_CA_CLIENT_MSPDIR=$ROOTCA_CLI_DIR/msp \
         -e FABRIC_CA_CLIENT_TLS_ENABLED=true \
         -e FABRIC_CA_CLIENT_TLS_CERTFILES=$ROOTCA_SRV_DIR/tls-cert.pem \
-        -v ${PWD}/keys/$CHANNEL/_infrastructure/_root/$ROOTCA_NAME:$ROOTCA_SRV_DIR \
-        -v ${PWD}/keys/$CHANNEL/_infrastructure/_root/cli.$ROOTCA_NAME:$ROOTCA_CLI_DIR \
-        -v ${PWD}/keys/$CHANNEL/_infrastructure/:$KEYS_DIR \
+        -v ${PWD}/infrastructure/_root/$ROOTCA_NAME:$ROOTCA_SRV_DIR \
+        -v ${PWD}/infrastructure/_root/cli.$ROOTCA_NAME:$ROOTCA_CLI_DIR \
+        -v ${PWD}/infrastructure/:$KEYS_DIR \
         -p $ROOTCA_PORT:$ROOTCA_PORT \
-        -p $ROOTCA_OPPORT:$ROOTCA_OPPORT \
         hyperledger/fabric-ca:latest \
         sh -c "fabric-ca-server start -b $ROOTCA_NAME:$ROOTCA_PASS" 
 
@@ -75,17 +67,17 @@ for CHANNEL in $CHANNELS; do
     CheckContainer "$ROOTCA_NAME" "$DOCKER_CONTAINER_WAIT"
     CheckContainerLog "$ROOTCA_NAME" "Listening on https://0.0.0.0:$ROOTCA_PORT" "$DOCKER_CONTAINER_WAIT"
 
-    # Installing OpenSSL
-    if [[ $ROOTCA_OPENSSL = true ]]; then
-        echo_info "OpenSSL installing..."
-        docker exec $ROOTCA_NAME sh -c 'command -v apk && apk update && apk add --no-cache openssl || (apt-get update && apt-get install -y openssl)'
-        CheckOpenSSL "$ROOTCA_NAME" "$DOCKER_CONTAINER_WAIT"
-    fi
+    chmod -R 777 ./infrastructure
+temp_end
+
 
     # Enroll Root-CA-Admin
     echo ""
     echo_info "Root-Admin enrolling..."
     docker exec -it $ROOTCA_NAME fabric-ca-client enroll -u https://$ROOTCA_NAME:$ROOTCA_PASS@$ROOTCA_NAME:$ROOTCA_PORT --mspdir $ROOTCA_CLI_DIR/msp
+
+
+temp_end
 
     # Add Affiliation
     echo ""
@@ -175,11 +167,9 @@ for CHANNEL in $CHANNELS; do
 
     echo_ok "Intermediate-CA certificates generated."
 
-done
 
 #     --tls.enabled \
 #     --operations.listenAddress=0.0.0.0:$ROOTCA_OPPORT \
 #     --operations.tls.enabled \
 #     --operations.tls.certfile=$ROOTCA_DIR/tls-cert.pem \
 #     --operations.tls.keyfile=$ROOTCA_DIR/tls-key.pem 
-

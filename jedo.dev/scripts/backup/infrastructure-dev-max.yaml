@@ -1,0 +1,351 @@
+################################################################################
+#
+#   Infrastructure for JEDO-DEV
+#
+#   IP Base: 172.25.x.y
+#     x:
+#       0: Root (Port 07xxx)
+#       1: Jenziner (Port 17xxx)
+#       2: Liebiwiler (Port 27xxx)
+#       3: Breitschi (Port 37xxx)
+#       4: Lenique (Port 47xxx)
+#     y:
+#       02-09: CA
+#       10-19: Orderer
+#       20-29: Peer0
+#       30-39: Peer1
+#
+#
+################################################################################
+Fabric:
+    # path to fabric-folder where bin and config subfolders exist
+    Path: /mnt/user/appdata/fabric
+Docker:
+    Unraid: 192.168.0.13
+    Network:
+        Name: jedo-dev
+        Subnet: 172.25.0.0/16
+        Gateway: 172.25.0.1
+    Container:
+        Wait: 60 # Max waiting time in seconds to start a docker container prior to exit
+        FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
+Root:
+    Name: jedo.dev
+    TLS-CA: 
+        Name: tls-ca.jedo.dev
+        Pass: Test1
+        IP: 172.25.0.11
+        Port: 7052
+        OpenSSL: false
+    ORG-CA: 
+        Name: org-ca.jedo.dev
+        Pass: Test1
+        IP: 172.25.0.12
+        Port: 7053
+        OpenSSL: false
+Intermediates:
+    - Name: TWS
+      TLS-CA: 
+          Name: tls-ca.tws.jedo.dev
+          Pass: Test1
+          IP: 172.25.0.21
+          Port: 8052
+          OpPort: 8059
+          OpenSSL: false
+      ORG-CA: 
+          Name: org-ca.tws.jedo.dev
+          Pass: Test1
+          IP: 172.25.0.22
+          Port: 9052
+          OpPort: 9059
+          OpenSSL: false
+Organizations:
+    - Name: Jenziner
+      Root: TWS
+      TLS-CA: 
+          Name: tls-ca.jenziner.jedo.dev
+          Pass: Test1
+          IP: 172.25.1.1
+          Port: 17054
+          OpPort: 17059
+          OpenSSL: false
+          Ext:
+          CAAPI:
+              Name:
+              IP:
+              Port:
+              SrvPort:
+      ORG-CA: 
+          Name: org-ca.jenziner.jedo.dev
+          Pass: Test1
+          IP: 172.25.1.2
+          Port: 18054
+          OpPort: 18059
+          OpenSSL: false
+          Ext:
+          CAAPI:
+              Name: api.org-ca.jenziner.jedo.dev
+              IP: 172.25.1.3
+              Port: 18055
+              SrvPort: 18056
+      Orderers:
+          - Name: orderer.jenziner.jedo.dev
+            Subject: "C=XX,ST=jedo.dev,L=jenziner,CN=orderer.jenziner.jedo.dev"
+            Pass: Test1
+            IP: 172.25.1.11
+            Port: 17050
+            ClusterPort: 17052
+            OpPort: 17059
+            AdminPort: 17053
+      Peers: # first peer will be used as AnchorPeer
+          - Name: peer0.jenziner.jedo.dev
+            Subject: "C=XX,ST=jedo.dev,L=jenziner,CN=peer0.jenziner.jedo.dev"
+            Pass: Test1
+            IP: 172.25.1.21
+            Port1: 17061
+            Port2: 17062
+            OpPort: 17069
+            CLI: 172.25.1.23
+            DB: 
+                Name: db.peer0.jenziner.jedo.dev
+                Pass: Test1
+                IP: 172.25.1.22
+                Port: 17064
+          - Name: peer1.jenziner.jedo.dev
+            Subject: "C=XX,ST=jedo.dev,L=jenziner,CN=peer1.jenziner.jedo.dev"
+            Pass: Test1
+            IP: 172.25.1.31
+            Port1: 17071
+            Port2: 17072
+            OpPort: 17079
+            CLI: 172.25.1.33
+            DB: 
+                Name: db.peer1.jenziner.jedo.dev
+                Pass: Test1
+                IP: 172.25.1.32
+                Port: 17074
+    - Name: Liebiwiler
+      Root: TWS
+      TLS-CA: 
+          Name: tls-ca.liebiwiler.jedo.dev
+          Pass: Test1
+          IP: 172.25.2.1
+          Port: 27054
+          OpPort: 27059
+          OpenSSL: false
+          Ext:
+          CAAPI:
+              Name:
+              IP:
+              Port:
+              SrvPort:
+      ORG-CA: 
+          Name: org-ca.liebiwiler.jedo.dev
+          Pass: Test1
+          IP: 172.25.2.2
+          Port: 28054
+          OpPort: 28059
+          OpenSSL: false
+          Ext:
+          CAAPI:
+              Name: api.org-ca.liebiwiler.jedo.dev
+              IP: 172.25.2.3
+              Port: 28055
+              SrvPort: 28056
+      Orderers:
+          - Name: orderer.liebiwiler.jedo.dev
+            Subject: "C=XX,ST=jedo.dev,L=liebiwiler,CN=orderer.liebiwiler.jedo.dev"
+            Pass: Test1
+            IP: 172.25.2.11
+            Port: 27050
+            ClusterPort: 27052
+            OpPort: 27059
+            AdminPort: 27053
+      Peers: # first peer will be used as AnchorPeer
+          - Name: peer0.liebiwiler.jedo.dev
+            Subject: "C=XX,ST=jedo.dev,L=liebiwiler,CN=peer0.liebiwiler.jedo.dev"
+            Pass: Test1
+            IP: 172.25.2.21
+            Port1: 27061
+            Port2: 27062
+            OpPort: 27069
+            CLI: 172.25.2.23
+            DB: 
+                Name: db.peer0.liebiwiler.jedo.dev
+                Pass: Test1
+                IP: 172.25.2.22
+                Port: 27064
+    - Name: Breitschi
+      Root: TWS
+      TLS-CA: 
+          Name:
+          Admin:
+          Pass:
+          IP:
+          Port:
+          OpPort:
+          OpenSSL:
+          Ext: tls-ca.jenziner.jedo.dev
+          CAAPI:
+              Name:
+              IP:
+              Port:
+              SrvPort:
+      ORG-CA:
+          Name:
+          Admin:
+          Pass:
+          IP:
+          Port:
+          OpPort:
+          OpenSSL:
+          Ext: org-ca.jenziner.jedo.dev
+          CAAPI:
+              Name:
+              IP:
+              Port:
+              SrvPort:
+      Orderers:
+          - Name: orderer.breitschi.jedo.dev
+            Subject: "C=XX,ST=jedo.dev,L=breitschi,CN=orderer.breitschi.jedo.dev"
+            Pass: Test1
+            IP: 172.25.3.11
+            Port: 37050
+            ClusterPort: 37052
+            OpPort: 37059
+            AdminPort: 37053
+      Peers: # first peer will be used as AnchorPeer
+          - Name: peer0.breitschi.jedo.dev
+            Subject: "C=XX,ST=jedo.dev,L=breitschi,CN=peer0.breitschi.jedo.dev"
+            Pass: Test1
+            IP: 172.25.3.21
+            Port1: 37061
+            Port2: 37062
+            OpPort: 37069
+            CLI: 172.25.3.23
+            DB: 
+                Name: db.peer0.breitschi.jedo.dev
+                Pass: Test1
+                IP: 172.25.3.22
+                Port: 37064
+    - Name: Lenique
+      Root: TWS
+      TLS-CA: 
+          Name:
+          Admin:
+          Pass:
+          IP:
+          Port:
+          OpPort:
+          OpenSSL:
+          Ext: tls-ca.liebiwiler.jedo.dev
+          CAAPI:
+              Name:
+              IP:
+              Port:
+              SrvPort:
+      ORG-CA:
+          Name:
+          Admin:
+          Pass:
+          IP:
+          Port:
+          OpPort:
+          OpenSSL:
+          Ext: org-ca.liebiwiler.jedo.dev
+          CAAPI:
+              Name:
+              IP:
+              Port:
+              SrvPort:
+      Orderers:
+          - Name: orderer.lenique.jedo.dev
+            Subject: "C=XX,ST=jedo.dev,L=lenique,CN=orderer.lenique.jedo.dev"
+            Pass: Test1
+            IP: 172.25.4.11
+            Port: 47050
+            ClusterPort: 47052
+            OpPort: 47059
+            AdminPort: 47053
+      Peers: # first peer will be used as AnchorPeer
+          - Name: peer0.lenique.jedo.dev
+            Subject: "C=XX,ST=jedo.dev,L=lenique,CN=peer0.lenique.jedo.dev"
+            Pass: Test1
+            IP: 172.25.4.21
+            Port1: 47061
+            Port2: 47062
+            OpPort: 47069
+            CLI: 172.25.4.23
+            DB: 
+                Name: db.peer0.lenique.jedo.dev
+                Pass: Test1
+                IP: 172.25.4.22
+                Port: 47064
+Channels:
+    - Name: ea.jedo.dev
+      Orderers:
+        - Name: JenzinerOrderer
+        - Name: LiebiwilerOrderer
+        - Name: BreitschiOrderer
+      Peers:
+        - Name: JenzinerPeer0
+        - Name: JenzinerPeer1
+        - Name: LiebiwilerPeer0
+        - Name: BreitschiPeer0
+      Regions:
+          - Name: alps.ea.jedo.dev
+            Subject: "C=ea,ST=jedo.dev,L=alps,CN=alps.ea.jedo.dev"
+            Auditors: #for FSC and User
+                - Name: aud.alps.ea.jedo.dev
+                  Subject: "C=ea,ST=jedo.dev,L=alps,CN=aud.alps.ea.jedo.dev"
+                  Pass: Test1
+                  CA: JenzinerORGCA
+            Issuers: #for FSC and User
+                - Name: iss.alps.ea.jedo.dev
+                  Subject: "C=ea,ST=jedo.dev,L=alps,CN=iss.alps.ea.jedo.dev"
+                  Pass: Test1
+                  CA: JenzinerORGCA
+            Owners:  #for FSC and User
+                - Name: worb.alps.ea.jedo.dev
+                  Subject: "C=ea,ST=jedo.dev,L=alps,O=worb,CN=worb.alps.ea.jedo.dev"
+                  Pass: Test1
+                  CA: JenzinerORGCA
+                  Users: 
+                      - Name: do
+                        Subject: "C=ea,ST=jedo.dev,L=alps,O=worb,CN=do.worb.alps.ea.jedo.dev"
+                        Pass: Test1
+                      - Name: ra
+                        Subject: "C=ea,ST=jedo.dev,L=alps,O=worb,CN=ra.worb.alps.ea.jedo.dev"
+                        Pass: Test1
+                - Name: biglen.alps.ea.jedo.dev
+                  Subject: "C=ea,ST=jedo.dev,L=alps,O=biglen,CN=biglen.alps.ea.jedo.dev"
+                  Pass: Test1
+                  CA: JenzinerORGCA
+                  Users:
+                      - Name: lu
+                        Subject: "C=ea,ST=jedo.dev,L=alps,O=biglen,CN=lu.biglen.alps.ea.jedo.dev"
+                        Pass: Test1
+                      - Name: is
+                        Subject: "C=ea,ST=jedo.dev,L=alps,O=biglen,CN=is.biglen.alps.ea.jedo.dev"
+                        Pass: Test1
+    - Name: as.jedo.dev
+      Orderers:
+        - Name: LeniqueOrderer
+        - Name: BreitschiOrderer
+      Peers:
+        - Name: LeniquePeer0
+        - Name: BreitschiPeer0
+      Regions:
+          - Name: sea.as.jedo.dev
+            Subject: "C=as,ST=jedo.dev,L=sea,CN=sea.as.jedo.dev"
+            Auditors: #for FSC and User
+                - Name: aud.sea.as.jedo.dev
+                  Subject: "C=as,ST=jedo.dev,L=sea,CN=aud.sea.as.jedo.dev"
+                  Pass: Test1
+                  CA: JenzinerORGCA
+            Issuers: #for FSC and User
+                - Name: iss.sea.as.jedo.dev
+                  Subject: "C=as,ST=jedo.dev,L=sea,CN=iss.sea.as.jedo.dev"
+                  Pass: Test1
+                  CA: JenzinerORGCA
+  

@@ -5,8 +5,10 @@
 # Documentation: https://hyperledger-fabric.readthedocs.io
 #
 ###############################################################
-source ./utils/utils.sh
-source ./utils/help.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/help.sh"
+
 export JEDO_INITIATED="yes"
 
 
@@ -17,8 +19,8 @@ if [[ $# -eq 0 ]]; then
     up_help
 fi
 opt_d=false
-opt_a=""
-opt_r=""
+opt_a="n/a"
+opt_r="n/a"
 while getopts ":hpda:r:" opt; do
     case ${opt} in
         h )
@@ -37,7 +39,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "ca" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" ]]; then
+            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -59,7 +61,7 @@ done
 ###############################################################
 # Params
 ###############################################################
-CONFIG_FILE="./config/infrastructure-dev.yaml"
+CONFIG_FILE="$SCRIPT_DIR/infrastructure-dev.yaml"
 FABRIC_PATH=$(yq eval '.Fabric.Path' $CONFIG_FILE)
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
 DOCKER_NETWORK_SUBNET=$(yq eval '.Docker.Network.Subnet' $CONFIG_FILE)
@@ -73,10 +75,8 @@ export FABRIC_CFG_PATH=./config
 # Checks
 ###############################################################
 if [[ "$opt_r" == "prereq" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./utils/prereq.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Prerequisites checked."
-    fi
+    $SCRIPT_DIR/prereq.sh
+    cool_down $opt_a "Prerequisites checked."
 fi
 
 
@@ -84,10 +84,8 @@ fi
 # Delete previous installation
 ###############################################################
 if $opt_d || [[ "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/down.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Previous installation deleted."
-    fi
+    $SCRIPT_DIR/down.sh
+    cool_down $opt_a "Previous installation deleted."
 fi
 
 
@@ -101,54 +99,35 @@ if [[ "$opt_r" == "net" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
         docker network create --subnet=$DOCKER_NETWORK_SUBNET --gateway=$DOCKER_NETWORK_GATEWAY "$DOCKER_NETWORK_NAME"
     fi
     docker network inspect "$DOCKER_NETWORK_NAME"
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Docker Network started."
-    fi
+    cool_down $opt_a "Docker Network started."
     echo_ok "Docker Network started."
 fi
 
 
 ###############################################################
-# Generate Root-CA
+# Run Fabric Tools
 ###############################################################
-if [[ "$opt_r" == "root" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/root.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Root-CA started."
-    fi
+if [[ "$opt_r" == "tools" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    $SCRIPT_DIR/tools.sh
+    cool_down $opt_a "Fabric Tools started."
 fi
+
+
+###############################################################
+# Run LDAP
+###############################################################
+# if [[ "$opt_r" == "ldap" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+#     $SCRIPT_DIR/ldap.sh
+#     cool_down $opt_a "LDAP started."
+# fi
 
 
 ###############################################################
 # Run CA
 ###############################################################
 if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/ca.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "CA running."
-    fi
-fi
-
-
-###############################################################
-# Enroll certificates
-###############################################################
-if [[ "$opt_r" == "enroll" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/enroll.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Certificates enrolled."
-    fi
-fi
-
-
-###############################################################
-# Run Peer
-###############################################################
-if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/peer.sh peer
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Peers running."
-    fi
+    $SCRIPT_DIR/ca.sh
+    cool_down $opt_a "CA started."
 fi
 
 
@@ -157,9 +136,7 @@ fi
 ###############################################################
 if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/orderer.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Orderers running."
-    fi
+    cool_down $opt_a "Orderers running."
 fi
 
 
@@ -168,9 +145,7 @@ fi
 ###############################################################
 if [[ "$opt_r" == "config" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/config.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Genesis Block and Channel Configuration generated."
-    fi
+    cool_down $opt_a "Genesis Block and Channel Configuration generated."
 fi
 
 
@@ -179,9 +154,26 @@ fi
 ###############################################################
 if [[ "$opt_r" == "channel" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/channel.sh
-    if [[ "$opt_a" == "pause" ]]; then
-        cool_down "Channel created."
-    fi
+    cool_down $opt_a "Channel created."
+fi
+
+
+###############################################################
+# Run Peer
+###############################################################
+if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/peer.sh peer
+    cool_down $opt_a "Peers running."
+fi
+
+
+###############################################################
+# Enroll certificates
+###############################################################
+if [[ "$opt_r" == "enroll" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/enroll.sh
+    cool_down $opt_a "Certificates enrolled."
+    
 fi
 
 

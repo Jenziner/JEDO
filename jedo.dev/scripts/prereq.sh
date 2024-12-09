@@ -5,8 +5,8 @@
 # Documentation: https://hyperledger-fabric.readthedocs.io
 #
 ###############################################################
-source ./utils/utils.sh
-source ./utils/help.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/utils.sh"
 check_script
 
 echo_warn "Prerequisites checking..."
