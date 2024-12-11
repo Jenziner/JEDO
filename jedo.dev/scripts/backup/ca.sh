@@ -23,7 +23,7 @@ source "$SCRIPT_DIR/ca_utils.sh"
 check_script
 
 # TEMP - needs to be changed, if certs are available in git, copy then from git when needed
-cp -r ./RootCA/root/. ./infrastructure/
+cp -r ./RootCA/ROOT/. ./infrastructure/
 
 
 ###############################################################
@@ -34,6 +34,9 @@ DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
 DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
 DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
 
+ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
+ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
+
 get_hosts
 
 echo ""
@@ -43,20 +46,17 @@ echo_warn "CA starting... (Defaults: https://hyperledger-fabric-ca.readthedocs.i
 ###############################################################
 # Orbis-TLS-CA
 ###############################################################
-ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
-ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
-
-ORBIS_NAME=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
+ORBIS=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
 ORBIS_TLS_NAME=$(yq eval ".Orbis.TLS.Name" "$CONFIG_FILE")
 ORBIS_TLS_PASS=$(yq eval ".Orbis.TLS.Pass" "$CONFIG_FILE")
 ORBIS_TLS_IP=$(yq eval ".Orbis.TLS.IP" "$CONFIG_FILE")
 ORBIS_TLS_PORT=$(yq eval ".Orbis.TLS.Port" "$CONFIG_FILE")
 ORBIS_TLS_OPPORT=$(yq eval ".Orbis.TLS.OpPort" "$CONFIG_FILE")
 
-# LOCAL_INFRA_DIR=${PWD}/infrastructure
-LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS_NAME/$ORBIS_TLS_NAME
-HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
 
+# LOCAL_INFRA_DIR=${PWD}/infrastructure
+LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$ORBIS_TLS_NAME
+HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
 mkdir -p $LOCAL_SRV_DIR
 
 
@@ -171,8 +171,8 @@ CheckContainerLog "$ORBIS_TLS_NAME" "Listening on https://0.0.0.0:$ORBIS_TLS_POR
 
 # copy ca-cert.pem to TLS-key directory and ca-client directory
 cp -r $LOCAL_SRV_DIR/ca-cert.pem $LOCAL_SRV_DIR/tls-ca-cert.pem
-mkdir ${PWD}/infrastructure/$ORBIS_NAME/$ORBIS_TOOLS_NAME/ca-client/tls-root-cert
-cp -r $LOCAL_SRV_DIR/ca-cert.pem ${PWD}/infrastructure/$ORBIS_NAME/$ORBIS_TOOLS_NAME/ca-client/tls-root-cert/tls-ca-cert.pem
+mkdir ${PWD}/infrastructure/$ORBIS/$ORBIS_TOOLS_NAME/ca-client/tls-root-cert
+cp -r $LOCAL_SRV_DIR/ca-cert.pem ${PWD}/infrastructure/$ORBIS/$ORBIS_TOOLS_NAME/ca-client/tls-root-cert/tls-ca-cert.pem
 
 
 # Enroll Orbis-TLS-CA TLS certs
@@ -182,11 +182,11 @@ docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$ORBIS_TLS_
     --home $ORBIS_TOOLS_CACLI_DIR \
     --tls.certfiles tls-root-cert/tls-ca-cert.pem \
     --enrollment.profile tls \
-    --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS_NAME/$ORBIS_TLS_NAME/tls \
+    --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
 
 
 ###############################################################
-# Register and entroll Orbis-CA TLS certs
+# Register and entroll TLS certs for Orbis-CA
 ###############################################################
 ORBIS_CA_NAME=$(yq eval ".Orbis.CA.Name" "$CONFIG_FILE")
 ORBIS_CA_PASS=$(yq eval ".Orbis.CA.Pass" "$CONFIG_FILE")
@@ -198,18 +198,18 @@ echo_info "Orbis-CA $ORBIS_CA_NAME TLS registering and enrolling..."
 docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
     --home $ORBIS_TOOLS_CACLI_DIR \
     --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-    --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS_NAME/$ORBIS_TLS_NAME/tls \
+    --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
     --id.name $ORBIS_CA_NAME --id.secret $ORBIS_CA_PASS --id.type client --id.affiliation jedo.root
 docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
     --home $ORBIS_TOOLS_CACLI_DIR \
     --tls.certfiles tls-root-cert/tls-ca-cert.pem \
     --enrollment.profile tls \
-    --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS_NAME/$ORBIS_CA_NAME/tls \
+    --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_CA_NAME/tls \
     --csr.hosts ${ORBIS_CA_NAME},${ORBIS_CA_IP},${ORBIS_TLS_NAME},${ORBIS_TLS_IP},*.jedo.dev
 
 
 ###############################################################
-# Register and entroll Regnums-CA TLS certs
+# Register and entroll TLS certs for Regnums-CA
 ###############################################################
 REGNUMS=$(yq eval '.Regnum[] | .Name' "$CONFIG_FILE")
 REGNUM_COUNT=$(echo "$REGNUMS" | wc -l)

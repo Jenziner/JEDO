@@ -126,7 +126,9 @@ fi
 # Run CA
 ###############################################################
 if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    $SCRIPT_DIR/ca.sh
+    $SCRIPT_DIR/ca_tls-node.sh
+    $SCRIPT_DIR/ca_tls-certs.sh
+    $SCRIPT_DIR/ca_ca-nodes.sh
     cool_down $opt_a "CA started."
 fi
 

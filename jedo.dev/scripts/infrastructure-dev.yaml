@@ -30,14 +30,14 @@ Docker:
         Wait: 60 # Max waiting time in seconds to start a docker container prior to exit
         FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
 Root:
-    Name: root
+    Name: ROOT
     CA:
         Name: rca.jedo.me # Root-CA is always rca.jedo.me, independant of the environment
         IP: 192.168.0.13
 Orbis:
-    Name: jedo.dev
+    Name: JEDO
     Administration:
-        Parent: jedo.dev
+        Parent: ROOT
         Contact: Nik
         Mail: nik@jedo.me
         Phone: +41791234567
@@ -70,10 +70,9 @@ Orbis:
         IP: 172.25.1.9
         Port: 51091
 Regnum:
-    - Name: ea.jedo.dev
-      Organization: ea
+    - Name: EA
       Administration:
-          Parent: jedo.dev
+          Parent: JEDO
           Contact: Nik
           Subject: "C=jd,ST=dev,O=ea,CN=nik.ea.jedo.dev"
           Pass: Test1
@@ -98,6 +97,30 @@ Regnum:
           IP: 172.25.2.4
           Port: 52041
           OpPort: 52049
+Ager:
+    - Name: ALPS
+      Administration:
+          Parent: EA
+          Contact: Nik
+          Mail: nik@jedo.me
+          Phone: +41791234567
+      TLS: 
+          Name: tls.alps.ea.jedo.dev
+          Pass: Test1
+          IP: 172.25.3.3
+          Port: 53031
+          OpPort: 53039
+      CA: 
+          Name: ca.alps.ea.jedo.dev
+          Pass: Test1
+          IP: 172.25.3.4
+          Port: 53041
+          OpPort: 53049
+          CAAPI:
+              Name: ca.api.alps.ea.jedo.dev
+              IP: 172.25.3.5
+              Port: 53051
+              SrvPort: 53059
       Orderers:
           - Name: orderer1.ea.jedo.dev
             Subject: "C=jd,ST=dev,O=ea,CN=orderer1.ea.jedo.dev"
@@ -137,30 +160,6 @@ Regnum:
                 Pass: Test1
                 IP: 172.25.2.52
                 Port: 52521
-Ager:
-    - Name: alps.ea.jedo.dev
-      Administration:
-          Parent: ea.jedo.dev
-          Contact: Nik
-          Mail: nik@jedo.me
-          Phone: +41791234567
-      TLS: 
-          Name: tls.alps.ea.jedo.dev
-          Pass: Test1
-          IP: 172.25.3.3
-          Port: 53031
-          OpPort: 53039
-      CA: 
-          Name: ca.alps.ea.jedo.dev
-          Pass: Test1
-          IP: 172.25.3.4
-          Port: 53041
-          OpPort: 53049
-          CAAPI:
-              Name: ca.api.alps.ea.jedo.dev
-              IP: 172.25.3.5
-              Port: 53051
-              SrvPort: 53059
       Operators:
           - Name: admin.jenziner.jedo.dev
             Pass: Test1
