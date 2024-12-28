@@ -145,10 +145,30 @@ Ager:
                 IP: 172.25.3.52
                 Port: 53521
       Operators:
-          - Name: admin.jenziner.jedo.dev
+          - Name: admin.alps.ea.jedo.dev
             Pass: Test1
             Type: admin
-            Subject: "C=ea,ST=jedo.dev,L=jenziner,CN=admin.jenziner.jedo.dev"
+            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=admin.alps.ea.jedo.dev"
+      Auditors: #for FSC and User
+          - Name: aud.alps.ea.jedo.dev
+            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=aud.alps.ea.jedo.dev"
+            Pass: Test1
+      Issuers: #for FSC and User
+          - Name: iss.alps.ea.jedo.dev
+            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=iss.alps.ea.jedo.dev"
+            Pass: Test1
+      Owners:  #for FSC and User
+          - Name: WORB
+            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=worb.alps.ea.jedo.dev"
+            Pass: Test1
+            Users: 
+                - Name: do
+                  Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=do.worb.alps.ea.jedo.dev"
+                  Pass: Test1
+                - Name: ra
+                  Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=ra.worb.alps.ea.jedo.dev"
+                  Pass: Test1
+
     - Name: JURA
       Administration:
           Parent: EA
@@ -200,38 +220,4 @@ Ager:
             Pass: Test1
             Type: admin
             Subject: "C=ea,ST=jedo.dev,L=jenziner,CN=admin.jenziner.jedo.dev"
-Channels:
-    - Name: ea.jedo.dev
-      Organizations:
-        - Name: Jenziner
-      Orderers:
-        - Name: orderer.jenziner.jedo.dev
-      Peers:
-        - Name: peer0.jenziner.jedo.dev
-      Regions:
-          - Name: alps.ea.jedo.dev
-            Subject: "C=ea,ST=jedo.dev,L=alps,CN=alps.ea.jedo.dev"
-            Auditors: #for FSC and User
-                - Name: aud.alps.ea.jedo.dev
-                  Subject: "C=ea,ST=jedo.dev,L=alps,CN=aud.alps.ea.jedo.dev"
-                  Pass: Test1
-                  CA: ca.jedo.dev
-            Issuers: #for FSC and User
-                - Name: iss.alps.ea.jedo.dev
-                  Subject: "C=ea,ST=jedo.dev,L=alps,CN=iss.alps.ea.jedo.dev"
-                  Pass: Test1
-                  CA: ca.jedo.dev
-            Owners:  #for FSC and User
-                - Name: worb.alps.ea.jedo.dev
-                  Subject: "C=ea,ST=jedo.dev,L=alps,O=worb,CN=worb.alps.ea.jedo.dev"
-                  Pass: Test1
-                  CA: ca.jedo.dev
-                  Users: 
-                      - Name: do
-                        Subject: "C=ea,ST=jedo.dev,L=alps,O=worb,CN=do.worb.alps.ea.jedo.dev"
-                        Pass: Test1
-                      - Name: ra
-                        Subject: "C=ea,ST=jedo.dev,L=alps,O=worb,CN=ra.worb.alps.ea.jedo.dev"
-                        Pass: Test1
-
   
