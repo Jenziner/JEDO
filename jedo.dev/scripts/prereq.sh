@@ -65,10 +65,10 @@ check_command() {
         echo ""
         echo_ok "$command is installed:"
         # try to print version
-        if "$command" version &> /dev/null; then
-            "$command" version
-        elif "$command" --version &> /dev/null; then
+        if "$command" --version &> /dev/null; then
             "$command" --version
+        elif "$command" version &> /dev/null; then
+            "$command" version
         elif "$command" -v &> /dev/null; then
             "$command" -v
         else

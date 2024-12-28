@@ -122,44 +122,79 @@ Ager:
               Port: 53051
               SrvPort: 53059
       Orderers:
-          - Name: orderer1.ea.jedo.dev
-            Subject: "C=jd,ST=dev,O=ea,CN=orderer1.ea.jedo.dev"
+          - Name: orderer.alps.ea.jedo.dev
+            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=orderer.alps.ea.jedo.dev"
             Pass: Test1
-            IP: 172.25.2.11
-            Port: 52111
-            ClusterPort: 52112
-            OpPort: 52119
-            AdminPort: 52113
-          - Name: orderer2.ea.jedo.dev
-            Subject: "C=jd,ST=dev,O=ea,CN=orderer2.ea.jedo.dev"
-            Pass: Test1
-            IP: 172.25.2.21
-            Port: 52211
-            ClusterPort: 52212
-            OpPort: 52219
-            AdminPort: 52213
-          - Name: orderer3.ea.jedo.dev
-            Subject: "C=jd,ST=dev,O=ea,CN=orderer3.ea.jedo.dev"
-            Pass: Test1
-            IP: 172.25.2.31
-            Port: 52311
-            ClusterPort: 52312
-            OpPort: 52319
-            AdminPort: 52313
+            IP: 172.25.3.11
+            Port: 53111
+            ClusterPort: 53112
+            OpPort: 53119
+            AdminPort: 53113
       Peers: # first peer will be used as AnchorPeer
-          - Name: peer1.ea.jedo.dev
-            Subject: "C=jd,ST=dev,O=ea,CN=peer0.ea.jedo.dev"
+          - Name: peer.alps.ea.jedo.dev
+            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=peer.alps.ea.jedo.dev"
             Pass: Test1
-            IP: 172.25.2.51
-            Port1: 52511
-            Port2: 52512
-            OpPort: 52519
-            CLI: 172.25.2.53
+            IP: 172.25.3.51
+            Port1: 53511
+            Port2: 53512
+            OpPort: 53519
+            CLI: 172.25.3.53
             DB: 
-                Name: db.peer0.ea.jedo.dev
+                Name: db.peer.alps.ea.jedo.dev
                 Pass: Test1
-                IP: 172.25.2.52
-                Port: 52521
+                IP: 172.25.3.52
+                Port: 53521
+      Operators:
+          - Name: admin.jenziner.jedo.dev
+            Pass: Test1
+            Type: admin
+            Subject: "C=ea,ST=jedo.dev,L=jenziner,CN=admin.jenziner.jedo.dev"
+    - Name: JURA
+      Administration:
+          Parent: EA
+          Contact: Nik
+          Mail: nik@jedo.me
+          Phone: +41791234567
+      TLS: 
+          Name: tls.jura.ea.jedo.dev
+          Pass: Test1
+          IP: 172.25.4.3
+          Port: 54031
+          OpPort: 54039
+      CA: 
+          Name: ca.jura.ea.jedo.dev
+          Pass: Test1
+          IP: 172.25.4.4
+          Port: 54041
+          OpPort: 54049
+          CAAPI:
+              Name: ca.api.jura.ea.jedo.dev
+              IP: 172.25.4.5
+              Port: 54051
+              SrvPort: 54059
+      Orderers:
+          - Name: orderer.jura.ea.jedo.dev
+            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=orderer.jura.ea.jedo.dev"
+            Pass: Test1
+            IP: 172.25.4.11
+            Port: 54111
+            ClusterPort: 54112
+            OpPort: 54119
+            AdminPort: 54113
+      Peers: # first peer will be used as AnchorPeer
+          - Name: peer.jura.ea.jedo.dev
+            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=peer.jura.ea.jedo.dev"
+            Pass: Test1
+            IP: 172.25.4.51
+            Port1: 54511
+            Port2: 54512
+            OpPort: 54519
+            CLI: 172.25.4.53
+            DB: 
+                Name: db.peer.jura.ea.jedo.dev
+                Pass: Test1
+                IP: 172.25.4.52
+                Port: 54521
       Operators:
           - Name: admin.jenziner.jedo.dev
             Pass: Test1

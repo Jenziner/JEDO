@@ -15,19 +15,17 @@ check_script
 ###############################################################
 CONFIG_FILE="$SCRIPT_DIR/infrastructure-dev.yaml"
 FABRIC_BIN_PATH=$(yq eval '.Fabric.Path' "$CONFIG_FILE")
-ORBIS_NAME=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
-CHANNELS=$(yq e ".Regnum[].Name" $CONFIG_FILE)
+ORBIS=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
+REGNUMS=$(yq e ".Regnum[].Name" $CONFIG_FILE)
 
-for CHANNEL in $CHANNELS; do
+for REGNUM in $REGNUMS; do
     echo ""
-    echo_warn "Channel $CHANNEL configuring..."
+    echo_warn "Channel $REGNUM configuring..."
 
-    export FABRIC_CFG_PATH=${PWD}/configuration/$CHANNEL
+    export FABRIC_CFG_PATH=${PWD}/configuration/$REGNUM
     mkdir -p $FABRIC_CFG_PATH
     OUTPUT_CONFIGTX_FILE="$FABRIC_CFG_PATH/configtx.yaml"
-    ORGCA=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .CA.Name" $CONFIG_FILE)
-    ORGANIZATION=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Organization" $CONFIG_FILE)
-    ORDERERS=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[].Name" $CONFIG_FILE)
+    ORGANIZATIONS=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
 
 
     ###############################################################
@@ -43,40 +41,65 @@ EOF
     ###############################################################
     # Section Organization
     ###############################################################
-cat <<EOF > $OUTPUT_CONFIGTX_FILE
+cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Organizations:
 EOF
 
-    ORDERER_ENDPOINTS="OrdererEndpoints:"
-    for ORDERER in $ORDERERS; do
-        ORDERER_PORT=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
-        ORDERER_ENDPOINTS="$ORDERER_ENDPOINTS"$'\n'"      - $ORDERER:$ORDERER_PORT"
-    done
+
+    ORGANIZATIONS="Organizations:"
+    CONSENTER_MAPPING="ConsenterMapping:"
+    CONSENTER_ID=1
+    PROFILE_ORGANIZATIONS="Organizations:"
+    AGERS=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
+    for AGER in $AGERS; do
+        ORGANIZATIONS="$ORGANIZATIONS"$'\n'"    - *$AGER"
+        ORDERERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[].Name" $CONFIG_FILE)
+        ORDERER_ENDPOINTS="OrdererEndpoints:"
+        for ORDERER in $ORDERERS; do
+            ORDERER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Name" $CONFIG_FILE)
+            ORDERER_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
+            ORDERER_ENDPOINTS="$ORDERER_ENDPOINTS"$'\n'"      - $ORDERER_NAME:$ORDERER_PORT"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"    - ID: $CONSENTER_ID"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Host: $ORDERER_NAME"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Port: $ORDERER_PORT"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      MSPID: $AGER"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Identity: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/msp/signcerts/cert.pem"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ClientTLSCert: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/signcerts/cert.pem"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ServerTLSCert: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/signcerts/cert.pem"
+            ((CONSENTER_ID++))
+        done
+        PROFILE_ORGANIZATIONS="$PROFILE_ORGANIZATIONS"$'\n'"        - <<: *$AGER"
+        PROFILE_ORGANIZATIONS="$PROFILE_ORGANIZATIONS"$'\n'"          Policies:"
+        PROFILE_ORGANIZATIONS="$PROFILE_ORGANIZATIONS"$'\n'"            <<: *${AGER}Policies"
+        PROFILE_ORGANIZATIONS="$PROFILE_ORGANIZATIONS"$'\n'"            Admins:"
+        PROFILE_ORGANIZATIONS="$PROFILE_ORGANIZATIONS"$'\n'"              Type: Signature"
+        PROFILE_ORGANIZATIONS="$PROFILE_ORGANIZATIONS"$'\n'"              Rule: \"OR('$AGER.member')\""
 
 
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-  - &${ORGANIZATION}
-    Name: $ORGANIZATION
-    ID: ${ORGANIZATION}
-    MSPDir: $PWD/infrastructure/$ORBIS_NAME/$CHANNEL/_Organization/msp
-    Policies: &${ORGANIZATION}Policies
+  - &${AGER}
+    Name: $AGER
+    ID: ${AGER}
+    MSPDir: $PWD/infrastructure/$ORBIS/$REGNUM/$AGER/msp
+    Policies: &${AGER}Policies
       Readers:
         Type: Signature
-        Rule: "OR('${ORGANIZATION}.member')"
+        Rule: "OR('${AGER}.member')"
       Writers:
         Type: Signature
-        Rule: "OR('${ORGANIZATION}.member')"
+        Rule: "OR('${AGER}.member')"
       Admins:
         Type: Signature
-        Rule: "OR('${ORGANIZATION}.admin')"
+        Rule: "OR('${AGER}.admin')"
       BlockValidation:
         Type: ImplicitMeta
         Rule: "ANY Writers"
       Endorsement:
         Type: Signature
-        Rule: "OR('${ORGANIZATION}.member')"
+        Rule: "OR('${AGER}.member')"
     $ORDERER_ENDPOINTS
 EOF
+    done
 
 
     ###############################################################
@@ -85,7 +108,7 @@ EOF
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Capabilities:
   Channel: &ChannelCapabilities
-    V2_0: true
+    V3_0: true
   Orderer: &OrdererCapabilities
     V2_0: true
   Application: &ApplicationCapabilities
@@ -98,8 +121,7 @@ EOF
     ###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Application: &ApplicationDefaults
-  Organizations:
-    - *$ORGANIZATION
+  $ORGANIZATIONS
   Policies: &ApplicationDefaultPolicies
     LifecycleEndorsement:
       Type: ImplicitMeta
@@ -126,48 +148,27 @@ EOF
     ###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Orderer: &OrdererDefaults
-  OrdererType: etcdraft
-EOF
-
-    ORDERER_ADDRESSES="Addresses:"
-    for ORDERER in $ORDERERS; do
-        ORDERER_PORT=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
-        ORDERER_ADDRESSES="$ORDERER_ADDRESSES"$'\n'"    - $ORDERER:$ORDERER_PORT"
-    done
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-  $ORDERER_ADDRESSES
-EOF
-
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
+  OrdererType: BFT
   BatchTimeout: 2s
   BatchSize:
     MaxMessageCount: 500
     AbsoluteMaxBytes: 10 MB
     PreferredMaxBytes: 2 MB
   MaxChannels: 0
-  EtcdRaft:
-    Consenters:
-EOF
-
-    for ORDERER in $ORDERERS; do
-        ORDERER_PORT=$(yq eval ".Regnum[] | select(.Name == \"$CHANNEL\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-      - Host: $ORDERER
-        Port: $ORDERER_PORT
-        ClientTLSCert: ${PWD}/infrastructure/$ORBIS_NAME/$CHANNEL/$ORDERER/tls/signcerts/cert.pem
-        ServerTLSCert: ${PWD}/infrastructure/$ORBIS_NAME/$CHANNEL/$ORDERER/tls/signcerts/cert.pem
-EOF
-    done
-
-cat <<EOF >> $OUTPUT_CONFIGTX_FILE
-    Options:
-      TickInterval: 500ms
-      ElectionTick: 10
-      HeartbeatTick: 1
-      MaxInflightBlocks: 5
-      SnapshotIntervalSize: 16 MB
-  Organizations:
-      - *$ORGANIZATION
+  SmartBFT:
+    RequestBatchMaxInterval: 200ms
+    RequestForwardTimeout: 5s
+    RequestComplainTimeout: 20s
+    RequestAutoRemoveTimeout: 3m0s
+    ViewChangeResendInterval: 5s
+    ViewChangeTimeout: 20s
+    LeaderHeartbeatTimeout: 1m0s
+    CollectTimeout: 1s
+    IncomingMessageBufferSize: 200
+    RequestPoolSize: 100000
+    LeaderHeartbeatCount: 10
+  $CONSENTER_MAPPING
+  $ORGANIZATIONS
   Policies:
     Readers:
       Type: ImplicitMeta
@@ -213,30 +214,19 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Profiles:
   JedoChannel:
     <<: *ChannelDefaults
+    Consortium: $REGNUM
     Orderer:
       <<: *OrdererDefaults
-      OrdererType: etcdraft
-      Organizations:
-        - <<: *$ORGANIZATION
-          Policies:
-            <<: *${ORGANIZATION}Policies
-            Admins:
-              Type: Signature
-              Rule: "OR('$ORGANIZATION.member')"
+      $PROFILE_ORGANIZATIONS
     Application:
       <<: *ApplicationDefaults
-      Organizations:
-        - <<: *$ORGANIZATION
-          Policies:
-            <<: *${ORGANIZATION}Policies
-            Admins:
-              Type: Signature
-              Rule: "OR('$ORGANIZATION.member')"
+      $PROFILE_ORGANIZATIONS
 EOF
 
-    echo_info "Genesis block for $CHANNEL generating..."
-    $FABRIC_BIN_PATH/bin/configtxgen -configPath $FABRIC_CFG_PATH -profile JedoChannel -channelID $CHANNEL -outputBlock $FABRIC_CFG_PATH/genesis_block.pb
+    echo_info "Genesis block for $REGNUM generating..."
+    FABRIC_LOGGING_SPEC=debug
+    $FABRIC_BIN_PATH/bin/configtxgen -configPath $FABRIC_CFG_PATH -profile JedoChannel -channelID $REGNUM -outputBlock $FABRIC_CFG_PATH/genesis_block.pb
 
-    echo_ok "Channel $CHANNEL configured..."
+    echo_ok "Channel $REGNUM configured..."
 done
 
