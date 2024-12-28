@@ -1,7 +1,7 @@
 ###############################################################
 #!/bin/bash
 #
-# Register and enroll all identities needed for the JEDO-Token-Test network.
+# Register and enroll all identities needed for the JEDO-Token network.
 #
 #
 ###############################################################
@@ -21,9 +21,6 @@ DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
 
 ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
 ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
-#INFRA_DIR=/etc/hyperledger/infrastructure
-CA_CLI_DIR=/etc/hyperledger/fabric-ca-client
-KEYS_DIR=/etc/hyperledger/keys
 
 
 ###############################################################
@@ -239,7 +236,6 @@ for AGER in $AGERS; do
     done
     echo_ok "Owners and Users for $AGER enrolled."
 done
-echo_ok "Enrollment completed."
 
 
 ################################################################
@@ -247,4 +243,5 @@ echo_ok "Enrollment completed."
 ################################################################
 echo_info "ScriptInfo: set permissions for keys-folder"
 chmod -R 777 ./infrastructure
+echo_ok "Enrollment completed."
 
