@@ -60,7 +60,7 @@ for AGER in $AGERS; do
         L=$(echo "$AUDITOR_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
         CN=$(echo "$AUDITOR_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
         CSR_NAMES="C=$C,ST=$ST,L=$L"
-        AFFILIATION="jedo.root" #ToDo Affiliation
+        AFFILIATION=$ORBIS.$REGNUM.$AGER
 
 
         # Register FSC User
@@ -112,7 +112,7 @@ for AGER in $AGERS; do
         L=$(echo "$ISSUER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
         CN=$(echo "$ISSUER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
         CSR_NAMES="C=$C,ST=$ST,L=$L"
-        AFFILIATION="jedo.root" #ToDo Affiliation
+        AFFILIATION=$ORBIS.$REGNUM.$AGER
 
         # Register FSC User
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT \
@@ -164,7 +164,7 @@ for AGER in $AGERS; do
         O=$(echo "$OWNER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
         CN=$(echo "$OWNER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
         CSR_NAMES="C=$C,ST=$ST,L=$L,O=$O"
-        AFFILIATION="jedo.root" #ToDo Affiliation
+        AFFILIATION=$ORBIS.$REGNUM.$AGER
 
         # Register FSC User
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT \
@@ -216,7 +216,7 @@ for AGER in $AGERS; do
             O=$(echo "$USER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^O=/) {sub(/^O=/, "", $i); print $i}}')
             CN=$(echo "$USER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
             CSR_NAMES="C=$C,ST=$ST,L=$L,O=$O"
-            AFFILIATION="jedo.root" #ToDo Affiliation
+            AFFILIATION=$ORBIS.$REGNUM.$AGER
 
             # Register Wallet User
             docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT \
