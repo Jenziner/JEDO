@@ -123,7 +123,7 @@ Ager:
               SrvPort: 53059
       Orderers:
           - Name: orderer.alps.ea.jedo.dev
-            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=orderer.alps.ea.jedo.dev"
+            Subject: "C=jd,ST=dev,L=ea,O=alps,CN=orderer.alps.ea.jedo.dev"
             Pass: Test1
             IP: 172.25.3.11
             Port: 53111
@@ -132,7 +132,7 @@ Ager:
             AdminPort: 53113
       Peers: # first peer will be used as AnchorPeer
           - Name: peer.alps.ea.jedo.dev
-            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=peer.alps.ea.jedo.dev"
+            Subject: "C=jd,ST=dev,L=ea,O=alps,CN=peer.alps.ea.jedo.dev"
             Pass: Test1
             IP: 172.25.3.51
             Port1: 53511
@@ -148,27 +148,26 @@ Ager:
           - Name: admin.alps.ea.jedo.dev
             Pass: Test1
             Type: admin
-            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=admin.alps.ea.jedo.dev"
+            Subject: "C=jd,ST=dev,L=ea,O=alps,CN=admin.alps.ea.jedo.dev"
       Auditors: #for FSC and User
           - Name: aud.alps.ea.jedo.dev
-            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=aud.alps.ea.jedo.dev"
+            Subject: "C=jd,ST=dev,L=ea,O=alps,CN=aud.alps.ea.jedo.dev"
             Pass: Test1
       Issuers: #for FSC and User
           - Name: iss.alps.ea.jedo.dev
-            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=iss.alps.ea.jedo.dev"
+            Subject: "C=jd,ST=dev,L=ea,O=alps,CN=iss.alps.ea.jedo.dev"
             Pass: Test1
       Owners:  #for FSC and User
           - Name: WORB
-            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=worb.alps.ea.jedo.dev"
+            Subject: "C=jd,ST=dev,L=ea,O=alps,CN=worb.alps.ea.jedo.dev"
             Pass: Test1
             Users: 
                 - Name: do
-                  Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=do.worb.alps.ea.jedo.dev"
+                  Subject: "C=jd,ST=dev,L=ea,O=alps,CN=do.worb.alps.ea.jedo.dev"
                   Pass: Test1
                 - Name: ra
-                  Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=ra.worb.alps.ea.jedo.dev"
+                  Subject: "C=jd,ST=dev,L=ea,O=alps,CN=ra.worb.alps.ea.jedo.dev"
                   Pass: Test1
-
     - Name: jura
       Administration:
           Parent: ea
@@ -194,7 +193,7 @@ Ager:
               SrvPort: 54059
       Orderers:
           - Name: orderer.jura.ea.jedo.dev
-            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=orderer.jura.ea.jedo.dev"
+            Subject: "C=jd,ST=dev,L=ea,O=jura,CN=orderer.jura.ea.jedo.dev"
             Pass: Test1
             IP: 172.25.4.11
             Port: 54111
@@ -203,7 +202,7 @@ Ager:
             AdminPort: 54113
       Peers: # first peer will be used as AnchorPeer
           - Name: peer.jura.ea.jedo.dev
-            Subject: "C=jd,ST=dev,L=EA,O=ALPS,CN=peer.jura.ea.jedo.dev"
+            Subject: "C=jd,ST=dev,L=ea,O=jura,CN=peer.jura.ea.jedo.dev"
             Pass: Test1
             IP: 172.25.4.51
             Port1: 54511
@@ -216,8 +215,8 @@ Ager:
                 IP: 172.25.4.52
                 Port: 54521
       Operators:
-          - Name: admin.jenziner.jedo.dev
+          - Name: admin.jura.ea.jedo.dev
             Pass: Test1
             Type: admin
-            Subject: "C=ea,ST=jedo.dev,L=jenziner,CN=admin.jenziner.jedo.dev"
+            Subject: "C=jd,ST=dev,L=ea,O=jura,CN=admin.jenziner.jedo.dev"
   
