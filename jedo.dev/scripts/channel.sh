@@ -26,7 +26,7 @@ for REGNUM in $REGNUMS; do
 
     export PATH=$PATH:$FABRIC_BIN_PATH
     export FABRIC_CFG_PATH=${PWD}/configuration/$REGNUM
-    export OSN_TLS_CA_ROOT_CERT=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem)
+    export TLS_CA_ROOT_CERT=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem)
     export ADMIN_TLS_SIGNCERT=${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/$ADMIN/tls/signcerts/cert.pem
     export ADMIN_TLS_PRIVATEKEY=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/$ADMIN/tls/keystore/*_sk)
 
@@ -52,13 +52,13 @@ for REGNUM in $REGNUMS; do
             echo_info "osnadmin channel join \
             --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesis_block.pb \
             -o $ORDERER_IP:$ORDERER_ADMINPORT \
-            --ca-file $OSN_TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY"
+            --ca-file $TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY"
 
             
             osnadmin channel join \
             --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesis_block.pb \
             -o $ORDERER_IP:$ORDERER_ADMINPORT \
-            --ca-file $OSN_TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY
+            --ca-file $TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY
         done
     done
 done

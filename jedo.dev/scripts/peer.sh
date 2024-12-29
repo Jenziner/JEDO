@@ -149,7 +149,6 @@ EOF
         ###############################################################
         TLS_PRIVATEKEY_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/keystore/*_sk))
         TLS_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/tlscacerts/*.pem))
-        CLIENT_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem))
 
         echo ""
         echo_info "Server-Config for $PEER_NAME writing..."
@@ -516,7 +515,7 @@ EOF
         echo_error "TEST: Channel List"
         docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel list --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
         --tls --cafile $TLS_CA_ROOT_CERT
-        
+
 # TEMP: continue work when channel exists
         # echo_error "TEST: Channel Fetch"
         # docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel fetch config genesis_block.pb --channelID $REGNUM --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
