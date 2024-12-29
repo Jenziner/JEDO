@@ -82,7 +82,7 @@ for AGER in $AGERS; do
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$CA_NAME/msp \
             --id.name $AUDITOR_NAME --id.secret $AUDITOR_PASS --id.type client --id.affiliation $AFFILIATION \
-            --id.attrs "jedo.apiPort=$CAAPI_PORT, jedo.role=auditor"
+            --id.attrs "jedo.apiPort=$CAAPI_PORT,jedo.role=auditor"
         # Enroll Wallet User
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$AUDITOR_NAME:$AUDITOR_PASS@$CA_NAME:$CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
@@ -90,7 +90,7 @@ for AGER in $AGERS; do
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$AUDITOR_NAME/msp \
             --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,*.jedo.dev" \
             --csr.cn $CN --csr.names "$CSR_NAMES" \
-            --enrollment.attrs "jedo.apiPort, jedo.role"
+            --enrollment.attrs "jedo.apiPort,jedo.role"
     done
     echo_ok "Auditors for $AGER enrolled."
 
@@ -133,7 +133,7 @@ for AGER in $AGERS; do
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$CA_NAME/msp \
             --id.name $ISSUER_NAME --id.secret $ISSUER_PASS --id.type client --id.affiliation $AFFILIATION \
-            --id.attrs "jedo.apiPort=$CAAPI_PORT, jedo.role=issuer"
+            --id.attrs "jedo.apiPort=$CAAPI_PORT,jedo.role=issuer"
         # Enroll Wallet User
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$ISSUER_NAME:$ISSUER_PASS@$CA_NAME:$CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
@@ -141,7 +141,7 @@ for AGER in $AGERS; do
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$ISSUER_NAME/msp \
             --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,*.jedo.dev" \
             --csr.cn $CN --csr.names "$CSR_NAMES" \
-            --enrollment.attrs "jedo.apiPort, jedo.role"
+            --enrollment.attrs "jedo.apiPort,jedo.role"
     done
     echo_ok "Issuers for $AGER enrolled."
 
@@ -185,7 +185,7 @@ for AGER in $AGERS; do
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$CA_NAME/msp \
             --id.name $OWNER_NAME --id.secret $OWNER_PASS --id.type client --id.affiliation $AFFILIATION \
-            --id.attrs "jedo.apiPort=$CAAPI_PORT, jedo.role=owner" \
+            --id.attrs "jedo.apiPort=$CAAPI_PORT,jedo.role=owner" \
             --enrollment.type idemix --idemix.curve gurvy.Bn254
         # Enroll Wallet User
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$OWNER_NAME:$OWNER_PASS@$CA_NAME:$CA_PORT \
@@ -194,7 +194,7 @@ for AGER in $AGERS; do
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$OWNER_NAME/$CN/msp \
             --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,*.jedo.dev" \
             --csr.cn $CN --csr.names "$CSR_NAMES" \
-            --enrollment.attrs "jedo.apiPort, jedo.role"
+            --enrollment.attrs "jedo.apiPort,jedo.role"
 
 
         ###############################################################
