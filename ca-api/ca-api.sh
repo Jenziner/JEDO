@@ -72,7 +72,7 @@ api_name: ${CA_API_NAME}
 api_IP: ${CA_API_IP}
 api_port: ${CA_API_SRV_PORT}
 unraid_IP: ${DOCKER_UNRAID}
-keys_dir: "/etc/hyperledger/keys"
+keys_dir: "/etc/hyperledger/infrastructure"
 channel: "${REGNUM}"
 organization: "${AGER}"
 EOF
@@ -88,7 +88,7 @@ EOF
         -e FABRIC_CA_CLIENT_TLS_CERTFILES=/app/tls/tls-cert.pem \
         -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$CA_API_NAME:/app \
         -v ${PWD}/infrastructure:/etc/hyperledger/infrastructure \
-        -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$CA_NAME/msp:/app/admin \
+        -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$CA_NAME:/app/admin \
         -w /app \
         -p $CA_API_PORT:$CA_API_PORT \
         -p $CA_API_SRV_PORT:$CA_API_SRV_PORT \

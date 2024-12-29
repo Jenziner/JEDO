@@ -22,8 +22,8 @@ const API_VERSION = '1.0.0';  // Version als Konstante
 const RELEASE_DATE = '2024-10-20';  // Datum als Konstante
 const SERVER_NAME = 'JEDO CA-Server';  // Servername als Konstante
 
-// Dynamisch den Dateinamen des CA-Zertifikats im Verzeichnis /app/admin/cacerts ermitteln
-const caCertDir = '/app/admin/cacerts';
+// Dynamisch den Dateinamen des CA-Zertifikats im Verzeichnis /app/admin/tls/tlscacerts ermitteln
+const caCertDir = '/app/admin/tls/tlscacerts';
 const caCertFile = fs.readdirSync(caCertDir).find(file => file.endsWith('.pem'));
 const tlsCertPath = path.join(caCertDir, caCertFile);
 
@@ -45,8 +45,8 @@ const loadAdminIdentity = async () => {
   let adminIdentity = await wallet.get('admin');
   
   if (!adminIdentity) {
-    const certPath = path.join('/app/admin', 'signcerts', 'cert.pem');
-    const keyDir = path.join('/app/admin', 'keystore');
+    const certPath = path.join('/app/admin/tls', 'signcerts', 'cert.pem');
+    const keyDir = path.join('/app/admin/tls', 'keystore');
     const keyFile = fs.readdirSync(keyDir).find(file => file.endsWith('_sk'));
     const certificate = fs.readFileSync(certPath).toString();
     const privateKey = fs.readFileSync(path.join(keyDir, keyFile)).toString();
