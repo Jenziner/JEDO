@@ -183,6 +183,7 @@ fi
 # FINISH
 ###############################################################
 echo_ok "Script for $DOCKER_NETWORK_NAME completed"
+echo_error "Run CA-API-Server now: ./ca-api/ca-api.sh"
 exit 0
 
 
