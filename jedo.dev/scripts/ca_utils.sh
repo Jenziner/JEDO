@@ -88,7 +88,7 @@ function ca_writeCfg() {
     PARENT_IP=$(yq eval-all '.. | select(has("Name") and .Name == "'"$CA_ORG_PARENT"'") | .CA?.IP // ""' "$cfg" | grep -v "^null$" | xargs echo -n)
     PARENT_PORT=$(yq eval-all '.. | select(has("Name") and .Name == "'"$CA_ORG_PARENT"'") | .CA?.Port // ""' "$cfg" | grep -v "^null$" | xargs echo -n)
 
-    if [ "$CA_ORG_PARENT" = "ROOT" ]; then
+    if [ "$CA_ORG_PARENT" = "root" ]; then
         PARENT_URL=""
     else
         PARENT_URL="https://$PARENT_NAME:$PARENT_PASS@$PARENT_NAME:$PARENT_PORT"
@@ -130,7 +130,7 @@ registry:
         - name: $CA_NAME
           pass: $CA_PASS
           type: client
-          affiliation: "jedo.root"
+          affiliation: "jedo"
           attrs:
               hf.Registrar.Roles: "*"
               hf.Registrar.DelegateRoles: "*"

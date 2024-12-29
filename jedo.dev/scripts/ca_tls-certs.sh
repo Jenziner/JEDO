@@ -53,6 +53,8 @@ ORBIS_TLS_PORT=$(yq eval ".Orbis.TLS.Port" "$CONFIG_FILE")
 ORBIS_CA_NAME=$(yq eval ".Orbis.CA.Name" "$CONFIG_FILE")
 ORBIS_CA_PASS=$(yq eval ".Orbis.CA.Pass" "$CONFIG_FILE")
 ORBIS_CA_IP=$(yq eval ".Orbis.CA.IP" "$CONFIG_FILE")
+AFFILIATION=$ORBIS
+
 
 echo ""
 echo_info "Orbis-CA $ORBIS_CA_NAME TLS registering and enrolling..."
@@ -60,7 +62,7 @@ docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_TL
     --home $ORBIS_TOOLS_CACLI_DIR \
     --tls.certfiles tls-root-cert/tls-ca-cert.pem \
     --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
-    --id.name $ORBIS_CA_NAME --id.secret $ORBIS_CA_PASS --id.type client --id.affiliation jedo.root
+    --id.name $ORBIS_CA_NAME --id.secret $ORBIS_CA_PASS --id.type client --id.affiliation $AFFILIATION
 docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
     --home $ORBIS_TOOLS_CACLI_DIR \
     --tls.certfiles tls-root-cert/tls-ca-cert.pem \
@@ -78,6 +80,7 @@ for REGNUM in $REGNUMS; do
     REGNUM_CA_NAME=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.Name" "$CONFIG_FILE")
     REGNUM_CA_PASS=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.Pass" "$CONFIG_FILE")
     REGNUM_CA_IP=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.IP" "$CONFIG_FILE")
+    AFFILIATION=$ORBIS.$REGNUM
 
 
     # Register Regnum-CA identity
@@ -87,7 +90,7 @@ for REGNUM in $REGNUMS; do
         --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
         --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
-        --id.name $REGNUM_CA_NAME --id.secret $REGNUM_CA_PASS --id.type client --id.affiliation jedo.root
+        --id.name $REGNUM_CA_NAME --id.secret $REGNUM_CA_PASS --id.type client --id.affiliation $AFFILIATION
     docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
         --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
@@ -123,7 +126,7 @@ for REGNUM in $REGNUMS; do
         --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
         --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
-        --id.name $REGNUM_ADMIN_NAME --id.secret $REGNUM_ADMIN_PASS --id.type admin --id.affiliation jedo.root
+        --id.name $REGNUM_ADMIN_NAME --id.secret $REGNUM_ADMIN_PASS --id.type admin --id.affiliation $AFFILIATION
     docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$REGNUM_ADMIN_NAME:$REGNUM_ADMIN_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
         --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
@@ -149,7 +152,18 @@ for AGER in $AGERS; do
     AGER_CA_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.Name" "$CONFIG_FILE")
     AGER_CA_PASS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.Pass" "$CONFIG_FILE")
     AGER_CA_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.IP" "$CONFIG_FILE")
-    AGER_PARENT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Administration.Parent" "$CONFIG_FILE")
+    REGNUM=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Administration.Parent" "$CONFIG_FILE")
+    AFFILIATION=$ORBIS.$REGNUM.$AGER
+
+
+    # Add affiliation to TLS-CA
+    AFFILIATION=$ORBIS.$REGNUM.$AGER
+    echo ""
+    echo_info "Affiliation $AFFILIATION adding..."
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client affiliation add $AFFILIATION  -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
+        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls 
 
 
     # Register Ager-CA identity
@@ -159,12 +173,12 @@ for AGER in $AGERS; do
         --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
         --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
-        --id.name $AGER_CA_NAME --id.secret $AGER_CA_PASS --id.type client --id.affiliation jedo.root
+        --id.name $AGER_CA_NAME --id.secret $AGER_CA_PASS --id.type client --id.affiliation $AFFILIATION
     docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$AGER_CA_NAME:$AGER_CA_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
         --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
         --enrollment.profile tls \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$AGER_PARENT/$AGER/$AGER_CA_NAME/tls \
+        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/tls \
         --csr.hosts ${AGER_CA_NAME},*.jedo.dev
 done
 

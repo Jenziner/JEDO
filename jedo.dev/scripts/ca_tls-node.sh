@@ -81,7 +81,7 @@ registry:
         - name: $ORBIS_TLS_NAME
           pass: $ORBIS_TLS_PASS
           type: client
-          affiliation: "jedo.root"
+          affiliation: "jedo"
           attrs:
               hf.Registrar.Roles: "*"
               hf.Registrar.DelegateRoles: "*"
@@ -120,11 +120,11 @@ csr:
         algo: ecdsa
         size: 384
     names:
-        - C: JD
-          ST: Dev
+        - C: jd
+          ST: dev
           L:
-          O: JEDO
-          OU: Root
+          O: jedo
+          OU: root
     hosts:
         - $ORBIS_TLS_NAME
         - $ORBIS_TLS_IP

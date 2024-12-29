@@ -76,10 +76,10 @@ for AGER in $AGERS; do
         L=$(echo "$ORDERER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
         CN=$(echo "$ORDERER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
         CSR_NAMES=$(echo "$ORDERER_SUBJECT" | sed 's/,CN=[^,]*//')
-
+        AFFILIATION=$ORBIS.$REGNUM
 
         ###############################################################
-        # Enroll orderer
+        # Enroll orderer @ orbis
         ###############################################################
         echo ""
         echo_info "$ORDERER_NAME registering and enrolling..."
@@ -87,7 +87,7 @@ for AGER in $AGERS; do
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_CA_NAME/msp \
-            --id.name $ORDERER_NAME --id.secret $ORDERER_PASS --id.type orderer --id.affiliation jedo.root #ToDo Affiliation
+            --id.name $ORDERER_NAME --id.secret $ORDERER_PASS --id.type orderer --id.affiliation $AFFILIATION
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$ORDERER_NAME:$ORDERER_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
@@ -101,7 +101,7 @@ for AGER in $AGERS; do
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
-            --id.name $ORDERER_NAME --id.secret $ORDERER_PASS --id.type client --id.affiliation jedo.root
+            --id.name $ORDERER_NAME --id.secret $ORDERER_PASS --id.type client --id.affiliation $AFFILIATION
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$ORDERER_NAME:$ORDERER_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \

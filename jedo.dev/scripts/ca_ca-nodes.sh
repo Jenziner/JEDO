@@ -91,6 +91,8 @@ for REGNUM in $REGNUMS; do
     LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/
     HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
 
+    AFFILIATION=$ORBIS.$REGNUM
+
     mkdir -p $LOCAL_SRV_DIR
 
 
@@ -101,7 +103,7 @@ for REGNUM in $REGNUMS; do
         --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
         --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_CA_NAME/msp \
-        --id.name $REGNUM_CA_NAME --id.secret $REGNUM_CA_PASS --id.type client --id.affiliation jedo.root \
+        --id.name $REGNUM_CA_NAME --id.secret $REGNUM_CA_PASS --id.type client --id.affiliation $AFFILIATION \
         --id.attrs '"hf.Registrar.Roles=user,admin","hf.Revoker=true","hf.IntermediateCA=true"'
     docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
         --home $ORBIS_TOOLS_CACLI_DIR \
@@ -179,7 +181,19 @@ for AGER in $AGERS; do
     LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/
     HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
 
+    AFFILIATION=$ORBIS.$REGNUM.$AGER
+
     mkdir -p $LOCAL_SRV_DIR
+
+
+    # Add affiliation to Regnum-CA
+    AFFILIATION=$ORBIS.$REGNUM.$AGER
+    echo ""
+    echo_info "Affiliation $AFFILIATION adding..."
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client affiliation add $AFFILIATION  -u https://$REGNUM_NAME:$REGNUM_PASS@$REGNUM_NAME:$REGNUM_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
+        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$REGNUM_NAME/msp
 
 
     # Register Ager-CA ID identity
@@ -189,7 +203,7 @@ for AGER in $AGERS; do
         --home $ORBIS_TOOLS_CACLI_DIR \
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
         --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$REGNUM_NAME/msp \
-        --id.name $AGER_CA_NAME --id.secret $AGER_CA_PASS --id.type client --id.affiliation jedo.root \
+        --id.name $AGER_CA_NAME --id.secret $AGER_CA_PASS --id.type client --id.affiliation $AFFILIATION \
         --id.attrs '"hf.Registrar.Roles=user,admin","hf.Revoker=true","hf.IntermediateCA=true"'
     docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$AGER_CA_NAME:$AGER_CA_PASS@$REGNUM_NAME:$REGNUM_PORT \
         --home $ORBIS_TOOLS_CACLI_DIR \
@@ -199,11 +213,11 @@ for AGER in $AGERS; do
         --csr.hosts ${REGNUM_NAME},*.jedo.dev
 
 
-        # Generating NodeOUs-File
-        echo ""
-        echo_info "NodeOUs-File writing..."
-        CA_CERT_FILE=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/msp/cacerts/*.pem)
-        cat <<EOF > ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/msp/config.yaml
+    # Generating NodeOUs-File
+    echo ""
+    echo_info "NodeOUs-File writing..."
+    CA_CERT_FILE=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/msp/cacerts/*.pem)
+    cat <<EOF > ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/msp/config.yaml
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
@@ -243,6 +257,17 @@ EOF
         --tls.certfiles tls-root-cert/tls-ca-cert.pem \
         --enrollment.profile ca \
         --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/msp
+
+    # Add affiliation to Ager-CA
+    AFFILIATION=$ORBIS.$REGNUM.$AGER
+    echo ""
+    echo_info "Affiliation $AFFILIATION adding..."
+    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client affiliation add $AFFILIATION  -u https://$AGER_CA_NAME:$AGER_CA_PASS@$AGER_CA_NAME:$AGER_CA_PORT \
+        --home $ORBIS_TOOLS_CACLI_DIR \
+        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/msp
+
+
 done
 
     # echo ""

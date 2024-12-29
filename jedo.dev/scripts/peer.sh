@@ -85,10 +85,11 @@ for AGER in $AGERS; do
         L=$(echo "$PEER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^L=/) {sub(/^L=/, "", $i); print $i}}')
         CN=$(echo "$PEER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^CN=/) {sub(/^CN=/, "", $i); print $i}}')
         CSR_NAMES=$(echo "$PEER_SUBJECT" | sed 's/,CN=[^,]*//')
+        AFFILIATION=$ORBIS.$REGNUM
 
 
         ###############################################################
-        # Enroll peer
+        # Enroll peer @ orbis
         ###############################################################
         echo ""
         echo_info "$PEER_NAME registering and enrolling..."
@@ -96,7 +97,7 @@ for AGER in $AGERS; do
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_CA_NAME/msp \
-            --id.name $PEER_NAME --id.secret $PEER_PASS --id.type peer --id.affiliation jedo.root #ToDo Affiliation
+            --id.name $PEER_NAME --id.secret $PEER_PASS --id.type peer --id.affiliation $AFFILIATION
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
@@ -110,7 +111,7 @@ for AGER in $AGERS; do
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
-            --id.name $PEER_NAME --id.secret $PEER_PASS --id.type client --id.affiliation jedo.root
+            --id.name $PEER_NAME --id.secret $PEER_PASS --id.type client --id.affiliation $AFFILIATION
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
