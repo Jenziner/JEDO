@@ -117,7 +117,7 @@ Ager:
           Port: 53041
           OpPort: 53049
           CAAPI:
-              Name: ca.api.alps.ea.jedo.dev
+              Name: api.ca.alps.ea.jedo.dev
               IP: 172.25.3.5
               Port: 53051
               SrvPort: 53059
@@ -188,7 +188,7 @@ Ager:
           Port: 54041
           OpPort: 54049
           CAAPI:
-              Name: ca.api.jura.ea.jedo.dev
+              Name: api.ca.jura.ea.jedo.dev
               IP: 172.25.4.5
               Port: 54051
               SrvPort: 54059

@@ -27,7 +27,7 @@ get_hosts
 # Remove old stuff
 ###############################################################
 echo_warn "Old Container and Folder removing..."
-docker ps -a -q --filter "name=^ca.api" | xargs -r docker rm -f
+docker ps -a -q --filter "name=^api.ca" | xargs -r docker rm -f
 find . -type d -name "api.ca*" -print0 | xargs -0 -r rm -rf
 docker rmi -f jedo-ca-api
 
