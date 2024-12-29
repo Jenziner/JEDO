@@ -115,7 +115,7 @@ const extractRoleAndSubjectFromCert = (certText) => {
 
   // Berechne die Affiliation
   const { C, ST, L, O } = subjectDetails;
-  const affiliation = O && O !== 'N/A' ? `${ST}.jedo.${C}.${L}.${O}` : `${ST}.jedo.${C}.${L}`;
+  const affiliation = O && O !== 'N/A' ? `jedo.${L}.${O}` : `jedo.${L}`;
 
   return { role, subjectDetails, affiliation };
 };
