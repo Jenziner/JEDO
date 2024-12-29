@@ -88,7 +88,7 @@ for AGER in $AGERS; do
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$AUDITOR_NAME/msp \
-            --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,*.jedo.dev" \
+            --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13,*.jedo.dev" \
             --csr.cn $CN --csr.names "$CSR_NAMES" \
             --enrollment.attrs "jedo.apiPort,jedo.role"
     done
@@ -139,7 +139,7 @@ for AGER in $AGERS; do
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$ISSUER_NAME/msp \
-            --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,*.jedo.dev" \
+            --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13,*.jedo.dev" \
             --csr.cn $CN --csr.names "$CSR_NAMES" \
             --enrollment.attrs "jedo.apiPort,jedo.role"
     done
@@ -192,7 +192,7 @@ for AGER in $AGERS; do
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$OWNER_NAME/$CN/msp \
-            --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,*.jedo.dev" \
+            --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13,*.jedo.dev" \
             --csr.cn $CN --csr.names "$CSR_NAMES" \
             --enrollment.attrs "jedo.apiPort,jedo.role"
 
@@ -230,7 +230,7 @@ for AGER in $AGERS; do
                 --home $ORBIS_TOOLS_CACLI_DIR \
                 --tls.certfiles tls-root-cert/tls-ca-cert.pem \
                 --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$OWNER_NAME/$USER_NAME/msp \
-                --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,*.jedo.dev" \
+                --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13,*.jedo.dev" \
                 --csr.cn $CN --csr.names "$CSR_NAMES"
         done
     done
