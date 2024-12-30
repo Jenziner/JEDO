@@ -10,6 +10,7 @@ const { createWriteStream } = require('fs');
 const app = express();
 const { execSync } = require('child_process');
 const { Certificate, verify } = require('crypto');
+const jwt = require('jsonwebtoken');
 
 app.use(cors());
 app.use(express.json());
@@ -26,15 +27,46 @@ const SERVER_NAME = 'JEDO CA-Server';  // Servername als Konstante
 const caCertDir = '/app/admin/tls/tlscacerts';
 const caCertFile = fs.readdirSync(caCertDir).find(file => file.endsWith('.pem'));
 const tlsCertPath = path.join(caCertDir, caCertFile);
+const caKeyDir = '/app/admin/tls/keystore';
+const caKeyFile = fs.readdirSync(caKeyDir).find(file => file.endsWith('_sk'));
+const tlsKeyPath = path.join(caKeyDir, caKeyFile);
+
+// Zertifikat und privater Schlüssel aus dem MSP
+const certPath = path.join('/app/admin/msp', 'signcerts', 'cert.pem');
+const keyDir = path.join('/app/admin/msp', 'keystore');
+const keyFile = fs.readdirSync(keyDir).find(file => file.endsWith('_sk'));
+const certificate = fs.readFileSync(certPath).toString();
+const privateKey = fs.readFileSync(path.join(keyDir, keyFile)).toString();
+
+// Token generieren
+const payload = {
+  sub: config.ca_name, 
+  iat: Math.floor(Date.now() / 1000), 
+  exp: Math.floor(Date.now() / 1000) + 60 * 60 
+};
+
+const token = jwt.sign(payload, privateKey, {
+  algorithm: 'ES384', // according CA-Server-Cert
+  header: {
+    x5c: [certificate], // Zertifikat als Teil des Headers senden
+  }
+});
+
+// Header für Token-basierte Authentifizierung
+const headers = {
+  Authorization: `Bearer ${token}`
+};
 
 // TLS-Optionen für die CA-Verbindung mit Zertifikatsprüfung
 const tlsOptions = {
   trustedRoots: [fs.readFileSync(tlsCertPath)],
+  clientCert: fs.readFileSync('/app/admin/tls/signcerts/cert.pem'),
+  clientKey: fs.readFileSync(tlsKeyPath),
   verify: false
 };
 
 // Setze den CA-Service mit den TLS-Optionen
-const caService = new FabricCAServices(config.ca_url, tlsOptions);
+const caService = new FabricCAServices(config.ca_url, tlsOptions, headers);
 
 
 // //////////////////////////////////////////////
@@ -45,12 +77,6 @@ const loadAdminIdentity = async () => {
   let adminIdentity = await wallet.get('admin');
   
   if (!adminIdentity) {
-    const certPath = path.join('/app/admin/tls', 'signcerts', 'cert.pem');
-    const keyDir = path.join('/app/admin/tls', 'keystore');
-    const keyFile = fs.readdirSync(keyDir).find(file => file.endsWith('_sk'));
-    const certificate = fs.readFileSync(certPath).toString();
-    const privateKey = fs.readFileSync(path.join(keyDir, keyFile)).toString();
-
     adminIdentity = {
       credentials: {
         certificate,
@@ -123,6 +149,30 @@ const extractRoleAndSubjectFromCert = (certText) => {
 
 
 // //////////////////////////////////////////////
+// Function to list Affiliation
+// //////////////////////////////////////////////
+async function listAffiliations(caService) {
+  const adminUser = await loadAdminIdentity(); // Admin-Identität laden
+
+  try {
+    const affiliationService = caService.newAffiliationService();
+    console.log('Authorization Header:', headers.Authorization);
+
+    const affiliations = await affiliationService.getAll(adminUser, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    console.log('Affiliations:', affiliations);
+    return affiliations;
+  } catch (error) {
+    console.error('Failed to list affiliations:', error);
+    throw error;
+  }
+}
+
+
+// //////////////////////////////////////////////
 // Function to add Affiliation
 // //////////////////////////////////////////////
 async function addAffiliation(affiliation, caService) {
@@ -130,10 +180,14 @@ async function addAffiliation(affiliation, caService) {
 
   try {
     const affiliationService = caService.newAffiliationService();
-    
+
     await affiliationService.create({
       name: affiliation
-    }, adminUser);
+    }, adminUser, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
 
     console.log(`Affiliation '${affiliation}' added successfully.`);
   } catch (error) {
@@ -502,6 +556,19 @@ const createUser = async (username, password, affiliation, subjectDetails, res) 
   }
 };
 
+
+
+// //////////////////////////////////////////////
+// GET Endpoint für die Auflistung der Affiliations
+// //////////////////////////////////////////////
+app.get('/affiliations', async (req, res) => {
+  try {
+    const affiliations = await listAffiliations(caService);
+    res.status(200).json(affiliations);
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to list affiliations' });
+  }
+});
 
 
 // //////////////////////////////////////////////
