@@ -55,11 +55,18 @@ async function getAffiliations() {
     );
 
     const affiliationService = ca.newAffiliationService();
+
+    const response = await affiliationService.create({
+        name: 'jedo.meinTest2',
+        force: false
+      }, user);
+    console.log(`Affiliation response: ${response}`);
+
     const rootAffiliation = await affiliationService.getAll(user);
-    
     console.log('Affiliation object:', JSON.stringify(rootAffiliation, null, 2));
 
-    return rootAffiliation.affiliations;
+//    return rootAffiliation.affiliations;
+    return JSON.stringify(rootAffiliation, null, 2);
   } catch (error) {
     console.error('Fehler beim Abrufen der Affiliations:', error);
     throw error;
