@@ -1,617 +1,94 @@
-const express = require('express');
-const cors = require('cors');
+/**
+ * Beispiel-Code für einen einfachen API-Server mit Node.js,
+ * der Affiliations vom Fabric-CA-Server abfragt (TLS-gesichert).
+ */
+
 const fs = require('fs');
-const yaml = require('yaml');
-const FabricCAServices = require('fabric-ca-client');
-const { Wallets } = require('fabric-network');
 const path = require('path');
-const archiver = require('archiver');
-const { createWriteStream } = require('fs');
-const app = express();
-const { execSync } = require('child_process');
-const { Certificate, verify } = require('crypto');
-const jwt = require('jsonwebtoken');
+const express = require('express');
+const FabricCAServices = require('fabric-ca-client');
+const bodyParser = require('body-parser');
+const { User } = require('fabric-common');
 
-app.use(cors());
-app.use(express.json());
+// 1) TLS-Root-Zertifikat lesen
+const caCertPath = path.join('/etc/hyperledger/infrastructure/temp', 'tls-cacert.pem');
+const caCert = fs.readFileSync(caCertPath);
 
-// Lade Konfigurationen aus der YAML-Datei
-const config = yaml.parse(fs.readFileSync('/app/config/jedo-ca-api-config.yaml', 'utf8'));
+// 2) Vorhandene MSP-Zertifikate (von einem früheren Enrollment)
+const mspCertPath = path.join('/etc/hyperledger/infrastructure/temp', 'cert.pem');
+const mspKeyPath = path.join('/etc/hyperledger/infrastructure/temp', 'key.pkcs8.pem');
+const mspCert = fs.readFileSync(mspCertPath, 'utf8');  // public cert
+const mspKey = fs.readFileSync(mspKeyPath, 'utf8');    // private key
 
-// Feste Werte für den Version-Endpoint
-const API_VERSION = '1.0.0';  // Version als Konstante
-const RELEASE_DATE = '2024-10-20';  // Datum als Konstante
-const SERVER_NAME = 'JEDO CA-Server';  // Servername als Konstante
-
-// Dynamisch den Dateinamen des CA-Zertifikats im Verzeichnis /app/admin/tls/tlscacerts ermitteln
-const caCertDir = '/app/admin/tls/tlscacerts';
-const caCertFile = fs.readdirSync(caCertDir).find(file => file.endsWith('.pem'));
-const tlsCertPath = path.join(caCertDir, caCertFile);
-const caKeyDir = '/app/admin/tls/keystore';
-const caKeyFile = fs.readdirSync(caKeyDir).find(file => file.endsWith('_sk'));
-const tlsKeyPath = path.join(caKeyDir, caKeyFile);
-
-// Zertifikat und privater Schlüssel aus dem MSP
-const certPath = path.join('/app/admin/msp', 'signcerts', 'cert.pem');
-const keyDir = path.join('/app/admin/msp', 'keystore');
-const keyFile = fs.readdirSync(keyDir).find(file => file.endsWith('_sk'));
-const certificate = fs.readFileSync(certPath).toString();
-const privateKey = fs.readFileSync(path.join(keyDir, keyFile)).toString();
-
-// Token generieren
-const payload = {
-  sub: config.ca_name, 
-  iat: Math.floor(Date.now() / 1000), 
-  exp: Math.floor(Date.now() / 1000) + 60 * 60 
+// 3) Fabric-CA-Server-URL und TLS-Options
+const caURL = 'https://ca.alps.ea.jedo.dev:53041';
+const caTLSOptions = {
+  trustedRoots: [caCert],
+  verify: true
 };
 
-const token = jwt.sign(payload, privateKey, {
-  algorithm: 'ES384', // according CA-Server-Cert
-  header: {
-    x5c: [certificate], // Zertifikat als Teil des Headers senden
-  }
-});
+// 4) MSP-Zugangsdaten (Enrollment) für den Admin o. ä.
+const enrollmentID = 'ca.alps.ea.jedo.dev';
+const enrollmentSecret = 'Test1';
+const caName = 'ca.alps.ea.jedo.dev';
+const mspId = 'jedo'; 
 
-// Header für Token-basierte Authentifizierung
-const headers = {
-  Authorization: `Bearer ${token}`
-};
-
-// TLS-Optionen für die CA-Verbindung mit Zertifikatsprüfung
-const tlsOptions = {
-  trustedRoots: [fs.readFileSync(tlsCertPath)],
-  clientCert: fs.readFileSync('/app/admin/tls/signcerts/cert.pem'),
-  clientKey: fs.readFileSync(tlsKeyPath),
-  verify: false
-};
-
-// Setze den CA-Service mit den TLS-Optionen
-const caService = new FabricCAServices(config.ca_url, tlsOptions, headers);
+// 5) Fabric-CA-Client instanziieren
+const ca = new FabricCAServices(caURL, caTLSOptions, caName);
 
 
-// //////////////////////////////////////////////
-// Funktion zum Laden der Admin-Identität
-// //////////////////////////////////////////////
-const loadAdminIdentity = async () => {
-  const wallet = await Wallets.newFileSystemWallet('/app/adminWallet');
-  let adminIdentity = await wallet.get('admin');
-  
-  if (!adminIdentity) {
-    adminIdentity = {
-      credentials: {
-        certificate,
-        privateKey
-      },
-      mspId: config.organization,
-      type: 'X.509'
-    };
-    await wallet.put('admin', adminIdentity);
-  }
-  
-  const identityProvider = wallet.getProviderRegistry().getProvider(adminIdentity.type);
-  const adminUser = await identityProvider.getUserContext(adminIdentity, 'admin');
-  return adminUser;
-};
-
-
-// //////////////////////////////////////////////
-// Funktion zum Auslesen von Zertifikatstext und Bestimmen der Rolle und des Subjects
-// //////////////////////////////////////////////
-const extractRoleAndSubjectFromCert = (certText) => {
-  const command = `echo "${certText}" | openssl x509 -text -noout`;
-  const certInfo = execSync(command).toString();
-  const roleMatch = certInfo.match(/jedo\.role":"(CA|issuer|owner)"/);
-  const subjectMatch = certInfo.match(/Subject: (.*)/);
-
-  if (!roleMatch) {
-    throw new Error('Role not found in certificate');
-  }
-  if (!subjectMatch) {
-    throw new Error('Subject not found in certificate');
-  }
-
-  const role = roleMatch[1];
-  const subject = subjectMatch[1];
-
-  // Subject details extraction (C, ST, L, O, OU)
-  const subjectDetails = {};
-  const ouList = [];
-  const compareList = [];
-
-  subject.split(/, |\s\+\s/).forEach(part => {
-    const [key, value] = part.split('=');
-    const trimmedKey = key.trim();
-    const trimmedValue = value ? value.trim() : '';
-
-    if (trimmedKey === 'OU') {
-      ouList.push(trimmedValue);
-    } else {
-      subjectDetails[trimmedKey] = trimmedValue;
-      compareList.push(trimmedValue.toLowerCase());
-    }
-  });
-
-  // Entferne redundante OU-Einträge und die OU "client"
-  const relevantOUList = ouList.filter(ou => {
-    return !compareList.includes(ou.toLowerCase()) && ou.toLowerCase() !== 'client';
-  });
-
-  // Setze die gefilterte OU, falls vorhanden
-  subjectDetails.OU = relevantOUList.length === 1 ? relevantOUList[0] : 'N/A';
-
-  // Berechne die Affiliation
-  const { C, ST, L, O } = subjectDetails;
-  const affiliation = O && O !== 'N/A' ? `jedo.${L}.${O}` : `jedo.${L}`;
-
-  return { role, subjectDetails, affiliation };
-};
-
-
-
-// //////////////////////////////////////////////
-// Function to list Affiliation
-// //////////////////////////////////////////////
-async function listAffiliations(caService) {
-  const adminUser = await loadAdminIdentity(); // Admin-Identität laden
-
+// 8) Funktion zum Abrufen der Affiliations
+async function getAffiliations() {
   try {
-    const affiliationService = caService.newAffiliationService();
-    console.log('Authorization Header:', headers.Authorization);
-
-    const affiliations = await affiliationService.getAll(adminUser, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    // 6) Admin einschreiben (MSP)
+    const enrollment = await ca.enroll({
+        enrollmentID,
+        enrollmentSecret
     });
-    console.log('Affiliations:', affiliations);
-    return affiliations;
+
+    // 7) User-Objekt erstellen und enrollen
+    const user = new User(enrollmentID);
+    await user.setEnrollment(
+    enrollment.key,
+    enrollment.certificate,
+    mspId
+    );
+
+    const affiliationService = ca.newAffiliationService();
+    const rootAffiliation = await affiliationService.getAll(user);
+    
+    console.log('Affiliation object:', JSON.stringify(rootAffiliation, null, 2));
+
+    return rootAffiliation.affiliations;
   } catch (error) {
-    console.error('Failed to list affiliations:', error);
+    console.error('Fehler beim Abrufen der Affiliations:', error);
     throw error;
   }
 }
 
+// 9) Express-Server starten
+async function main() {
+  const app = express();
+  app.use(bodyParser.json());
 
-// //////////////////////////////////////////////
-// Function to add Affiliation
-// //////////////////////////////////////////////
-async function addAffiliation(affiliation, caService) {
-  const adminUser = await loadAdminIdentity();
-
-  try {
-    const affiliationService = caService.newAffiliationService();
-
-    await affiliationService.create({
-      name: affiliation
-    }, adminUser, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    console.log(`Affiliation '${affiliation}' added successfully.`);
-  } catch (error) {
-    console.error(`Failed to add affiliation '${affiliation}':`, error);
-  }
-}
-
-
-// //////////////////////////////////////////////
-// Function to register FSC-User
-// //////////////////////////////////////////////
-async function registerFscUser(enrollmentID, enrollmentSecret, role, affiliation, caService, config) {
-  const adminUser = await loadAdminIdentity();
-
-  await caService.register({
-      enrollmentID: enrollmentID,
-      enrollmentSecret: enrollmentSecret,
-      role: 'client',
-      affiliation: affiliation,
-      attrs: [
-          { name: 'jedo.apiPort', value: String(config.api_port), type: 'string', ecert: true },
-          { name: 'jedo.role', value: role, type: 'string', ecert: true }
-      ]
-  }, adminUser);
-}
-
-
-// //////////////////////////////////////////////
-// Function to register Wallet-User
-// //////////////////////////////////////////////
-async function registerWalletUser(enrollmentID, enrollmentSecret, role, affiliation, caService, config) {
-  const adminUser = await loadAdminIdentity();
-
-  await caService.register({
-      enrollmentID: enrollmentID,
-      enrollmentSecret: enrollmentSecret,
-      role: 'client',
-      affiliation: affiliation,
-      attrs: [
-        { name: 'jedo.apiPort', value: String(config.api_port), type: 'string', ecert: true },
-        { name: 'jedo.role', value: role, type: 'string', ecert: true }
-    ]
-// TODO
-// --enrollment.type idemix --idemix.curve gurvy.Bn254
-    }, adminUser);
-}
-
-
-// //////////////////////////////////////////////
-// Function to enroll User
-// //////////////////////////////////////////////
-async function enrollUser(enrollmentID, enrollmentSecret, csrPem, caService) {
-  const fscEnrollment = await caService.enroll({
-      enrollmentID: enrollmentID,
-      enrollmentSecret: enrollmentSecret,
-      csr: csrPem,
-      attr_reqs: [
-          { name: 'jedo.apiPort' },
-          { name: 'jedo.role' }
-      ]
-  });
-
-  return fscEnrollment;
-}
-
-
-// //////////////////////////////////////////////
-// Function to store certificate and keyfile
-// //////////////////////////////////////////////
-function storeCert(enrollment, privateKeyPem, mspDir) {
-  // Create MSP-Folder-Path
-  const signcertsDir = path.join(mspDir, 'signcerts');
-  const keystoreDir = path.join(mspDir, 'keystore');
-
-  // Create directories
-  fs.mkdirSync(signcertsDir, { recursive: true });
-  fs.mkdirSync(keystoreDir, { recursive: true });
-
-  // Store certificate and keyfile
-  fs.writeFileSync(path.join(signcertsDir, 'cert.pem'), enrollment.certificate);
-  fs.writeFileSync(path.join(keystoreDir, 'key.pem'), privateKeyPem);
-}
-
-
-// //////////////////////////////////////////////
-// Function to store certificate and keyfile
-// //////////////////////////////////////////////
-async function createCertsZip(username, signcertsDir, keystoreDir, res) {
-  const zipFilePath = `/tmp/${username}_certs.zip`;
-  const output = fs.createWriteStream(zipFilePath);
-  const archive = archiver('zip', { zlib: { level: 9 } });
-
-  return new Promise((resolve, reject) => {
-      output.on('close', () => {
-          // Send Zip as download
-          res.download(zipFilePath, `${username}_certs.zip`, (err) => {
-              if (err) {
-                  console.error("Download error:", err);
-                  res.status(500).send({ error: "Failed to download certificates." });
-                  reject(err);
-              } else {
-                  resolve();
-              }
-          });
-      });
-
-      archive.on('error', (err) => {
-          reject(err);
-      });
-
-      archive.pipe(output);
-      archive.file(path.join(signcertsDir, 'cert.pem'), { name: 'cert.pem' });
-      archive.file(path.join(keystoreDir, 'key.pem'), { name: 'key.pem' });
-      archive.finalize();
-  });
-}
-
-
-// //////////////////////////////////////////////
-// Funktion zum Erstellen eines Issuer
-// //////////////////////////////////////////////
-const createIssuer = async (region, username, password, affiliation, subjectDetails, res) => {
-  console.log(`${username}: Creating Issuer with affiliation: ${affiliation}`);
-  const { generateCsr } = require('./utils');
-
-  try {
-    // Generate FSC User
-    const fscUsername = `fsc.${username}`;
-    await registerFscUser(fscUsername, password, 'issuer', affiliation, caService, config);
-    console.log(`${username}: FSC User registered successfully.`);
-
-    // Generate CSR
-    const { csrPem: fscCsrPem, privateKeyPem: fscPrivateKeyPem } = await generateCsr({
-        cn: fscUsername,
-      names: [
-        { C: subjectDetails.C },
-        { ST: subjectDetails.ST },
-        { L: region },
-      ],
-      altNames: [
-        { type: 2, value: config.ca_name }, // type 2: DNS
-        { type: 2, value: config.api_name },
-        { type: 7, ip: config.api_IP }, // type 7: IP
-        { type: 7, ip: config.unraid_IP }        
-      ]
-    });
-    console.log(`${username}: PrivateKeyPem for FSC User generated successfully`);
-    
-    // Enroll FSC User
-    const fscEnrollment = await enrollUser(fscUsername, password, fscCsrPem, caService);
-    console.log(`${username}: FSC User enrolled successfully.`);
-
-    // Store FSC User certificates
-    const fscMspDir = path.join(
-      config.keys_dir, 
-      `${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `${region}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      '_issuer', 
-      `${username}`, 
-      'fsc', 
-      'msp'
-    );
-    storeCert(fscEnrollment, fscPrivateKeyPem, fscMspDir);
-    console.log(`${username}: Files stored successfully.`);
-
-    // Generate Wallet User
-    await registerWalletUser(username, password, 'issuer', affiliation, caService, config);
-    console.log(`${username}: Wallet User registered successfully.`);
-
-    // Generate CSR
-    const { csrPem: walletCsrPem, privateKeyPem: walletPrivateKeyPem } = await generateCsr({
-        cn: username,
-      names: [
-        { C: subjectDetails.C },
-        { ST: subjectDetails.ST },
-        { L: region },
-      ]
-    });
-    console.log(`${username}: PrivateKeyPem for Wallet User generated successfully`);
-    
-    // Enroll Wallet User
-    const walletEnrollment = await enrollUser(username, password, walletCsrPem, caService);
-    console.log(`${username}: Wallet User enrolled successfully.`);
-
-    // Store Wallet User certificates
-    const walletMspDir = path.join(
-      config.keys_dir, 
-      `${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `${region}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `_issuer`, 
-      `${username}`, 
-      `wallet`,
-      `msp`
-    );
-    storeCert(walletEnrollment, walletPrivateKeyPem, walletMspDir);
-    console.log(`${username}: Files stored successfully.`);
-
-    // Create ZIP with FSC User certificates only
-    const signcertsDir = path.join(fscMspDir, 'signcerts');
-    const keystoreDir = path.join(fscMspDir, 'keystore');
-    await createCertsZip(fscUsername, signcertsDir, keystoreDir, res);
-    console.log(`${username}: ZIP created and sent successfully.`);
-
-    console.log(`${username}: Issuer created successfully`);
-  
-  } catch (error) {
-    console.error(`${username}: Error creating Issuer: ${error.message}`);
-    console.error('Full error details:', error);
-    res.status(500).send({ error: `Failed to create Issuer ${username}: ${error.message}` });
-  }
-};
-
-
-// //////////////////////////////////////////////
-// Funktion zum Erstellen eines Owner
-// //////////////////////////////////////////////
-const createOwner = async (username, password, affiliation, subjectDetails, res) => {
-  console.log(`${username}: Creating Owner with affiliation: ${affiliation}`);
-  const { generateCsr } = require('./utils');
-
-  try {
-    // Add affiliation
-    addAffiliation(`${affiliation}.${username}`, caService);
-
-    // Generate FSC User
-    const fscUsername = `fsc.${username}`;
-    await registerFscUser(fscUsername, password, 'owner', affiliation, caService, config);
-    console.log(`${username}: FSC User registered successfully.`);
-
-    // Generate CSR
-    const { csrPem: fscCsrPem, privateKeyPem: fscPrivateKeyPem } = await generateCsr({
-        cn: fscUsername,
-      names: [
-        { C: subjectDetails.C },
-        { ST: subjectDetails.ST },
-        { L: subjectDetails.L },
-        { O: username },
-      ],
-      altNames: [
-        { type: 2, value: config.ca_name }, // type 2: DNS
-        { type: 2, value: config.api_name },
-        { type: 7, ip: config.api_IP }, // type 7: IP
-        { type: 7, ip: config.unraid_IP }        
-      ]
-    });
-    console.log(`${username}: PrivateKeyPem for FSC User generated successfully`);
-    
-    // Enroll FSC User
-    const fscEnrollment = await enrollUser(fscUsername, password, fscCsrPem, caService);
-    console.log(`${username}: FSC User enrolled successfully.`);
-
-    // Store FSC User certificates
-    const fscMspDir = path.join(
-      config.keys_dir, 
-      `${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `${username}.${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `_owner-${username}`, 
-      `fsc`, 
-      `msp`
-    );
-    storeCert(fscEnrollment, fscPrivateKeyPem, fscMspDir);
-    console.log(`${username}: Files stored successfully.`);
-
-    // Generate Wallet User
-    await registerWalletUser(username, password, 'owner', affiliation, caService, config);
-    console.log(`${username}: Wallet User registered successfully.`);
-
-    // Generate CSR
-    const { csrPem: walletCsrPem, privateKeyPem: walletPrivateKeyPem } = await generateCsr({
-        cn: username,
-      names: [
-        { C: subjectDetails.C },
-        { ST: subjectDetails.ST },
-        { L: subjectDetails.L },
-        { O: username },
-      ]
-    });
-    console.log(`${username}: PrivateKeyPem for Wallet User generated successfully`);
-    
-    // Enroll Wallet User
-    const walletEnrollment = await enrollUser(username, password, walletCsrPem, caService);
-    console.log(`${username}: Wallet User enrolled successfully.`);
-
-    // Store Wallet User certificates
-    const walletMspDir = path.join(
-      config.keys_dir, 
-      `${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `${username}.${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `_owner-${username}`, 
-      `wallet`,
-      `msp`
-    );
-    storeCert(walletEnrollment, walletPrivateKeyPem, walletMspDir);
-    console.log(`${username}: Files stored successfully.`);
-
-    // Create ZIP with FSC User certificates only
-    const signcertsDir = path.join(fscMspDir, 'signcerts');
-    const keystoreDir = path.join(fscMspDir, 'keystore');
-    await createCertsZip(fscUsername, signcertsDir, keystoreDir, res);
-    console.log(`${username}: ZIP created and sent successfully.`);
-
-    console.log(`${username}: Owner created successfully`);
-  
-  } catch (error) {
-    console.error(`${username}: Error creating Owner: ${error.message}`);
-    console.error('Full error details:', error);
-    res.status(500).send({ error: `Failed to create Owner ${username}: ${error.message}` });
-  }
-};
-
-
-// //////////////////////////////////////////////
-// Funktion zum Erstellen eines User
-// //////////////////////////////////////////////
-const createUser = async (username, password, affiliation, subjectDetails, res) => {
-  console.log(`${username}: Creating User with affiliation: ${affiliation}`);
-  const { generateCsr } = require('./utils');
-
-  try {
-    // Generate Wallet User
-    await registerWalletUser(username, password, 'user', affiliation, caService, config);
-    console.log(`${username}: Wallet User registered successfully.`);
-
-    // Generate CSR
-    const { csrPem: walletCsrPem, privateKeyPem: walletPrivateKeyPem } = await generateCsr({
-        cn: username,
-      names: [
-        { C: subjectDetails.C },
-        { ST: subjectDetails.ST },
-        { L: subjectDetails.L },
-        { O: subjectDetails.O }
-      ]
-    });
-    console.log(`${username}: PrivateKeyPem for Wallet User generated successfully`);
-    
-    // Enroll Wallet User
-    const walletEnrollment = await enrollUser(username, password, walletCsrPem, caService);
-    console.log(`${username}: Wallet User enrolled successfully.`);
-
-    // Store Wallet User certificates
-    const walletMspDir = path.join(
-      config.keys_dir, 
-      `${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`,
-      `${subjectDetails.O}.${subjectDetails.L}.${subjectDetails.C}.jedo.${subjectDetails.ST}`, 
-      `${username}`, 
-      `msp`
-    );
-    storeCert(walletEnrollment, walletPrivateKeyPem, walletMspDir);
-    console.log(`${username}: Files stored successfully.`);
-
-    // Create ZIP with FSC User certificates only
-    const signcertsDir = path.join(walletMspDir, 'signcerts');
-    const keystoreDir = path.join(walletMspDir, 'keystore');
-    await createCertsZip(username, signcertsDir, keystoreDir, res);
-    console.log(`${username}: ZIP created and sent successfully.`);
-
-    console.log(`${username}: User created successfully`);
-  
-  } catch (error) {
-    console.error(`${username}: Error creating User: ${error.message}`);
-    console.error('Full error details:', error);
-    res.status(500).send({ error: `Failed to create User ${username}: ${error.message}` });
-  }
-};
-
-
-
-// //////////////////////////////////////////////
-// GET Endpoint für die Auflistung der Affiliations
-// //////////////////////////////////////////////
-app.get('/affiliations', async (req, res) => {
-  try {
-    const affiliations = await listAffiliations(caService);
-    res.status(200).json(affiliations);
-  } catch (error) {
-    res.status(500).send({ error: 'Failed to list affiliations' });
-  }
-});
-
-
-// //////////////////////////////////////////////
-// GET Endpoint für die Version
-// //////////////////////////////////////////////
-app.get('/version', (req, res) => {
-  res.status(200).json({
-    version: API_VERSION,
-    releaseDate: RELEASE_DATE,
-    serverName: SERVER_NAME
-  });
-});
-
-
-// //////////////////////////////////////////////
-// POST Endpoint für die Registrierung
-// //////////////////////////////////////////////
-app.post('/register', async (req, res) => {
-  const { region, username, password, certText } = req.body;
-  try {
-    // Extrahiere die Rolle und den Subject aus dem Zertifikat
-    const { role, subjectDetails, affiliation } = extractRoleAndSubjectFromCert(certText);
-
-    // Registriere Benutzer je nach Rolle
-    if (role === 'CA') {
-      await createIssuer(region, username, password, affiliation, subjectDetails, res);
-    } else if (role === 'issuer') {
-      await createOwner(username, password, affiliation, subjectDetails, res);
-    } else if (role === 'owner') {
-      await createUser(username, password, affiliation, subjectDetails, res);
+  // Route: GET /affiliations
+  app.get('/affiliations', async (req, res) => {
+    try {
+      const affiliations = await getAffiliations();
+      res.json({ affiliations });
+    } catch (error) {
+      res.status(500).json({ error: error.toString() });
     }
+  });
 
-  } catch (error) {
-    console.error(`Error in /register endpoint: ${error.message}`);
-    res.status(500).send({ error: error.message });
-  }
-});
+  const port = process.env.PORT || 53059;
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
+}
 
-
-// //////////////////////////////////////////////
-// Starte den Server auf dem API-Port aus der Konfigurationsdatei
-// //////////////////////////////////////////////
-const PORT = config.api_port || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// 10) main() ausführen
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
 });
