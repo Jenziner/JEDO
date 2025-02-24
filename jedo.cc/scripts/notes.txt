@@ -1,0 +1,89 @@
+
+curl -k -s https://peer0.jenziner.jedo.test:7069/healthz
+
+openssl x509 -in ./keys/JenzinerOrg/orderer.jenziner.jedo.test/tls/signcerts/cert.pem -text -noout
+openssl x509 -in ./keys/LiebiwilerOrg/orderer.liebiwiler.jedo.test/tls/signcerts/cert.pem -text -noout
+
+-e ORDERER_GENERAL_TLS_ROOTCAS=[/etc/hyperledger/orderer/tls/tlscacerts/$TLS_ROOTCERT] \
+
+
+PEER Operation:
+        -e CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:$PEER_OPPORT \
+        -e CORE_OPERATIONS_TLS_ENABLED=true \
+        -e CORE_OPERATIONS_TLS_CERTIFICATE=/etc/hyperledger/fabric/tls/signcerts/cert.pem \
+        -e CORE_OPERATIONS_TLS_PRIVATEKEY=/etc/hyperledger/fabric/tls/keystore/$TLS_PRIVATE_KEY \
+
+ORDERER Operation:
+        -e ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:$ORDERER_OPPORT \
+        -e ORDERER_OPERATIONS_TLS_ENABLED=true \
+        -e ORDERER_OPERATIONS_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+        -e ORDERER_OPERATIONS_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATE_KEY \
+
+
+
+openssl x509 -in "./keys/combined_tls_cacerts/tls-combined-ca.pem" -text -noout
+grep -c "BEGIN CERTIFICATE" "./keys/combined_tls_cacerts/tls-combined-ca.pem"
+openssl x509 -in "./keys/combined_tls_cacerts/tls-combined-ca.pem" -noout -text | grep "Subject:"
+
+docker exec -it cli.peer0.jenziner.jedo.test openssl s_client -connect orderer.jenziner.jedo.test:7050 -cert /etc/hyperledger/fabric/tls/signcerts/cert.pem -key /etc/hyperledger/fabric/tls/keystore/eacf9af51b5b1ae6887527e61476b91635a50cac0a83442f26f605499d8dfa33_sk -CAfile /etc/hyperledger/fabric/tls/tlscacerts/tls_ca_combined.pem
+
+docker exec -it cli.peer0.jenziner.jedo.test openssl s_client -connect orderer.jenziner.jedo.test:7050 -CAfile /etc/hyperledger/fabric/tls/tlscacerts/tls_ca_combined.pem
+
+
+docker exec -it cli.peer0.jenziner.jedo.test ls /etc/hyperledger/fabric/tls/signcerts/cert.pem
+
+docker exec -it orderer.jenziner.jedo.test cat /etc/hyperledger/fabric/tls/tlscacerts/tls_ca_combined.pem | openssl x509 -noout -text | grep "Issuer"
+
+openssl s_client -connect orderer.jenziner.jedo.test:7050 -cert ./keys/JenzinerOrg/peer0.jenziner.jedo.test/tls/signcerts/cert.pem -key ./keys/JenzinerOrg/peer0.jenziner.jedo.test/tls/keystore/e2922d5eabf6ad6a4babd696c0fa8e4688a77a4b413247572ef88f7e94062f85_sk -CAfile ./keys/tlscerts_collections/tls_ca_combined/tls_ca_combined.pem
+
+
+openssl s_client -connect orderer.jenziner.jedo.test:7050 -cert /etc/hyperledger/fabric/tls/signcerts/cert.pem -key /etc/hyperledger/fabric/tls/keystore/e2922d5eabf6ad6a4babd696c0fa8e4688a77a4b413247572ef88f7e94062f85_sk -CAfile /etc/hyperledger/fabric/tls/tlscacerts/tls_ca_combined.pem
+
+
+curl -s --cacert /mnt/user/appdata/jedo-network/keys/JenzinerOrg/ca.jenziner.jedo.test/tls/signcerts/ca-cert.pem https://ca.jenziner.jedo.test:7040/cainfo
+
+
+    docker exec -it cli.ca.jenziner.jedo.test fabric-ca-client enroll \
+        --url https://ca.jenziner.jedo.test:Test1@ca.jenziner.jedo.test:7040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/ca-chain.pem \
+        --mspdir /etc/hyperledger/fabric-ca-client/msp/admin
+
+docker exec -it cli.ca.jedo.test ls -l /etc/hyperledger/fabric-ca-client/msp/cacerts
+    
+openssl x509 -in ${PWD}/production/JenzinerOrg/ca.jenziner.jedo.test/msp/tlscacerts/tls-ca-cert.pem -text -noout
+
+
+docker exec -it cli.ca.jedo.test fabric-ca-client enroll \
+            --url https://ca.jedo.test:Test1@ca.jedo.test:6040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/root-ca-cert.pem \
+            --mspdir /etc/hyperledger/fabric-ca-client/msp
+docker exec -it cli.ca.jedo.test fabric-ca-client affiliation add TestOrg \
+            --url https://ca.jedo.test:Test1@ca.jedo.test:6040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/root-ca-cert.pem \
+            --mspdir /etc/hyperledger/fabric-ca-client/msp
+docker exec -it cli.ca.jedo.test fabric-ca-client affiliation add TestOrg \
+            --url https://ca.jedo.test:Test1@ca.jedo.test:6040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/ca-jedo-test-6040.pem \
+            --mspdir /etc/hyperledger/fabric-ca-client/msp
+
+
+docker exec -it cli.ca.jedo.test ls /etc/hyperledger/production/admin.ca.jedo.test/keystore/
+docker exec -it cli.ca.jedo.test ls /etc/hyperledger/production/admin.ca.jedo.test/signcerts/
+
+
+
+
+        docker exec -it cli.ca.jedo.test fabric-ca-client register \
+            --url https://ca.jedo.test:6040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/ca-jedo-test-6040.pem \
+            --id.name Nik --id.secret Test1 --id.type client 
+
+        docker exec -i cli.ca.jedo.test fabric-ca-client enroll \
+            --url https://Nik:Test1@ca.jedo.test:6040 --tls.certfiles /etc/hyperledger/fabric-ca-client/msp/cacerts/ca-jedo-test-6040.pem \
+            --csr.cn ca.jedo.test --csr.hosts ca.jedo.test \
+            --mspdir /etc/hyperledger/fabric-ca-client/intermediate/JenzinerOrg/msp \
+
+
+
+docker exec -it peer0.jenziner.jedo.test openssl x509 -in /etc/hyperledger/fabric/msp/signcerts/cert.pem -text -noout
+openssl crl2pkcs7 -nocrl -certfile ca-chain.pem | openssl pkcs7 -print_certs -text -noout
+
+
+
+
+/mnt/user/appdata/fabric/bin/configtxgen -configPath /mnt/user/appdata/jedo-dev/configuration/ea.jedo.dev -profile JedoChannel -channelID ea.jedo.dev -outputBlock /mnt/user/appdata/jedo-dev/configuration/ea.jedo.dev/genesis_block.pb
