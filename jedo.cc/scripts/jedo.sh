@@ -134,13 +134,13 @@ fi
 
 
 ###############################################################
-# Run Orderer
+# Run Orderer Certificates
 ###############################################################
 if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/orderer.sh
+    ./scripts/orderer_cert.sh
     cool_down $opt_a "Orderers running."
 fi
-temp_end
+
 
 ###############################################################
 # Generate configuration (genesis block and channel configuration)
@@ -148,6 +148,15 @@ temp_end
 if [[ "$opt_r" == "config" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/config.sh
     cool_down $opt_a "Genesis Block and Channel Configuration generated."
+fi
+
+
+###############################################################
+# Run Orderer Nodes
+###############################################################
+if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/orderer_node.sh
+    cool_down $opt_a "Orderers running."
 fi
 
 

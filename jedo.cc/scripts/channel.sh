@@ -25,7 +25,7 @@ for REGNUM in $REGNUMS; do
     ADMIN=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Administration.Contact" $CONFIG_FILE)
 
     export PATH=$PATH:$FABRIC_BIN_PATH
-    export FABRIC_CFG_PATH=${PWD}/configuration/$REGNUM
+    export FABRIC_CFG_PATH=${PWD}/infrastructure/$ORBIS/$REGNUM/configuration
     export TLS_CA_ROOT_CERT=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem)
     export ADMIN_TLS_SIGNCERT=${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/$ADMIN/tls/signcerts/cert.pem
     export ADMIN_TLS_PRIVATEKEY=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/$ADMIN/tls/keystore/*_sk)
@@ -44,19 +44,19 @@ for REGNUM in $REGNUMS; do
 
             # Uncomment for genesis-file debug
             # echo_info "List Genesis-File"
-            # configtxlator proto_decode --input=$FABRIC_CFG_PATH/genesis_block.pb --type=common.Block
+            # configtxlator proto_decode --input=$FABRIC_CFG_PATH/genesisblock --type=common.Block
 
 
             echo ""
             echo_info "$ORDERER_NAME joins $REGNUM..."
             echo_info "osnadmin channel join \
-            --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesis_block.pb \
+            --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesisblock \
             -o $ORDERER_IP:$ORDERER_ADMINPORT \
             --ca-file $TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY"
 
             
             osnadmin channel join \
-            --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesis_block.pb \
+            --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesisblock \
             -o $ORDERER_IP:$ORDERER_ADMINPORT \
             --ca-file $TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY
         done

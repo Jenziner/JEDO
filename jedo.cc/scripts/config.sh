@@ -22,7 +22,7 @@ for REGNUM in $REGNUMS; do
     echo ""
     echo_warn "Channel $REGNUM configuring..."
 
-    export FABRIC_CFG_PATH=${PWD}/configuration/$REGNUM
+    export FABRIC_CFG_PATH=${PWD}/infrastructure/$ORBIS/$REGNUM/configuration
     mkdir -p $FABRIC_CFG_PATH
     OUTPUT_CONFIGTX_FILE="$FABRIC_CFG_PATH/configtx.yaml"
     ORGANIZATIONS=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
@@ -63,9 +63,9 @@ EOF
             CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Host: $ORDERER_NAME"
             CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Port: $ORDERER_PORT"
             CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      MSPID: $AGER"
-            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Identity: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/msp/signcerts/cert.pem"
-            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ClientTLSCert: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/signcerts/cert.pem"
-            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ServerTLSCert: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/signcerts/cert.pem"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Identity: /etc/hyperledger/orderer/msp/signcerts/cert.pem"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ClientTLSCert: /etc/hyperledger/orderer/tls/signcerts/cert.pem"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ServerTLSCert: /etc/hyperledger/orderer/tls/signcerts/cert.pem"
             ((CONSENTER_ID++))
         done
         PROFILE_ORGANIZATIONS="$PROFILE_ORGANIZATIONS"$'\n'"        - <<: *$AGER"
@@ -80,7 +80,7 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   - &${AGER}
     Name: $AGER
     ID: ${AGER}
-    MSPDir: $PWD/infrastructure/$ORBIS/$REGNUM/$AGER/msp
+    MSPDir: /etc/hyperledger/orderer/msp
     Policies: &${AGER}Policies
       Readers:
         Type: Signature
@@ -110,9 +110,9 @@ Capabilities:
   Channel: &ChannelCapabilities
     V3_0: true
   Orderer: &OrdererCapabilities
-    V2_0: true
+    V3_0: true
   Application: &ApplicationCapabilities
-    V2_5: true
+    V3_0: true
 EOF
 
 
@@ -225,7 +225,7 @@ EOF
 
     echo_info "Genesis block for $REGNUM generating..."
     FABRIC_LOGGING_SPEC=debug
-    $FABRIC_BIN_PATH/bin/configtxgen -configPath $FABRIC_CFG_PATH -profile JedoChannel -channelID $REGNUM -outputBlock $FABRIC_CFG_PATH/genesis_block.pb
+    $FABRIC_BIN_PATH/bin/configtxgen -configPath $FABRIC_CFG_PATH -profile JedoChannel -channelID $REGNUM -outputBlock $FABRIC_CFG_PATH/genesisblock
 
     echo_ok "Channel $REGNUM configured..."
 done

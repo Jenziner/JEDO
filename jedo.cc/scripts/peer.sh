@@ -458,13 +458,14 @@ EOF
             -p $PEER_PORT2:$PEER_PORT2 \
             -p $PEER_OPPORT:$PEER_OPPORT \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME:/etc/hyperledger/fabric \
+            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/configuration/genesisblock:/etc/hyperledger/fabric/genesisblock \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp:/etc/hyperledger/peer/msp \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$FIRST_ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/production:/var/hyperledger/production \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -e CORE_VM_ENDPOINT=unix:///var/run/docker.sock \
-            hyperledger/fabric-peer:latest
+            hyperledger/fabric-peer:3.0
 
         CheckContainer "$PEER_NAME" "$DOCKER_CONTAINER_WAIT"
         CheckContainerLog "$PEER_NAME" "Started peer with ID" "$DOCKER_CONTAINER_WAIT"
@@ -476,7 +477,7 @@ EOF
         echo ""
         echo_info "CLI  cli.$PEER_NAME starting..."
 
-        export TLS_CA_ROOT_CERT=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem)
+        export TLS_CA_ROOT_CERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem))
         export FABRIC_CFG_PATH=/etc/hyperledger/fabric
 
         docker run -d \
@@ -492,7 +493,7 @@ EOF
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/production:/var/hyperledger/production \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME:/opt/gopath/src/github.com/hyperledger/fabric/chaincode \
             -v ${PWD}/infrastructure:/var/hyperledger/infrastructure \
-            -v ${PWD}/configuration:/var/hyperledger/configuration \
+            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/configuration:/var/hyperledger/configuration \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w /opt/gopath/src/github.com/hyperledger/fabric \
             -e GOPATH=/opt/gopath \
@@ -515,12 +516,19 @@ EOF
 
         echo_error "TEST: Channel List"
         docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel list --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
-        --tls --cafile $TLS_CA_ROOT_CERT
+        --tls --cafile /var/hyperledger/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/$TLS_CA_ROOT_CERT_FILE
 
-# TEMP: continue work when channel exists
         # echo_error "TEST: Channel Fetch"
-        # docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel fetch config genesis_block.pb --channelID $REGNUM --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
-        # --tls --cafile /var/hyperledger/infrastructure/$ORBIS_NAME/$REGNUM/_Organization/msp/tlscacerts/$ORG_TLSCACERT_FILE
+        # docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel fetch config channel_config.block --channelID $REGNUM --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
+        # --tls --cafile /var/hyperledger/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/$TLS_CA_ROOT_CERT_FILE
+
+        # echo_error "TEST: Channel Join"
+        # docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel join -b channel_config.block
+        # # --channelID $REGNUM --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
+        # #--tls --cafile /var/hyperledger/infrastructure/$ORBIS/$REGNUM/_Organization/msp/tlscacerts/$ORG_TLSCACERT_FILE
+        
+
+
         
 #        bash peer channel list
 
@@ -551,4 +559,5 @@ done
 # echo_info "Channelconfig $CHANNEL with $PEER_NAME signing..."
 # docker exec -it cli.$PEER_NAME peer channel signconfigtx -f /etc/hyperledger/config/$CHANNEL.tx
 # echo_ok "Channelconfig $CHANNEL with $PEER_NAME signed."
+
 
