@@ -58,15 +58,26 @@ EOF
         for ORDERER in $ORDERERS; do
             ORDERER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Name" $CONFIG_FILE)
             ORDERER_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
-            ORDERER_ENDPOINTS="$ORDERER_ENDPOINTS"$'\n'"      - $ORDERER_NAME:$ORDERER_PORT"
+            ORDERER_ENDPOINTS="$ORDERER_ENDPOINTS"$'\n'"      - \"$ORDERER_NAME:$ORDERER_PORT\""
             CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"    - ID: $CONSENTER_ID"
             CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Host: $ORDERER_NAME"
             CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Port: $ORDERER_PORT"
             CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      MSPID: $AGER"
-            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Identity: /etc/hyperledger/orderer/msp/signcerts/cert.pem"
-            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ClientTLSCert: /etc/hyperledger/orderer/tls/signcerts/cert.pem"
-            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ServerTLSCert: /etc/hyperledger/orderer/tls/signcerts/cert.pem"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Identity: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/msp/signcerts/cert.pem"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ClientTLSCert: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/signcerts/cert.pem"
+            CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ServerTLSCert: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/signcerts/cert.pem"
+            # CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Identity: /etc/hyperledger/orderer/msp/signcerts/cert.pem"
+            # CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ClientTLSCert: /etc/hyperledger/orderer/tls/signcerts/cert.pem"
+            # CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ServerTLSCert: /etc/hyperledger/orderer/tls/signcerts/cert.pem"
             ((CONSENTER_ID++))
+        done
+        PEERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[].Name" $CONFIG_FILE)
+        ANCHOR_PEERS="AnchorPeers:"
+        for PEER in $PEERS; do
+            PEER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Name" $CONFIG_FILE)
+            PEER_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Port1" $CONFIG_FILE)
+            ANCHOR_PEERS="$ANCHOR_PEERS"$'\n'"      - Host: $PEER_NAME"
+            ANCHOR_PEERS="$ANCHOR_PEERS"$'\n'"        Port: $PEER_PORT"
         done
         PROFILE_ORGANIZATIONS="$PROFILE_ORGANIZATIONS"$'\n'"        - <<: *$AGER"
         PROFILE_ORGANIZATIONS="$PROFILE_ORGANIZATIONS"$'\n'"          Policies:"
@@ -80,7 +91,7 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   - &${AGER}
     Name: $AGER
     ID: ${AGER}
-    MSPDir: /etc/hyperledger/orderer/msp
+    MSPDir: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp
     Policies: &${AGER}Policies
       Readers:
         Type: Signature
@@ -98,6 +109,7 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
         Type: Signature
         Rule: "OR('${AGER}.member')"
     $ORDERER_ENDPOINTS
+    $ANCHOR_PEERS
 EOF
     done
 
@@ -214,7 +226,6 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Profiles:
   JedoChannel:
     <<: *ChannelDefaults
-    Consortium: $REGNUM
     Orderer:
       <<: *OrdererDefaults
       $PROFILE_ORGANIZATIONS

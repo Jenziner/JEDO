@@ -121,16 +121,16 @@ for REGNUM in $REGNUMS; do
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: client
   PeerOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: peer
   AdminOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: admin
   OrdererOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: orderer
 EOF
 
@@ -221,16 +221,16 @@ for AGER in $AGERS; do
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: client
   PeerOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: peer
   AdminOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: admin
   OrdererOUIdentifier:
-    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: orderer
 EOF
 
