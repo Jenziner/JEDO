@@ -66,9 +66,6 @@ EOF
             CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Identity: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/msp/signcerts/cert.pem"
             CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ClientTLSCert: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/signcerts/cert.pem"
             CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ServerTLSCert: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/signcerts/cert.pem"
-            # CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      Identity: /etc/hyperledger/orderer/msp/signcerts/cert.pem"
-            # CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ClientTLSCert: /etc/hyperledger/orderer/tls/signcerts/cert.pem"
-            # CONSENTER_MAPPING="$CONSENTER_MAPPING"$'\n'"      ServerTLSCert: /etc/hyperledger/orderer/tls/signcerts/cert.pem"
             ((CONSENTER_ID++))
         done
         PEERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[].Name" $CONFIG_FILE)
@@ -91,7 +88,7 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   - &${AGER}
     Name: $AGER
     ID: ${AGER}
-    MSPDir: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp
+    MSPDir: ${PWD}/infrastructure/$ORBIS/$REGNUM/msp
     Policies: &${AGER}Policies
       Readers:
         Type: Signature
@@ -122,9 +119,9 @@ Capabilities:
   Channel: &ChannelCapabilities
     V3_0: true
   Orderer: &OrdererCapabilities
-    V3_0: true
+    V2_0: true
   Application: &ApplicationCapabilities
-    V3_0: true
+    V2_5: true
 EOF
 
 

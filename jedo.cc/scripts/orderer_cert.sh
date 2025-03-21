@@ -49,6 +49,10 @@ AGERS=$(yq eval '.Ager[] | .Name' "$CONFIG_FILE")
 for AGER in $AGERS; do
 
     REGNUM=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Administration.Parent" $CONFIG_FILE)
+    REGNUM_CA_NAME=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.Name" $CONFIG_FILE)
+    REGNUM_CA_PASS=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.Pass" $CONFIG_FILE)
+    REGNUM_CA_IP=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.IP" $CONFIG_FILE)
+    REGNUM_CA_PORT=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.Port" $CONFIG_FILE)
     AFFILIATION_NODE=$REGNUM.${AGER,,}
 
     ORDERERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[].Name" $CONFIG_FILE)
@@ -94,7 +98,6 @@ for AGER in $AGERS; do
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/msp \
             --csr.hosts ${ORDERER_NAME},${ORDERER_IP},*.jedo.cc,*.jedo.me \
             --csr.cn $CN --csr.names "$CSR_NAMES"
-
 
         # Register and enroll TLS-ID
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \

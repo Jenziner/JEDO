@@ -46,19 +46,30 @@ for REGNUM in $REGNUMS; do
             # echo_info "List Genesis-File"
             # configtxlator proto_decode --input=$FABRIC_CFG_PATH/genesisblock --type=common.Block
 
+            ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
+            ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
+
+            export FABRIC_CFG_PATH=$ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/configuration
+
+            export OSN_TLS_CA_ROOT_CERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem))
+            export OSN_TLS_CA_ROOT_CERT=$ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/$OSN_TLS_CA_ROOT_CERT_FILE
+
+            export ADMIN_TLS_SIGNCERT=$ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/_Admin/$ADMIN/tls/signcerts/cert.pem
+
+            export ADMIN_TLS_PRIVATEKEY_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/$ADMIN/tls/keystore/*_sk))
+            export ADMIN_TLS_PRIVATEKEY=$ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/_Admin/$ADMIN/tls/keystore/$ADMIN_TLS_PRIVATEKEY_FILE
 
             echo ""
             echo_info "$ORDERER_NAME joins $REGNUM..."
-            echo_info "osnadmin channel join \
-            --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesisblock \
-            -o $ORDERER_IP:$ORDERER_ADMINPORT \
-            --ca-file $OSN_TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY"
+            echo_info "docker exec -it $ORBIS_TOOLS_NAME osnadmin channel join \
+                --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesisblock \
+                -o $ORDERER_IP:$ORDERER_ADMINPORT \
+                --ca-file $OSN_TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY"
 
-            
-            osnadmin channel join \
-            --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesisblock \
-            -o $ORDERER_IP:$ORDERER_ADMINPORT \
-            --ca-file $OSN_TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY
+            docker exec -it $ORBIS_TOOLS_NAME osnadmin channel join \
+                --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesisblock \
+                -o $ORDERER_IP:$ORDERER_ADMINPORT \
+                --ca-file $OSN_TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY
         done
     done
 done

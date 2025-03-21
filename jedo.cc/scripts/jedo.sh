@@ -143,6 +143,15 @@ fi
 
 
 ###############################################################
+# Generate configuration (genesis block and channel configuration)
+###############################################################
+if [[ "$opt_r" == "config" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/config.sh
+    cool_down $opt_a "Genesis Block and Channel Configuration generated."
+fi
+
+
+###############################################################
 # Run Orderer Nodes
 ###############################################################
 if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
@@ -157,15 +166,6 @@ fi
 if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/peer.sh peer
     cool_down $opt_a "Peers running."
-fi
-
-
-###############################################################
-# Generate configuration (genesis block and channel configuration)
-###############################################################
-if [[ "$opt_r" == "config" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/config.sh
-    cool_down $opt_a "Genesis Block and Channel Configuration generated."
 fi
 
 

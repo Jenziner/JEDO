@@ -527,7 +527,8 @@ EOF
         # # --channelID $REGNUM --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
         # #--tls --cafile /var/hyperledger/infrastructure/$ORBIS/$REGNUM/_Organization/msp/tlscacerts/$ORG_TLSCACERT_FILE
         
-
+# docker exec -it tools.jedo.cc osnadmin channel list --channelID ea -o orderer.alps.ea.jedo.cc:53111
+#docker exec -it tools.jedo.cc osnadmin channel list --channelID ea -o 172.30.3.11:53113 --ca-file /etc/hyperledger/fabric-ca-client/infrastructure/jedo/ea/_Admin/tls/tlscacerts/tls-tls-jedo-cc-51031.pem --client-cert /etc/hyperledger/fabric-ca-client/infrastructure/jedo/ea/_Admin/Nik/tls/signcerts/cert.pem --client-key /etc/hyperledger/fabric-ca-client/infrastructure/jedo/ea/_Admin/Nik/tls/keystore/a56d643cb4511d850102a8348d7d0142abdd25fbe3f24f55d19b74e29a6dcc86_sk
 
         
 #        bash peer channel list
