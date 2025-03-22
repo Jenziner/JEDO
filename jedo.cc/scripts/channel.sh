@@ -41,11 +41,6 @@ for REGNUM in $REGNUMS; do
             ORDERER_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .IP" $CONFIG_FILE)
             ORDERER_ADMINPORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .AdminPort" $CONFIG_FILE)
 
-
-            # Uncomment for genesis-file debug
-            # echo_info "List Genesis-File"
-            # configtxlator proto_decode --input=$FABRIC_CFG_PATH/genesisblock --type=common.Block
-
             ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
             ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
 
@@ -61,15 +56,23 @@ for REGNUM in $REGNUMS; do
 
             echo ""
             echo_info "$ORDERER_NAME joins $REGNUM..."
-            echo_info "docker exec -it $ORBIS_TOOLS_NAME osnadmin channel join \
-                --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesisblock \
-                -o $ORDERER_IP:$ORDERER_ADMINPORT \
-                --ca-file $OSN_TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY"
-
             docker exec -it $ORBIS_TOOLS_NAME osnadmin channel join \
                 --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesisblock \
                 -o $ORDERER_IP:$ORDERER_ADMINPORT \
                 --ca-file $OSN_TLS_CA_ROOT_CERT --client-cert $ADMIN_TLS_SIGNCERT --client-key $ADMIN_TLS_PRIVATEKEY
+        done
+
+
+        PEERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[].Name" $CONFIG_FILE)
+        for PEER in $PEERS; do
+            ###############################################################
+            # Channel Join for Peers - useing last orderer joined channel
+            ###############################################################
+            PEER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Name" $CONFIG_FILE)
+
+            echo ""
+            echo_info "$PEER_NAME joins $REGNUM..."
+            docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel join -b /var/hyperledger/configuration/genesisblock
         done
     done
 done

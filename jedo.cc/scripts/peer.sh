@@ -136,7 +136,7 @@ NodeOUs:
     OrganizationalUnitIdentifier: peer
   AdminOUIdentifier:
     Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
-    OrganizationalUnitIdentifier: admin
+    OrganizationalUnitIdentifier: peer
   OrdererOUIdentifier:
     Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: orderer
@@ -458,7 +458,6 @@ EOF
             -p $PEER_PORT2:$PEER_PORT2 \
             -p $PEER_OPPORT:$PEER_OPPORT \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME:/etc/hyperledger/fabric \
-            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/configuration/genesisblock:/etc/hyperledger/fabric/genesisblock \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp:/etc/hyperledger/peer/msp \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$FIRST_ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
@@ -513,37 +512,6 @@ EOF
 
         CheckContainer "cli.$PEER_NAME" "$DOCKER_CONTAINER_WAIT"
 
-
-        echo_error "TEST: Channel List"
-        docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel list --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
-        --tls --cafile /var/hyperledger/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/$TLS_CA_ROOT_CERT_FILE
-
-        # echo_error "TEST: Channel Fetch"
-        # docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel fetch config channel_config.block --channelID $REGNUM --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
-        # --tls --cafile /var/hyperledger/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/$TLS_CA_ROOT_CERT_FILE
-
-        # echo_error "TEST: Channel Join"
-        # docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel join -b channel_config.block
-        # # --channelID $REGNUM --orderer $FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
-        # #--tls --cafile /var/hyperledger/infrastructure/$ORBIS/$REGNUM/_Organization/msp/tlscacerts/$ORG_TLSCACERT_FILE
-        
-# docker exec -it tools.jedo.cc osnadmin channel list --channelID ea -o orderer.alps.ea.jedo.cc:53111
-#docker exec -it tools.jedo.cc osnadmin channel list --channelID ea -o 172.30.3.11:53113 --ca-file /etc/hyperledger/fabric-ca-client/infrastructure/jedo/ea/_Admin/tls/tlscacerts/tls-tls-jedo-cc-51031.pem --client-cert /etc/hyperledger/fabric-ca-client/infrastructure/jedo/ea/_Admin/Nik/tls/signcerts/cert.pem --client-key /etc/hyperledger/fabric-ca-client/infrastructure/jedo/ea/_Admin/Nik/tls/keystore/a56d643cb4511d850102a8348d7d0142abdd25fbe3f24f55d19b74e29a6dcc86_sk
-
-        
-#        bash peer channel list
-
-# 2024-12-09 17:07:47.133 UTC 0032 WARN [msp] validateIdentity -> Could not validate identity: could not validate identity's OUs: certifiersIdentifier does not match: 
-# [jedo(86F565D2037187C9) peer(86F565D2037187C9) root(86F565D2037187C9)], 
-# MSP: [ea] (certificate subject=CN=peer1.ea.jedo.dev,OU=jedo+OU=peer+OU=root,O=ea,ST=dev,C=jd issuer=CN=ca.jedo.dev,O=JEDO,L=orbis,ST=dev,C=XX serialnumber=480824256698855961778230763129674567072230188588)
-
-# 2024-12-09 17:07:47.135 UTC 0033 WARN [orderer.common.msgprocessor] Apply -> SigFilter evaluation failed error="implicit policy evaluation failed - 0 sub-policies were satisfied, but this policy requires 1 of the 'Readers' sub-policies to be satisfied" 
-# ConsensusState=STATE_NORMAL policyName=/Channel/Readers signingIdentity=
-# "(mspid=ea subject=CN=peer1.ea.jedo.dev,OU=jedo+OU=peer+OU=root,O=ea,ST=dev,C=jd issuer=CN=ca.jedo.dev,O=JEDO,L=orbis,ST=dev,C=XX serialnumber=480824256698855961778230763129674567072230188588)"
-
-# 2024-12-09 17:07:47.135 UTC 0034 WARN [common.deliver] deliverBlocks -> [channel: ea.jedo.dev] Client 172.25.2.53:43990 is not authorized: implicit policy evaluation failed - 
-# 0 sub-policies were satisfied, but this policy requires 1 of the 'Readers' sub-policies to be satisfied: permission denied
-
         echo ""
         echo_ok "Peer $PEER started."
     done
@@ -551,14 +519,5 @@ done
 ###############################################################
 # Last Tasks
 ###############################################################
-
-
-# ###############################################################
-# # sign channelconfig
-# ###############################################################
-# echo ""
-# echo_info "Channelconfig $CHANNEL with $PEER_NAME signing..."
-# docker exec -it cli.$PEER_NAME peer channel signconfigtx -f /etc/hyperledger/config/$CHANNEL.tx
-# echo_ok "Channelconfig $CHANNEL with $PEER_NAME signed."
 
 

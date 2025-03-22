@@ -106,9 +106,10 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
         Type: Signature
         Rule: "OR('${AGER}.member')"
     $ORDERER_ENDPOINTS
-    $ANCHOR_PEERS
 EOF
     done
+# TODO: Remove code
+#    $ANCHOR_PEERS
 
 
     ###############################################################
