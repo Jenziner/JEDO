@@ -219,4 +219,19 @@ Ager:
             Pass: Test1
             Type: admin
             Subject: "C=jd,ST=cc,L=ea,O=jura,CN=admin.jenziner.jedo.cc"
+      Issuers: #for FSC and User
+          - Name: iss1.jura.ea.jedo.cc
+            Subject: "C=jd,ST=cc,L=ea,O=jura,CN=iss1.jura.ea.jedo.cc"
+            Pass: Test1
+          - Name: iss2.jura.ea.jedo.cc
+            Subject: "C=jd,ST=cc,L=ea,O=jura,CN=iss2.jura.ea.jedo.cc"
+            Pass: Test1
+      Owners:  #for FSC and User
+          - Name: MOUTIER
+            Subject: "C=jd,ST=cc,L=ea,O=jura,CN=moutier.jura.ea.jedo.cc"
+            Pass: Test1
+            Users: 
+                - Name: monbijou
+                  Subject: "C=jd,ST=cc,L=ea,O=jura,CN=monbijou.moutier.jura.ea.jedo.cc"
+                  Pass: Test1
   

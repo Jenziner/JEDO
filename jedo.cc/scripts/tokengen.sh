@@ -21,28 +21,42 @@ DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
 
 ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
 ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
+ORBIS_TOOLS_INFRA_DIR=/etc/hyperledger/fabric-ca-client/infrastructure
+
+ORBIS=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
 
 
 ###############################################################
 # Generate public parameter for tokenchaincode
 ###############################################################
-HOST_INFRA_DIR=/etc/hyperledger/fabric-ca-client/infrastructure
-
-
-
-# tokengen gen dlog --base 300 --exponent 5 \
-#   --issuers keys/issuer/iss/msp \
-#   --idemix keys/owner1/wallet/alice \
-#   --auditors keys/auditor/aud/msp \
-#   --output tokenchaincode
-
-
-
-
 echo ""
 echo_info "Generate public parameter for tokenchaincode"
-docker exec $ORBIS_TOOLS_NAME bash -c 'PATH=$PATH:/usr/local/go/bin && /root/go/bin/tokengen gen dlog --base 300 --exponent 5 \
-    --issuers $HOST_INFRA_DIR/jedo/ea/alps/iss.alps.ea.jedo.cc/msp \
-    --idemix $HOST_INFRA_DIR/jedo/ea/alps/WORB/do \
-    --auditors $HOST_INFRA_DIR/jedo/ea/alps/aud.alps.ea.jedo.cc/msp \
-    --output $HOST_INFRA_DIR/jedo/ea/configuration/tokengen'
+
+# Generate List of Issuers and Auditors
+AGERS=$(yq eval '.Ager[] | .Name' "$CONFIG_FILE")
+ISSUER_LIST=""
+AUDITOR_LIST=""
+for AGER in $AGERS; do
+    REGNUM=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Administration.Parent" $CONFIG_FILE)
+    ISSUERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Issuers[].Name" $CONFIG_FILE)
+    for ISSUER in $ISSUERS; do
+        ISSUER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Issuers[] | select(.Name == \"$ISSUER\") | .Name" $CONFIG_FILE)
+        ISSUER_LIST=$ISSUER_LIST,$ORBIS_TOOLS_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ISSUER_NAME/msp
+    done
+    AUDITORS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Auditors[].Name" $CONFIG_FILE)
+    for AUDITOR in $AUDITORS; do
+        AUDITOR_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Auditors[] | select(.Name == \"$AUDITOR\") | .Name" $CONFIG_FILE)
+        AUDITOR_LIST=$AUDITOR_LIST,$ORBIS_TOOLS_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$AUDITOR_NAME/msp
+    done
+done
+
+# Remove first coma in each list
+ISSUER_LIST=${ISSUER_LIST:1}
+AUDITOR_LIST=${AUDITOR_LIST:1}
+
+# Generate zkatdlog_pp.json
+docker exec $ORBIS_TOOLS_NAME bash -c "tokengen gen dlog --base 300 --exponent 5 \
+    --issuers \"$ISSUER_LIST\" \
+    --idemix \"$ORBIS_TOOLS_INFRA_DIR/jedo/ea/alps/WORB/do\" \
+    --auditors \"$AUDITOR_LIST\" \
+    --output \"$ORBIS_TOOLS_INFRA_DIR/jedo/ea/configuration\""

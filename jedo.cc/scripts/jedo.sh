@@ -39,7 +39,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "token" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
+            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "token" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -209,40 +209,31 @@ exit 0
 temp_end
 
 
-
-
-
-
-
-
-
-
-
-echo "ScriptInfo: run tokengen"
-if [ ! "$(docker ps -q -f name=$DOCKER_CONTAINER_FABRICTOOLS)" ]; then
-    if [ "$(docker ps -aq -f status=exited -f name=$DOCKER_CONTAINER_FABRICTOOLS)" ]; then
-        docker rm -f $DOCKER_CONTAINER_FABRICTOOLS
-    fi
-    docker run -v /mnt/user/appdata/jedo-network:/root \
-      -itd --name $DOCKER_CONTAINER_FABRICTOOLS hyperledger/fabric-tools:latest
+###############################################################
+# Deploy CCAAS
+###############################################################
+if [[ "$opt_r" == "ccaas" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/ccaas.sh
+    cool_down $opt_a "CCAAS deployed."
+    
 fi
 
-echo "ScriptInfo: run fabric tools"
-docker exec $DOCKER_CONTAINER_FABRICTOOLS bash -c 'PATH=$PATH:/usr/local/go/bin && /root/go/bin/tokengen gen dlog \
-    --base 300 \
-    --exponent 5 \
-    --issuers /root/keys/issuer/iss/msp \
-    --idemix /root/keys/owner1/wallet/alice \
-    --auditors /root/keys/auditor/aud/msp \
-    --output /root/tokengen'
+
+###############################################################
+# Start TokenNodes
+###############################################################
+if [[ "$opt_r" == "tokennode" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/tokennodes.sh
+    cool_down $opt_a "Token Nodes started."
+    
+fi
 
 
+Read:
+- fabric-samples/token-sdk/scripts/up.sh --> Zeile 38ff
+- fabric-sample/test-network/network.sh --> Function deployCCAASS --> Deploys Chaincode
+- fabric-samples/token-sdk/docker-compose.yaml --> starts token nodes and swagger-ui
 
-# Start Fabric network
-#bash "$TEST_NETWORK_HOME/network.sh" up createChannel
-# copy the keys and certs of the peers, orderer and the client user
-#mkdir -p keys/fabric
-#cp -r "$TEST_NETWORK_HOME/organizations" keys/fabric/
 
 # Install and start tokenchaincode as a service
 #INIT_REQUIRED="--init-required" "$TEST_NETWORK_HOME/network.sh" deployCCAAS  -ccn tokenchaincode -ccp "$(pwd)/tokenchaincode" -cci "init" -ccs 1
