@@ -177,7 +177,7 @@ if [[ "$opt_r" == "channel" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     cool_down $opt_a "Channel created."
 fi
 
-temp_end
+
 ###############################################################
 # Enroll certificates
 ###############################################################
@@ -196,6 +196,7 @@ echo_error "Run CA-API-Server now: ./ca-api/ca-api.sh"
 exit 0
 
 
+temp_end
 
 
 

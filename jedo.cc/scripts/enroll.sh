@@ -63,13 +63,13 @@ for AGER in $AGERS; do
         AFFILIATION=$ORBIS.$REGNUM.$AGER
 
 
-        # Register FSC User
+        # Register FSC Node ID
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$CA_NAME/msp \
             --id.name fsc.$AUDITOR_NAME --id.secret $AUDITOR_PASS --id.type client --id.affiliation $AFFILIATION \
-        # Enroll FSC User
+        # Enroll FSC Node ID
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://fsc.$AUDITOR_NAME:$AUDITOR_PASS@$CA_NAME:$CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
@@ -114,13 +114,13 @@ for AGER in $AGERS; do
         CSR_NAMES="C=$C,ST=$ST,L=$L"
         AFFILIATION=$ORBIS.$REGNUM.$AGER
 
-        # Register FSC User
+        # Register FSC Node ID
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$CA_NAME/msp \
             --id.name fsc.$ISSUER_NAME --id.secret $ISSUER_PASS --id.type client --id.affiliation $AFFILIATION \
-        # Enroll FSC User
+        # Enroll FSC Node ID
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://fsc.$ISSUER_NAME:$ISSUER_PASS@$CA_NAME:$CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
@@ -166,13 +166,13 @@ for AGER in $AGERS; do
         CSR_NAMES="C=$C,ST=$ST,L=$L,O=$O"
         AFFILIATION=$ORBIS.$REGNUM.$AGER
 
-        # Register FSC User
+        # Register FSC Node ID
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$CA_NAME:$CA_PASS@$CA_NAME:$CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$CA_NAME/msp \
             --id.name fsc.$OWNER_NAME --id.secret $OWNER_PASS --id.type client --id.affiliation $AFFILIATION \
-        # Enroll FSC User
+        # Enroll FSC Node ID
         docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://fsc.$OWNER_NAME:$OWNER_PASS@$CA_NAME:$CA_PORT \
             --home $ORBIS_TOOLS_CACLI_DIR \
             --tls.certfiles tls-root-cert/tls-ca-cert.pem \
@@ -194,7 +194,8 @@ for AGER in $AGERS; do
             --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$OWNER_NAME/$CN/msp \
             --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13,*.jedo.cc" \
             --csr.cn $CN --csr.names "$CSR_NAMES" \
-            --enrollment.attrs "jedo.apiPort,jedo.role"
+            --enrollment.attrs "jedo.apiPort,jedo.role" \
+            --enrollment.type idemix --idemix.curve gurvy.Bn254
 
 
         ###############################################################
@@ -231,7 +232,8 @@ for AGER in $AGERS; do
                 --tls.certfiles tls-root-cert/tls-ca-cert.pem \
                 --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$OWNER_NAME/$USER_NAME/msp \
                 --csr.hosts "$CA_NAME,$CAAPI_NAME,$CAAPI_IP,192.168.0.13,*.jedo.cc" \
-                --csr.cn $CN --csr.names "$CSR_NAMES"
+                --csr.cn $CN --csr.names "$CSR_NAMES" \
+                --enrollment.type idemix --idemix.curve gurvy.Bn254
         done
     done
     echo_ok "Owners and Users for $AGER enrolled."
