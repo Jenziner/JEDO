@@ -25,6 +25,9 @@ nano ~/.bashrc
 source ~/.bashrc
 
 # Install TOKENGEN
+sudo apt-get update
+export CGO_ENABLED=1
+export GO_TAGS=pkcs11
 go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen@v0.3.0
 
 # Start and Stop
