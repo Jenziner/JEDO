@@ -70,6 +70,10 @@ docker run -d \
     hyperledger/fabric-tools:latest
     
 
+# Waiting Root-CA Host startup
+CheckContainer "$TOOLS_NAME" "$DOCKER_CONTAINER_WAIT"
+
+
 # Install Fabric-CA-Client
 echo ""
 echo_info "Fabric-CA-Client installing..."
@@ -80,6 +84,15 @@ docker exec -it $TOOLS_NAME /bin/bash -c "
     chmod +x /usr/local/bin/fabric-ca-client && \
     rm fabric-ca.tar.gz \
     rm -rf bin"
+
+
+# Install Fabric-Token-SDK Tokengen
+echo ""
+echo_info "Tokengen installing..."
+docker exec -it $TOOLS_NAME /bin/bash -c "
+    go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen@v0.3.0 && \
+    cp \$GOPATH/bin/tokengen /usr/local/bin/tokengen && \
+    chmod +x /usr/local/bin/tokengen"
 
 
 # Waiting Root-CA Host startup
