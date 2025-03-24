@@ -199,17 +199,6 @@ fi
 
 
 ###############################################################
-# FINISH
-###############################################################
-echo_ok "Script for $DOCKER_NETWORK_NAME completed"
-echo_error "Run CA-API-Server now: ./ca-api/ca-api.sh"
-exit 0
-
-
-temp_end
-
-
-###############################################################
 # Deploy CCAAS
 ###############################################################
 if [[ "$opt_r" == "ccaas" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
@@ -217,6 +206,16 @@ if [[ "$opt_r" == "ccaas" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     cool_down $opt_a "CCAAS deployed."
     
 fi
+
+
+###############################################################
+# FINISH
+###############################################################
+echo_ok "Script for $DOCKER_NETWORK_NAME completed"
+echo_error "Run CA-API-Server now: ./ca-api/ca-api.sh"
+exit 0
+
+
 
 
 ###############################################################
@@ -228,11 +227,16 @@ if [[ "$opt_r" == "tokennode" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; the
     
 fi
 
+temp_end
 
 Read:
 - fabric-samples/token-sdk/scripts/up.sh --> Zeile 38ff
-- fabric-sample/test-network/network.sh --> Function deployCCAASS --> Deploys Chaincode
+- fabric-sample/test-network/network.sh --> Function deployCCAASS --> Deploys Chaincode --> scripts/deployCCAAS.sh
 - fabric-samples/token-sdk/docker-compose.yaml --> starts token nodes and swagger-ui
+
+
+
+
 
 
 # Install and start tokenchaincode as a service
