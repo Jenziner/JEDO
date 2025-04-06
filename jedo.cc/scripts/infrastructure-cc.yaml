@@ -144,6 +144,10 @@ Ager:
                 Pass: Test1
                 IP: 172.30.3.52
                 Port: 53521
+      CCAAS: 
+          Name: tcc.alps.ea.jedo.cc
+          IP: 172.30.3.91
+          Port: 53911
       Operators:
           - Name: admin.alps.ea.jedo.cc
             Pass: Test1
@@ -214,6 +218,10 @@ Ager:
                 Pass: Test1
                 IP: 172.30.4.52
                 Port: 54521
+      CCAAS:
+          Name: tcc.jura.ea.jedo.cc
+          IP: 172.30.4.91
+          Port: 54911
       Operators:
           - Name: admin.jura.ea.jedo.cc
             Pass: Test1

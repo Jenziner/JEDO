@@ -16,7 +16,11 @@ check_script
 ###############################################################
 CONFIG_FILE="$SCRIPT_DIR/infrastructure-cc.yaml"
 FABRIC_BIN_PATH=$(yq eval '.Fabric.Path' "$CONFIG_FILE")
+DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
+DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
 ORBIS=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
+
+get_hosts
 
 
 ###############################################################
@@ -67,65 +71,10 @@ buildDockerImages() {
 }
 
 
-###############################################################
-# Function startDockerContainer
-###############################################################
-startDockerContainer() {
-  # start the docker container
-
-#From Plexi:
-docker run -d \
---name tokenchaincode_container \
--p 9999:9999 \
--v /etc/hyperledger/fabric-ca-client/infrastructure:/etc/hyperledger/fabric-ca-client/infrastructure \
--e CC_SERVER_PORT=9999 \
---restart unless-stopped \
-tokenchaincode_ccaas_image:latest
-
-#From TokenSDK-Sample
-#   if [ "$CCAAS_DOCKER_RUN" = "true" ]; then
-#     echo_info "Starting the Chaincode-as-a-Service docker container..."
-#     set -x
-#     ${CONTAINER_CLI} run --rm -d --name peer0org1_${CC_NAME}_ccaas  \
-#                   --network fabric_test \
-#                   -e CHAINCODE_SERVER_ADDRESS=0.0.0.0:${CCAAS_SERVER_PORT} \
-#                   -e CHAINCODE_ID=$PACKAGE_ID -e CORE_CHAINCODE_ID_NAME=$PACKAGE_ID \
-#                     ${CC_NAME}_ccaas_image:latest
-
-#     ${CONTAINER_CLI} run  --rm -d --name peer0org2_${CC_NAME}_ccaas \
-#                   --network fabric_test \
-#                   -e CHAINCODE_SERVER_ADDRESS=0.0.0.0:${CCAAS_SERVER_PORT} \
-#                   -e CHAINCODE_ID=$PACKAGE_ID -e CORE_CHAINCODE_ID_NAME=$PACKAGE_ID \
-#                     ${CC_NAME}_ccaas_image:latest
-#     res=$?
-#     { set +x; } 2>/dev/null
-#     cat log.txt
-#     verifyResult $res "Failed to start the container container '${CC_NAME}_ccaas_image:latest' "
-#     echo_ok "Docker container started succesfully '${CC_NAME}_ccaas_image:latest'" 
-#   else
-  
-#     echo_info "Not starting docker containers; these are the commands we would have run"
-#     echo_info "    ${CONTAINER_CLI} run --rm -d --name peer0org1_${CC_NAME}_ccaas  \
-#                   --network fabric_test \
-#                   -e CHAINCODE_SERVER_ADDRESS=0.0.0.0:${CCAAS_SERVER_PORT} \
-#                   -e CHAINCODE_ID=$PACKAGE_ID -e CORE_CHAINCODE_ID_NAME=$PACKAGE_ID \
-#                     ${CC_NAME}_ccaas_image:latest"
-#     echo_info "    ${CONTAINER_CLI} run --rm -d --name peer0org2_${CC_NAME}_ccaas  \
-#                   --network fabric_test \
-#                   -e CHAINCODE_SERVER_ADDRESS=0.0.0.0:${CCAAS_SERVER_PORT} \
-#                   -e CHAINCODE_ID=$PACKAGE_ID -e CORE_CHAINCODE_ID_NAME=$PACKAGE_ID \
-#                     ${CC_NAME}_ccaas_image:latest"
-
-#   fi
-}
-
 
 ###############################################################
 # Deploy CCAAS
 ###############################################################
-
-
-
 REGNUMS=$(yq e ".Regnum[].Name" $CONFIG_FILE)
 for REGNUM in $REGNUMS; do
     echo ""
@@ -145,6 +94,8 @@ for REGNUM in $REGNUMS; do
     VERBOSE="false"
 
     CCAAS_SERVER_PORT=9999
+
+    PEER_CONN_PARMS=()
 
     echo_info "executing with the following"
     echo_info "- CHANNEL_NAME: ${GREEN}${CHANNEL_NAME}${NC}"
@@ -172,20 +123,91 @@ for REGNUM in $REGNUMS; do
     # Install chaincode on peers
     AGERS=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
     for AGER in $AGERS; do
+        # Loop all orderer (if any), but only 1 needed to approve chaincode for AGER
+        ORDERERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[].Name" $CONFIG_FILE)
+        for ORDERER in $ORDERERS; do
+            ORDERER_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .IP" $CONFIG_FILE)
+            ORDERER_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
+            ORDERER_ADDRESS=$ORDERER_IP:$ORDERER_PORT
+            ORDERER_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER/tls/tlscacerts/*.pem))
+            ORDERER_TLSCACERT=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER/tls/tlscacerts/$ORDERER_TLSCACERT_FILE
+
+        done
         PEERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[].Name" $CONFIG_FILE)
         for PEER in $PEERS; do
             echo ""
             echo_warn "Chaincode on $PEER installing..."
             PEER_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .IP" $CONFIG_FILE)
             PEER_PORT1=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Port1" $CONFIG_FILE)
+            PEER_ADDRESS=$PEER_IP:$PEER_PORT1
             TLS_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER/tls/tlscacerts/*.pem))
             PEER_ROOTCERT=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER/tls/tlscacerts/$TLS_TLSCACERT_FILE
+
             # package the chaincode
             PACKAGE_ID=$(packageChaincode $PEER $CC_NAME $CC_VERSION $CCAAS_SERVER_PORT)
             echo_info "Package-ID für $PEER: ${GREEN}$PACKAGE_ID${NC}!!!"
-            # install the chaincode
-            installChaincode $ORBIS $REGNUM $AGER $PEER $PEER_IP $PEER_PORT1 $PEER_ROOTCERT
+
+            # install and approve the chaincode
+            installChaincode $ORBIS $REGNUM $AGER $PEER $PEER_ADDRESS $PEER_ROOTCERT $ORDERER_ADDRESS $ORDERER_TLSCACERT
+            echo_ok "Chaincode on $PEER installed..."
+
+            # set peer connection parameters for later
+            PEER_CONN_PARMS=("${PEER_CONN_PARMS[@]}" --peerAddresses $PEER_ADDRESS)
+            PEER_CONN_PARMS=("${PEER_CONN_PARMS[@]}" --tlsRootCertFiles $PEER_ROOTCERT)
         done
+    done
+
+    # Committing chaincode 
+    echo_warn "Chaincode committing"
+    echo_info "executing with the following"
+    echo_info "- PEER_CONN_PARMS: ${GREEN}${PEER_CONN_PARMS[@]}${NC}"
+    # do commit
+    peer lifecycle chaincode commit -o $ORDERER_ADDRESS --tls --cafile "$ORDERER_TLSCACERT" \
+      --channelID $CHANNEL_NAME --name ${CC_NAME} "${PEER_CONN_PARMS[@]}" --version ${CC_VERSION} \
+      --sequence ${CC_SEQUENCE} --init-required ${CC_INIT_FCN} ${CC_END_POLICY} ${CC_COLL_CONFIG}
+    # query committed
+    peer lifecycle chaincode querycommitted --channelID $CHANNEL_NAME --name ${CC_NAME}
+    echo_ok "Chaincode committed"
+ 
+    # Start CCAAS Docker containers
+    AGERS=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
+    for AGER in $AGERS; do
+        CCAAS_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CCAAS.Name" $CONFIG_FILE)
+        CCAAS_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CCAAS.IP" $CONFIG_FILE)
+        CCAAS_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CCAAS.Port" $CONFIG_FILE)
+
+        echo_warn "CCAAS $CCAAS_NAME starting..."
+        docker run -d \
+            --name $CCAAS_NAME \
+            --network $DOCKER_NETWORK_NAME \
+            --ip $CCAAS_IP \
+            $hosts_args \
+            --restart=on-failure:1 \
+            --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/infrastructure/src/fabric_logo.png" \
+            -p $CCAAS_PORT:$CCAAS_PORT \
+            -e CHAINCODE_SERVER_ADDRESS=$CCAAS_IP:$CCAAS_PORT \
+            -e CHAINCODE_ID=$PACKAGE_ID \
+            -e CORE_CHAINCODE_ID_NAME=$PACKAGE_ID \
+            ${CC_NAME}_ccaas_image:latest
+
+        CheckContainer "$CCAAS_NAME" "$DOCKER_CONTAINER_WAIT"
+        CheckContainerLog "$CCAAS_NAME" "Running Token Chaincode as service" "$DOCKER_CONTAINER_WAIT"
+
+        # Invoking chaincode
+        # Loop all orderer (if any), but only 1 needed to approve chaincode for AGER
+        ORDERERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[].Name" $CONFIG_FILE)
+        for ORDERER in $ORDERERS; do
+            ORDERER_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .IP" $CONFIG_FILE)
+            ORDERER_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
+            ORDERER_ADDRESS=$ORDERER_IP:$ORDERER_PORT
+            ORDERER_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER/tls/tlscacerts/*.pem))
+            ORDERER_TLSCACERT=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER/tls/tlscacerts/$ORDERER_TLSCACERT_FILE
+        done
+        fcn_call='{"function":"'${CC_INIT_FCN}'","Args":[]}'
+        echo_info "Chaincode invokeing..."
+        # peer chaincode invoke -o $ORDERER_ADDRESS --tls --cafile "$ORDERER_TLSCACERT" \
+        #     -C $CHANNEL_NAME -n ${CC_NAME} "${PEER_CONN_PARMS[@]}" --isInit -c ${fcn_call}
+        echo_ok "CCAAS $CCAAS_NAME startec..."
     done
 done
 
@@ -199,60 +221,12 @@ exit 0
 
 
 # Install and start tokenchaincode as a service
-INIT_REQUIRED="--init-required" "$TEST_NETWORK_HOME/network.sh" deployCCAAS  -ccn tokenchaincode -ccp "$(pwd)/tokenchaincode" -cci "init" -ccs 1
+#INIT_REQUIRED="--init-required" "$TEST_NETWORK_HOME/network.sh" deployCCAAS  -ccn tokenchaincode -ccp "$(pwd)/tokenchaincode" -cci "init" -ccs 1
 
-function deployCCAAS() {
-  scripts/deployCCAAS.sh $CHANNEL_NAME $CC_NAME $CC_SRC_PATH $CCAAS_DOCKER_RUN $CC_VERSION $CC_SEQUENCE $CC_INIT_FCN $CC_END_POLICY $CC_COLL_CONFIG $CLI_DELAY $MAX_RETRY $VERBOSE $CCAAS_DOCKER_RUN
+# function deployCCAAS() {
+#   scripts/deployCCAAS.sh $CHANNEL_NAME $CC_NAME $CC_SRC_PATH $CCAAS_DOCKER_RUN $CC_VERSION $CC_SEQUENCE $CC_INIT_FCN $CC_END_POLICY $CC_COLL_CONFIG $CLI_DELAY $MAX_RETRY $VERBOSE $CCAAS_DOCKER_RUN
+#   ccn --> CC_NAME --> "tokenchaincode"
+#   ccp --> CC_SRC_PATH --> "$(pwd)/tokenchaincode"
+#   cci --> CC_INIT_FCN --> "init"
+#   ccs --> CC_SEQUENCE --> 1
 
-# Build the docker image 
-#buildDockerImages
-
-## package the chaincode
-#packageChaincode
-
-## Install chaincode on peer0.org1 and peer0.org2
-#infoln "Installing chaincode on peer0.org1..."
-#installChaincode 1
-#infoln "Install chaincode on peer0.org2..."
-#installChaincode 2
-
-resolveSequence
-
-## query whether the chaincode is installed
-queryInstalled 1
-
-## approve the definition for org1
-approveForMyOrg 1
-
-## check whether the chaincode definition is ready to be committed
-## expect org1 to have approved and org2 not to
-checkCommitReadiness 1 "\"Org1MSP\": true" "\"Org2MSP\": false"
-checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": false"
-
-## now approve also for org2
-approveForMyOrg 2
-
-## check whether the chaincode definition is ready to be committed
-## expect them both to have approved
-checkCommitReadiness 1 "\"Org1MSP\": true" "\"Org2MSP\": true"
-checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": true"
-
-## now that we know for sure both orgs have approved, commit the definition
-commitChaincodeDefinition 1 2
-
-## query on both orgs to see that the definition committed successfully
-queryCommitted 1
-queryCommitted 2
-
-# start the container
-startDockerContainer
-
-## Invoke the chaincode - this does require that the chaincode have the 'initLedger'
-## method defined
-if [ "$CC_INIT_FCN" = "NA" ]; then
-  infoln "Chaincode initialization is not required"
-else
-  chaincodeInvokeInit 1 2
-fi
-
-exit 0

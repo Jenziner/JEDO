@@ -59,15 +59,16 @@ function installChaincode() {
   REGNUM=$2
   AGER=$3
   PEER=$4
-  PEER_IP=$5
-  PEER_PORT=$6
-  PEER_ROOTCERT=$7
+  PEER_ADDRESS=$5
+  PEER_ROOTCERT=$6
+  ORDERER_ADDRESS=$7
+  ORDERER_TLSCACERT=$8
 
   FABRIC_CFG_PATH=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER
   export CORE_PEER_LOCALMSPID=$AGER
   export CORE_PEER_TLS_ROOTCERT_FILE=$PEER_ROOTCERT
   export CORE_PEER_MSPCONFIGPATH=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER/msp
-  export CORE_PEER_ADDRESS=$PEER_IP:$PEER_PORT
+  export CORE_PEER_ADDRESS=$PEER_ADDRESS
 
   echo_info "Installing chaincode with the following"
   echo_info "- LocalMSPID: ${GREEN}${CORE_PEER_LOCALMSPID}${NC}"
@@ -83,6 +84,17 @@ function installChaincode() {
   else
     echo_ok "Chaincode already installed: ${PACKAGE_ID}"
   fi
+
+  echo_info "Approving chaincode"
+  echo_info "- Orderer: ${GREEN}${ORDERER_ADDRESS}${NC}"
+  echo_info "- Orderer CAFile: ${GREEN}${ORDERER_TLSCACERT}${NC}"
+  peer lifecycle chaincode approveformyorg -o $ORDERER_ADDRESS --tls --cafile "$ORDERER_TLSCACERT" \
+    --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} \
+    --sequence ${CC_SEQUENCE} --init-required ${CC_INIT_FCN} ${CC_END_POLICY} ${CC_COLL_CONFIG}
+
+  echo_info "Checking readiness"
+  peer lifecycle chaincode checkcommitreadiness --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} \
+    --sequence ${CC_SEQUENCE} --init-required ${CC_INIT_FCN} ${CC_END_POLICY} ${CC_COLL_CONFIG}
 }
 
 # queryInstalled PEER ORG
