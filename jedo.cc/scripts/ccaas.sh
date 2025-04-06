@@ -81,7 +81,7 @@ for REGNUM in $REGNUMS; do
     echo_warn "CCAAS for $REGNUM running..."
 
     CHANNEL_NAME=$REGNUM
-    CC_NAME="tokenchaincode"
+    CC_NAME="tcc"
     CC_SRC_PATH=${PWD}/infrastructure/$ORBIS/$REGNUM/configuration
     CCAAS_DOCKER_RUN="true"
     CC_VERSION="1.0"
@@ -112,13 +112,6 @@ for REGNUM in $REGNUMS; do
     echo_info "- VERBOSE: ${GREEN}${VERBOSE}${NC}"
 
     FABRIC_CFG_PATH=$PWD/../../fabric/config/
-
-    # Write the Dockerfile in the configuration-folder
-    writeDockerfile
-
-    # Build the docker image 
-    CONTAINER_CLI="docker compose"
-    buildDockerImages
 
     # Install chaincode on peers
     AGERS=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
@@ -169,45 +162,62 @@ for REGNUM in $REGNUMS; do
     peer lifecycle chaincode querycommitted --channelID $CHANNEL_NAME --name ${CC_NAME}
     echo_ok "Chaincode committed"
  
+    # Write the Dockerfile in the configuration-folder
+    writeDockerfile
+
+    # Build the docker image 
+    CONTAINER_CLI="docker compose"
+    buildDockerImages
+
     # Start CCAAS Docker containers
-    AGERS=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
+#    AGERS_2=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
     for AGER in $AGERS; do
         CCAAS_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CCAAS.Name" $CONFIG_FILE)
+        CCAAS_NAME=${PEER}_${CC_NAME}_ccaas
         CCAAS_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CCAAS.IP" $CONFIG_FILE)
         CCAAS_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CCAAS.Port" $CONFIG_FILE)
+        PEERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[].Name" $CONFIG_FILE)
+        for PEER in $PEERS; do
+            echo_warn "CCAAS $CCAAS_NAME starting..."
+            docker run -d \
+                --name $CCAAS_NAME \
+                --network $DOCKER_NETWORK_NAME \
+                --ip $CCAAS_IP \
+                $hosts_args \
+                --restart=on-failure:1 \
+                --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/infrastructure/src/fabric_logo.png" \
+                -p $CCAAS_PORT:9999 \
+                -e CHAINCODE_SERVER_ADDRESS=$CCAAS_IP:$CCAAS_PORT \
+                -e CHAINCODE_ID=$PACKAGE_ID \
+                -e CORE_CHAINCODE_ID_NAME=$PACKAGE_ID \
+                ${CC_NAME}_ccaas_image:latest
 
-        echo_warn "CCAAS $CCAAS_NAME starting..."
-        docker run -d \
-            --name $CCAAS_NAME \
-            --network $DOCKER_NETWORK_NAME \
-            --ip $CCAAS_IP \
-            $hosts_args \
-            --restart=on-failure:1 \
-            --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/infrastructure/src/fabric_logo.png" \
-            -p $CCAAS_PORT:$CCAAS_PORT \
-            -e CHAINCODE_SERVER_ADDRESS=$CCAAS_IP:$CCAAS_PORT \
-            -e CHAINCODE_ID=$PACKAGE_ID \
-            -e CORE_CHAINCODE_ID_NAME=$PACKAGE_ID \
-            ${CC_NAME}_ccaas_image:latest
-
-        CheckContainer "$CCAAS_NAME" "$DOCKER_CONTAINER_WAIT"
-        CheckContainerLog "$CCAAS_NAME" "Running Token Chaincode as service" "$DOCKER_CONTAINER_WAIT"
-
-        # Invoking chaincode
-        # Loop all orderer (if any), but only 1 needed to approve chaincode for AGER
-        ORDERERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[].Name" $CONFIG_FILE)
-        for ORDERER in $ORDERERS; do
-            ORDERER_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .IP" $CONFIG_FILE)
-            ORDERER_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
-            ORDERER_ADDRESS=$ORDERER_IP:$ORDERER_PORT
-            ORDERER_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER/tls/tlscacerts/*.pem))
-            ORDERER_TLSCACERT=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER/tls/tlscacerts/$ORDERER_TLSCACERT_FILE
+            CheckContainer "$CCAAS_NAME" "$DOCKER_CONTAINER_WAIT"
+            CheckContainerLog "$CCAAS_NAME" "Running Token Chaincode as service" "$DOCKER_CONTAINER_WAIT"
         done
-        fcn_call='{"function":"'${CC_INIT_FCN}'","Args":[]}'
-        echo_info "Chaincode invokeing..."
-        # peer chaincode invoke -o $ORDERER_ADDRESS --tls --cafile "$ORDERER_TLSCACERT" \
-        #     -C $CHANNEL_NAME -n ${CC_NAME} "${PEER_CONN_PARMS[@]}" --isInit -c ${fcn_call}
-        echo_ok "CCAAS $CCAAS_NAME startec..."
+        echo_ok "CCAAS $CCAAS_NAME started."
+    done
+
+    # Invoking chaincode
+#    AGERS_3=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
+    for AGER in $AGERS; do
+        PEERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[].Name" $CONFIG_FILE)
+        for PEER in $PEERS; do
+            echo_warn "Chaincode invokeing..."
+            # Loop all orderer (if any), but only 1 needed to approve chaincode for AGER
+            ORDERERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[].Name" $CONFIG_FILE)
+            for ORDERER in $ORDERERS; do
+                ORDERER_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .IP" $CONFIG_FILE)
+                ORDERER_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Port" $CONFIG_FILE)
+                ORDERER_ADDRESS=$ORDERER_IP:$ORDERER_PORT
+                ORDERER_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER/tls/tlscacerts/*.pem))
+                ORDERER_TLSCACERT=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER/tls/tlscacerts/$ORDERER_TLSCACERT_FILE
+            done
+            fcn_call='{"function":"'${CC_INIT_FCN}'","Args":[]}'
+            peer chaincode invoke -o $ORDERER_ADDRESS --tls --cafile "$ORDERER_TLSCACERT" \
+                -C $CHANNEL_NAME -n ${CC_NAME} "${PEER_CONN_PARMS[@]}" --isInit -c ${fcn_call}
+            echo_ok "Chaincode invoked."
+        done
     done
 done
 
