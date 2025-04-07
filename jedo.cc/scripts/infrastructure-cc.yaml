@@ -145,7 +145,7 @@ Ager:
                 IP: 172.30.3.52
                 Port: 53521
       CCAAS: 
-          Name: tcc.alps.ea.jedo.cc
+          Name: peer.alps.ea.jedo.cc_tcc_ccaas
           IP: 172.30.3.91
           Port: 53911
       Operators:
@@ -219,7 +219,7 @@ Ager:
                 IP: 172.30.4.52
                 Port: 54521
       CCAAS:
-          Name: tcc.jura.ea.jedo.cc
+          Name: peer.jura.ea.jedo.cc_tcc_ccaas
           IP: 172.30.4.91
           Port: 54911
       Operators:

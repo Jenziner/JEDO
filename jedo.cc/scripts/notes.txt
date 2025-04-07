@@ -87,3 +87,10 @@ openssl crl2pkcs7 -nocrl -certfile ca-chain.pem | openssl pkcs7 -print_certs -te
 
 
 /mnt/user/appdata/fabric/bin/configtxgen -configPath /mnt/user/appdata/jedo-dev/configuration/ea.jedo.dev -profile JedoChannel -channelID ea.jedo.dev -outputBlock /mnt/user/appdata/jedo-dev/configuration/ea.jedo.dev/genesis_block.pb
+
+
+TELNET installieren:
+docker exec -it peer.alps.ea.jedo.cc /bin/sh -c "apt-get update && apt-get install -y telnet"
+
+Ausführen:
+docker exec -it peer.alps.ea.jedo.cc /bin/sh -c "telnet peer.alps.ea.jedo.cc_tcc_ccaas 9999"

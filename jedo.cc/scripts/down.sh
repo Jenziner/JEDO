@@ -49,6 +49,7 @@ echo_info "Folder removing..."
 rm -rf infrastructure
 rm -rf configuration
 rm -rf chaincode
+rm -f tcc.tar.gz
 #rm tokenchaincode/zkatdlog_pp.json
 
 

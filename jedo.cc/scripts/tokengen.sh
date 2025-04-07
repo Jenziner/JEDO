@@ -57,6 +57,6 @@ AUDITOR_LIST=${AUDITOR_LIST:1}
 # Generate zkatdlog_pp.json
 docker exec $ORBIS_TOOLS_NAME bash -c "tokengen gen dlog --base 300 --exponent 5 \
     --issuers \"$ISSUER_LIST\" \
-    --idemix \"$ORBIS_TOOLS_INFRA_DIR/jedo/ea/alps/WORB/do\" \
+    --idemix \"$ORBIS_TOOLS_INFRA_DIR/jedo/ea/alps/WORB/worb.alps.ea.jedo.cc\" \
     --auditors \"$AUDITOR_LIST\" \
     --output \"$ORBIS_TOOLS_INFRA_DIR/jedo/ea/configuration\""

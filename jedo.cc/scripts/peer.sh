@@ -340,15 +340,15 @@ chaincode:
   id:
     path:
     name:
-  builder: "$(DOCKER_NS)/fabric-ccenv:$(TWO_DIGIT_VERSION)"
+  builder: \$(DOCKER_NS)/fabric-ccenv:\$(TWO_DIGIT_VERSION)
   pull: false
   golang:
-    runtime: "$(DOCKER_NS)/fabric-baseos:$(TWO_DIGIT_VERSION)"
+    runtime: \$(DOCKER_NS)/fabric-baseos:\$(TWO_DIGIT_VERSION)
     dynamicLink: false
   java:
-    runtime: "$(DOCKER_NS)/fabric-javaenv:2.5"
+    runtime: \$(DOCKER_NS)/fabric-javaenv:\$(TWO_DIGIT_VERSION)
   node:
-    runtime: "$(DOCKER_NS)/fabric-nodeenv:2.5"
+    runtime: \$(DOCKER_NS)/fabric-nodeenv:\$(TWO_DIGIT_VERSION)
   externalBuilders:
     - name: ccaas_builder
       path: /opt/hyperledger/ccaas_builder
@@ -356,7 +356,7 @@ chaincode:
         - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG
   installTimeout: 300s
   startuptimeout: 300s
-  executetimeout: 30s
+  executetimeout: 300s
   mode: net
   keepalive: 0
   system:
@@ -365,7 +365,7 @@ chaincode:
     lscc: enable
     qscc: enable
   logging:
-    level: info
+    level: debug
     shim: warning
     format: "%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}"
 ledger:
