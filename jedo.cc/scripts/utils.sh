@@ -22,6 +22,7 @@ function check_script() {
 # Function to echo in colors
 ###############################################################
 RED='\033[0;31m'
+ORANGE='\033[0;33m'
 YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
 BLUE='\033[1;34m'

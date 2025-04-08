@@ -39,7 +39,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "token" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
+            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "tokengen" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -191,7 +191,7 @@ fi
 ###############################################################
 # Tokengen
 ###############################################################
-if [[ "$opt_r" == "token" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+if [[ "$opt_r" == "tokengen" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/tokengen.sh
     cool_down $opt_a "Param for tokenchaincode generated."
     
@@ -209,6 +209,16 @@ fi
 
 
 ###############################################################
+# Start TokenNodes
+###############################################################
+if [[ "$opt_r" == "tokennode" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/tokennodes.sh
+    cool_down $opt_a "Token Nodes started."
+    
+fi
+
+
+###############################################################
 # FINISH
 ###############################################################
 echo_ok "Script for $DOCKER_NETWORK_NAME completed"
@@ -217,15 +227,6 @@ exit 0
 
 
 
-
-###############################################################
-# Start TokenNodes
-###############################################################
-if [[ "$opt_r" == "tokennode" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/tokennodes.sh
-    cool_down $opt_a "Token Nodes started."
-    
-fi
 
 temp_end
 
