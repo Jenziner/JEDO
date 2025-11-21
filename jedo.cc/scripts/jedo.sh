@@ -179,7 +179,7 @@ fi
 
 
 ###############################################################
-# Enroll certificates
+# Enroll Certificates
 ###############################################################
 if [[ "$opt_r" == "enroll" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/enroll.sh

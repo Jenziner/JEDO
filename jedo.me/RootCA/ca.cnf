@@ -7,7 +7,7 @@
 # ===========
 # 1. mkdir jedo
 # 2. cp ca.cnf ./jedo/ca.cnf
-# 3. cd /jedo
+# 3. cd jedo
 # 4. touch index.txt serial
 # 5. echo 1000 > serial
 # 6. echo 1000 > crlnumber

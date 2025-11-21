@@ -172,7 +172,7 @@ General:
         ListenAddress: 
         ServerCertificate: 
         ServerPrivateKey: 
-        ReplicationPolicy: consensus
+    BootstrapMethod: none
     LocalMSPDir: /etc/hyperledger/orderer/msp
     LocalMSPID: ${AGER}
     Profile:

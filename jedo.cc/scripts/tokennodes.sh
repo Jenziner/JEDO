@@ -31,14 +31,41 @@ writeDockerfile() {
     echo_info "Executing with the following:"
     echo_info "- Dockerfile Path: ${ORANGE}${CONFIG_SRC_PATH}${NC}"
 
-cat <<EOF > $CONFIG_SRC_PATH/dockerfile_token_node
+cat <<'EOF' > $CONFIG_SRC_PATH/dockerfile_token_node
 #build stage
 FROM golang:1.23-bookworm AS builder
 WORKDIR /go/src/app
+
+# Kopiere go.mod/go.sum
 COPY go.mod .
 COPY go.sum .
-RUN go mod download
+
+# CRITICAL: Lösche go.sum
+RUN rm -f go.sum
+
+# PATCH: Replace ALLES (Token SDK, FSC, libp2p)
+RUN echo "" >> go.mod && \
+    echo "// Fabric 3.0 Compatibility Patches (Aggressive Mode)" >> go.mod && \
+    echo "replace google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9 => google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1" >> go.mod && \
+    echo "replace google.golang.org/genproto/googleapis/api v0.0.0-20241007155032-5fefd90f89a9 => google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1" >> go.mod && \
+    echo "" >> go.mod && \
+    echo "// Force ALLE libp2p Dependencies auf kompatible Versionen" >> go.mod && \
+    echo "replace github.com/libp2p/go-libp2p v0.31.0 => github.com/libp2p/go-libp2p v0.36.4" >> go.mod && \
+    echo "replace github.com/libp2p/go-libp2p-kad-dht v0.22.0 => github.com/libp2p/go-libp2p-kad-dht v0.26.0" >> go.mod && \
+    echo "replace github.com/quic-go/webtransport-go v0.5.3 => github.com/quic-go/webtransport-go v0.9.0" >> go.mod && \
+    echo "replace github.com/quic-go/quic-go v0.48.2 => github.com/quic-go/quic-go v0.53.0" >> go.mod && \
+    echo "" >> go.mod && \
+    echo "// Zusätzliche transitive Dependencies" >> go.mod && \
+    echo "replace github.com/multiformats/go-multistream v0.4.1 => github.com/multiformats/go-multistream v0.5.0" >> go.mod && \
+    echo "replace github.com/multiformats/go-multiaddr v0.11.0 => github.com/multiformats/go-multiaddr v0.13.0" >> go.mod
+
+# Dependencies neu laden
+RUN go mod tidy && go mod download
+
+# Kopiere Source Code
 COPY . .
+
+# Build
 RUN go build -o /go/bin/app
 
 #final stage
@@ -57,6 +84,36 @@ EOF
 }
 
 
+
+
+
+
+
+
+###############################################################
+# Function patchTokenSDKDependencies
+###############################################################
+patchTokenSDKDependencies() {
+    echo ""
+    echo_warn "Preparing Token SDK for Fabric 3.0..."
+    echo_info "Executing with the following:"
+    echo_info "- APP Path: ${ORANGE}${APP_SRC_PATH}${NC}"
+
+    cd $APP_SRC_PATH
+
+    # Backup original files (einmalig)
+    if [ ! -f "go.mod.backup" ]; then
+        cp go.mod go.mod.backup
+        [ -f "go.sum" ] && cp go.sum go.sum.backup
+        echo_info "Backed up original go.mod/go.sum"
+    fi
+
+    echo_ok "Token SDK prepared (patching happens in Dockerfile)"
+    cd - > /dev/null
+}
+
+
+
 ###############################################################
 # Function buildDockerImages
 ###############################################################
@@ -68,6 +125,7 @@ buildDockerImages() {
     echo_info "- Dockerfile Path: ${ORANGE}${CONFIG_SRC_PATH}${NC}"
 
     docker build \
+        --no-cache \
         -f $CONFIG_SRC_PATH/dockerfile_token_node \
         -t token-auditor_image:latest \
         $APP_SRC_PATH
@@ -125,12 +183,15 @@ for AGER in $AGERS; do
 
         # Generate core.yaml in the configuration-folder
 
+        # Patch TokenSDK Dependencies
+        patchTokenSDKDependencies
+
         # Write the Dockerfile in the configuration-folder
         writeDockerfile
 
         # Build the docker image 
 # ERROR in build
-#        buildDockerImages
+        buildDockerImages
 
         # Rund the docker image
 
