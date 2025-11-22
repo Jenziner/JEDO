@@ -184,7 +184,6 @@ fi
 if [[ "$opt_r" == "enroll" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/enroll.sh
     cool_down $opt_a "Certificates enrolled."
-    
 fi
 
 
@@ -194,7 +193,6 @@ fi
 if [[ "$opt_r" == "tokengen" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/tokengen.sh
     cool_down $opt_a "Param for tokenchaincode generated."
-    
 fi
 
 
@@ -204,18 +202,17 @@ fi
 if [[ "$opt_r" == "ccaas" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/ccaas.sh
     cool_down $opt_a "CCAAS deployed."
-    
 fi
 
 
 ###############################################################
 # Start TokenNodes
 ###############################################################
-if [[ "$opt_r" == "tokennode" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/tokennodes.sh
-    cool_down $opt_a "Token Nodes started."
+# if [[ "$opt_r" == "tokennode" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+#     ./scripts/tokennodes.sh
+#     cool_down $opt_a "Token Nodes started."
     
-fi
+# fi
 
 
 ###############################################################

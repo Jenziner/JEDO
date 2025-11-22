@@ -234,7 +234,3 @@ done
 ###############################################################
 # Last Tasks
 ###############################################################
-echo_error "NEXT"
-# Start token nodes
-echo_info "mkdir -p data/auditor data/issuer data/owner1 data/owner2"
-echo_info "docker-compose up -d"
