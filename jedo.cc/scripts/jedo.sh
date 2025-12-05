@@ -39,7 +39,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "tokengen" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "intermediate" ]]; then
+            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "tokengen" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "gateway" && "$OPTARG" != "intermediate" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -216,10 +216,19 @@ fi
 
 
 ###############################################################
+# Wallet API Gateway
+###############################################################
+if [[ "$opt_r" == "gateway" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/gateway.sh
+    cool_down $opt_a "Wallet API Gateway deployed."
+fi
+
+
+###############################################################
 # FINISH
 ###############################################################
 echo_ok "Script for $DOCKER_NETWORK_NAME completed"
-echo_error "Run CA-API-Server now: ./ca-api/ca-api.sh"
+# echo_error "Run CA-API-Server now: ./ca-api/ca-api.sh"
 exit 0
 
 

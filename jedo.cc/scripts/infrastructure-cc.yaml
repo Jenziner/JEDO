@@ -69,6 +69,10 @@ Orbis:
         Pass: Test1
         IP: 172.30.1.9
         Port: 51091
+    Gateway: #Wallet Gateway
+        Name: gateway.jedo.cc
+        IP: 172.30.1.11
+        Port: 51111
 Regnum:
     - Name: ea
       Administration:
