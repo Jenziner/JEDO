@@ -1,0 +1,6 @@
+package/
+*.tar.gz
+vendor/
+.git
+.gitignore
+*.md

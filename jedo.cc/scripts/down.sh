@@ -48,9 +48,12 @@ echo ""
 echo_info "Folder removing..."
 rm -rf infrastructure
 rm -rf configuration
-rm -rf chaincode
-rm -f tcc.tar.gz
-#rm tokenchaincode/zkatdlog_pp.json
+
+
+# Remove Chaincode Packages
+echo ""
+echo_info "Chaincode packages removing..."
+rm -f *.tar.gz
 
 
 echo_ok "$DOCKER_NETWORK_NAME removed."

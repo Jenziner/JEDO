@@ -3,21 +3,16 @@ import * as path from 'path';
 
 import { env } from './environment';
 import logger from './logger';
-import { FabricConfig } from '../types/fabric';
 
-export const fabricConfig: FabricConfig = {
+export const fabricConfig = {
   mspId: env.fabric.mspId,
   channelName: env.fabric.channelName,
   chaincodeName: env.fabric.chaincodeName,
   peerEndpoint: env.fabric.peerEndpoint,
   peerHostAlias: env.fabric.peerHostAlias,
-  tlsCertPath: env.fabric.tlsCertPath,
-  tlsRootCertPath: env.fabric.tlsRootCertPath,
-  identityName: env.fabric.issuer.name,
-  identityCertPath: env.fabric.issuer.certPath,
-  identityKeyPath: env.fabric.issuer.keyPath,
-  walletPath: env.walletPath,
-};
+  tlsCertPath: env.fabric.peerTlsCert,
+  tlsRootCertPath: env.fabric.peerTlsRootCert,
+  };
 
 export const readCertificate = (certPath: string): Buffer => {
   const absolutePath = path.resolve(certPath);
@@ -92,81 +87,43 @@ export const validateFabricConfig = (): void => {
 
   const checks = [
     {
-      name: 'Infrastructure Directory',
-      path: './infrastructure/jedo/ea/alps',
-      isDirectory: true,
-      allowWildcard: false,
-    },
-    {
       name: 'Peer TLS Certificate',
       path: fabricConfig.tlsCertPath,
-      isDirectory: false,
       allowWildcard: true,
     },
     {
       name: 'Peer TLS Root Certificate',
       path: fabricConfig.tlsRootCertPath,
-      isDirectory: false,
       allowWildcard: true,
-    },
-    {
-      name: 'Issuer Certificate',
-      path: fabricConfig.identityCertPath,
-      isDirectory: false,
-      allowWildcard: false,
-    },
-    {
-      name: 'Issuer Private Key Directory',
-      path: path.dirname(fabricConfig.identityKeyPath),
-      isDirectory: true,
-      allowWildcard: false,
     },
   ];
 
   const missingPaths: string[] = [];
 
-  checks.forEach(({ name, path: checkPath, isDirectory, allowWildcard }) => {
+  checks.forEach(({ name, path: checkPath, allowWildcard }) => {
     const resolvedPath = path.resolve(checkPath);
 
-    // Handle wildcard paths
     if (allowWildcard && checkPath.includes('*')) {
       const dir = path.dirname(resolvedPath);
-
       if (!fs.existsSync(dir)) {
         missingPaths.push(`${name}: ${checkPath} (directory not found)`);
         return;
       }
-
       const files = fs.readdirSync(dir);
       const matchingFile = files.find((f) => f.endsWith('.pem'));
-
       if (!matchingFile) {
         missingPaths.push(`${name}: ${checkPath} (no matching file found)`);
       }
       return;
     }
 
-    // Regular path checks
-    if (isDirectory) {
-      if (!fs.existsSync(resolvedPath) || !fs.statSync(resolvedPath).isDirectory()) {
-        missingPaths.push(`${name}: ${checkPath} (directory not found)`);
-      }
-    } else {
-      if (!fs.existsSync(resolvedPath)) {
-        missingPaths.push(`${name}: ${checkPath}`);
-      }
+    if (!fs.existsSync(resolvedPath)) {
+      missingPaths.push(`${name}: ${checkPath}`);
     }
   });
 
-  // Validate private key file exists (with wildcard support)
-  try {
-    readPrivateKey(fabricConfig.identityKeyPath);
-  } catch (error) {
-    missingPaths.push(`Issuer Private Key: ${fabricConfig.identityKeyPath}`);
-  }
-
   if (missingPaths.length > 0) {
-    logger.error({ missingPaths }, 'Missing Fabric certificates/keys');
+    logger.error({ missingPaths }, 'Missing Fabric certificates');
     throw new Error(`Missing required Fabric files:\n${missingPaths.join('\n')}`);
   }
 
@@ -176,8 +133,6 @@ export const validateFabricConfig = (): void => {
       channel: fabricConfig.channelName,
       chaincode: fabricConfig.chaincodeName,
       peerEndpoint: fabricConfig.peerEndpoint,
-      identity: fabricConfig.identityName,
-      infrastructureMount: path.resolve('./infrastructure'),
     },
     'Fabric configuration validated successfully'
   );

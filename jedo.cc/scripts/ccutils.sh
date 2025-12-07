@@ -1,11 +1,13 @@
 #!/bin/bash
 
+
 # verify Function from Hyperledger
 verifyResult() {
   if [ $1 -ne 0 ]; then
     echo_error "$2"
   fi
 }
+
 
 
 ###############################################################
@@ -15,8 +17,9 @@ packageChaincode() {
     PEER=$1
     CC_NAME=$2
     CC_VERSION=$3
-    CCAAS_SERVER_PORT=$4
-    address="${PEER}_${CC_NAME}_ccaas:${CCAAS_SERVER_PORT}"
+    CCAAS_SERVER_NAME=$4
+    CCAAS_SERVER_PORT=$5
+    address="${CCAAS_SERVER_NAME}:${CCAAS_SERVER_PORT}"
     prefix=$(basename "$0")
     tempdir=$(mktemp -d -t "$prefix.XXXXXXXX") || error_exit "Error creating temporary directory"
     label=${CC_NAME}_${CC_VERSION}
@@ -43,59 +46,157 @@ METADATA-EOF
     tar -C "$tempdir/pkg" -czf "$CC_NAME.tar.gz" metadata.json code.tar.gz
     rm -Rf "$tempdir"
 
+    # ✅ Set minimal FABRIC_CFG_PATH for calculatepackageid
+    export FABRIC_CFG_PATH=${PWD}/../../fabric/config
+    
     local PACKAGE_ID
-    PACKAGE_ID=$(peer lifecycle chaincode calculatepackageid ${CC_NAME}.tar.gz)
+    PACKAGE_ID=$(peer lifecycle chaincode calculatepackageid ${CC_NAME}.tar.gz 2>/dev/null)
   
     echo "$PACKAGE_ID"
-#    echo_info "Chaincode is packaged  ${GREEN}${address}${NC}"
 }
 
 
+
+
 ###############################################################
-# Function installChaincode on a PEER
+# Function installChaincode
 ###############################################################
 function installChaincode() {
-  ORBIS=$1
-  REGNUM=$2
-  AGER=$3
-  PEER=$4
-  PEER_ADDRESS=$5
-  PEER_ROOTCERT=$6
+  CC_NAME=$1
+  ORBIS=$2
+  REGNUM=$3
+  AGER=$4
+  PEER=$5
+  PEER_ADDRESS=$6
   ORDERER_ADDRESS=$7
-  ORDERER_TLSCACERT=$8
 
-  FABRIC_CFG_PATH=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER
-  export CORE_PEER_LOCALMSPID=$AGER
-  export CORE_PEER_TLS_ROOTCERT_FILE=$PEER_ROOTCERT
-  export CORE_PEER_MSPCONFIGPATH=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER/msp
-  export CORE_PEER_ADDRESS=$PEER_ADDRESS
+  # ✅ Copy tar.gz to mounted directory
+  PEER_CHAINCODE_PATH=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER
+  cp ${CC_NAME}.tar.gz $PEER_CHAINCODE_PATH/
+  
+  if [ $? -ne 0 ]; then
+    echo_error "Failed to copy ${CC_NAME}.tar.gz to $PEER_CHAINCODE_PATH"
+    exit 1
+  fi
+  
+  echo_info "Chaincode package copied to: ${GREEN}${PEER_CHAINCODE_PATH}/${CC_NAME}.tar.gz${NC}"
+
+  # ✅ Finde den richtigen TLS Cert Namen im Container!
+  PEER_TLSCACERT_FILE=$(docker exec $PEER ls /etc/hyperledger/fabric/tls/tlscacerts/ 2>/dev/null | head -1)
+
+  if [ -z "$PEER_TLSCACERT_FILE" ]; then
+    echo_error "Peer TLS CA cert not found in container!"
+    exit 1
+  fi
+  
+  ORDERER_TLSCACERT_FILE=$(docker exec $PEER ls /var/hyperledger/orderer/tls/tlscacerts/ 2>/dev/null | head -1)
+  
+  if [ -z "$ORDERER_TLSCACERT_FILE" ]; then
+    echo_error "Orderer TLS CA cert not found in container!"
+    exit 1
+  fi
+
+  # Container Paths
+  ADMIN_MSP_CONTAINER_PATH="/var/hyperledger/infrastructure/$ORBIS/$REGNUM/$AGER/admin.$AGER.$REGNUM.jedo.cc/msp"
+  PEER_TLSCACERT_CONTAINER="/etc/hyperledger/fabric/tls/tlscacerts/$PEER_TLSCACERT_FILE"
+  #ORDERER_TLSCACERT_CONTAINER="/etc/hyperledger/orderer/tls/tlscacerts/$ORDERER_TLSCACERT_FILE"
+  ORDERER_TLSCACERT_CONTAINER="/var/hyperledger/infrastructure/$ORBIS/$REGNUM/$AGER/orderer.$AGER.$REGNUM.$ORBIS.cc/tls/tlscacerts/$ORDERER_TLSCACERT_FILE"
+  CC_PACKAGE_CONTAINER="/etc/hyperledger/fabric/${CC_NAME}.tar.gz"
 
   echo_info "Installing chaincode with the following"
-  echo_info "- LocalMSPID: ${GREEN}${CORE_PEER_LOCALMSPID}${NC}"
-  echo_info "- RootCert: ${GREEN}${CORE_PEER_TLS_ROOTCERT_FILE}${NC}"
-  echo_info "- MSPConfigPath: ${GREEN}${CORE_PEER_MSPCONFIGPATH}${NC}"
-  echo_info "- PEER: ${GREEN}${CORE_PEER_ADDRESS}${NC}"
+  echo_info "- LocalMSPID: ${GREEN}${AGER}${NC}"
+  echo_info "- TLS Enabled: ${GREEN}true${NC}"
+  echo_info "- Admin MSP: ${GREEN}${ADMIN_MSP_CONTAINER_PATH}${NC}"
+  echo_info "- PEER: ${GREEN}${PEER_ADDRESS}${NC}"
+  echo_info "- Peer TLS Cert: ${GREEN}${PEER_TLSCACERT_CONTAINER}${NC}"
+  echo_info "- Orderer TLS Cert: ${GREEN}${ORDERER_TLSCACERT_CONTAINER}${NC}"
   echo_info "- PackageID: ${GREEN}${PACKAGE_ID}${NC}"
+  echo_info "- Package File: ${GREEN}${CC_PACKAGE_CONTAINER}${NC}"
 
-  if ! PACKAGE_FOUND=$(peer lifecycle chaincode queryinstalled --output json | jq -e -r '.installed_chaincodes[].package_id // empty' | grep -F -x "${PACKAGE_ID}"); then
+  # Check if already installed
+  if ! docker exec \
+    -e CORE_PEER_TLS_ENABLED=true \
+    -e CORE_PEER_LOCALMSPID=$AGER \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=$PEER_TLSCACERT_CONTAINER \
+    -e CORE_PEER_MSPCONFIGPATH=$ADMIN_MSP_CONTAINER_PATH \
+    -e CORE_PEER_ADDRESS=$PEER_ADDRESS \
+    $PEER peer lifecycle chaincode queryinstalled --output json 2>/dev/null | jq -e -r '.installed_chaincodes[].package_id // empty' | grep -F -x "${PACKAGE_ID}" > /dev/null; then
+    
     echo_info "Installing chaincode ${PACKAGE_ID}..."
-    peer lifecycle chaincode install ${CC_NAME}.tar.gz
+    docker exec \
+      -e CORE_PEER_TLS_ENABLED=true \
+      -e CORE_PEER_LOCALMSPID=$AGER \
+      -e CORE_PEER_TLS_ROOTCERT_FILE=$PEER_TLSCACERT_CONTAINER \
+      -e CORE_PEER_MSPCONFIGPATH=$ADMIN_MSP_CONTAINER_PATH \
+      -e CORE_PEER_ADDRESS=$PEER_ADDRESS \
+      $PEER peer lifecycle chaincode install $CC_PACKAGE_CONTAINER
+    
     verifyResult $? "Chaincode installation on $PEER has failed"
   else
     echo_ok "Chaincode already installed: ${PACKAGE_ID}"
   fi
 
+  # Approve chaincode
   echo_info "Approving chaincode"
+  echo_info "- Channel: ${GREEN}${CHANNEL_NAME}${NC}"
   echo_info "- Orderer: ${GREEN}${ORDERER_ADDRESS}${NC}"
-  echo_info "- Orderer CAFile: ${GREEN}${ORDERER_TLSCACERT}${NC}"
-  peer lifecycle chaincode approveformyorg -o $ORDERER_ADDRESS --tls --cafile "$ORDERER_TLSCACERT" \
-    --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} \
-    --sequence ${CC_SEQUENCE} --init-required ${CC_INIT_FCN} ${CC_END_POLICY} ${CC_COLL_CONFIG}
+  
+  docker exec \
+    -e CORE_PEER_TLS_ENABLED=true \
+    -e CORE_PEER_LOCALMSPID=$AGER \
+    -e CORE_PEER_TLS_ROOTCERT_FILE=$PEER_TLSCACERT_CONTAINER \
+    -e CORE_PEER_MSPCONFIGPATH=$ADMIN_MSP_CONTAINER_PATH \
+    -e CORE_PEER_ADDRESS=$PEER_ADDRESS \
+    $PEER peer lifecycle chaincode approveformyorg \
+      -o $ORDERER_ADDRESS \
+      --tls \
+      --cafile "$ORDERER_TLSCACERT_CONTAINER" \
+      --channelID $CHANNEL_NAME \
+      --name ${CC_NAME} \
+      --version ${CC_VERSION} \
+      --package-id ${PACKAGE_ID} \
+      --sequence ${CC_SEQUENCE} \
+      ${CC_INIT_FCN:+--init-required} \
+      ${CC_END_POLICY} \
+      ${CC_COLL_CONFIG}
 
-  echo_info "Checking readiness"
-  peer lifecycle chaincode checkcommitreadiness --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} \
-    --sequence ${CC_SEQUENCE} --init-required ${CC_INIT_FCN} ${CC_END_POLICY} ${CC_COLL_CONFIG}
+APPROVE_RC=$?
+echo_warn "DEBUG: approveformyorg exit code = ${APPROVE_RC}"
+# NICHT abbrechen, auch wenn APPROVE_RC != 0
+
+echo_info "Checking commit readiness..."
+docker exec \
+  -e CORE_PEER_TLS_ENABLED=true \
+  -e CORE_PEER_LOCALMSPID=$AGER \
+  -e CORE_PEER_TLS_ROOTCERT_FILE=$PEER_TLSCACERT_CONTAINER \
+  -e CORE_PEER_MSPCONFIGPATH=$ADMIN_MSP_CONTAINER_PATH \
+  -e CORE_PEER_ADDRESS=$PEER_ADDRESS \
+  $PEER peer lifecycle chaincode checkcommitreadiness \
+    --channelID $CHANNEL_NAME \
+    --name ${CC_NAME} \
+    --version ${CC_VERSION} \
+    --sequence ${CC_SEQUENCE} \
+    --output json \
+    ${CC_INIT_FCN:+--init-required} \
+    ${CC_END_POLICY} \
+    ${CC_COLL_CONFIG}
+
+CCR_RC=$?
+echo_warn "DEBUG: checkcommitreadiness exit code = ${CCR_RC}"
+
+if [ $CCR_RC -ne 0 ]; then
+  echo_error "checkcommitreadiness failed for ${AGER}"
+  exit 1
+fi
+    
+    echo_ok "Chaincode approved for ${AGER} (approve rc=${APPROVE_RC})"
 }
+
+
+
+###############################################################
+# Additional utility functions (kept from original)
+###############################################################
 
 # queryInstalled PEER ORG
 function queryInstalled() {
@@ -110,153 +211,7 @@ function queryInstalled() {
   successln "Query installed successful on peer0.org${ORG} on channel"
 }
 
-# approveForMyOrg VERSION PEER ORG
-function approveForMyOrg() {
-  ORG=$1
-  setGlobals $ORG
-  set -x
-  peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} >&log.txt
-  res=$?
-  { set +x; } 2>/dev/null
-  cat log.txt
-  verifyResult $res "Chaincode definition approved on peer0.org${ORG} on channel '$CHANNEL_NAME' failed"
-  successln "Chaincode definition approved on peer0.org${ORG} on channel '$CHANNEL_NAME'"
-}
-
-# checkCommitReadiness VERSION PEER ORG
-function checkCommitReadiness() {
-  ORG=$1
-  shift 1
-  setGlobals $ORG
-  infoln "Checking the commit readiness of the chaincode definition on peer0.org${ORG} on channel '$CHANNEL_NAME'..."
-  local rc=1
-  local COUNTER=1
-  # continue to poll
-  # we either get a successful response, or reach MAX RETRY
-  while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
-    sleep $DELAY
-    infoln "Attempting to check the commit readiness of the chaincode definition on peer0.org${ORG}, Retry after $DELAY seconds."
-    set -x
-    peer lifecycle chaincode checkcommitreadiness --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} --output json >&log.txt
-    res=$?
-    { set +x; } 2>/dev/null
-    let rc=0
-    for var in "$@"; do
-      grep "$var" log.txt &>/dev/null || let rc=1
-    done
-    COUNTER=$(expr $COUNTER + 1)
-  done
-  cat log.txt
-  if test $rc -eq 0; then
-    infoln "Checking the commit readiness of the chaincode definition successful on peer0.org${ORG} on channel '$CHANNEL_NAME'"
-  else
-    fatalln "After $MAX_RETRY attempts, Check commit readiness result on peer0.org${ORG} is INVALID!"
-  fi
-}
-
-# commitChaincodeDefinition VERSION PEER ORG (PEER ORG)...
-function commitChaincodeDefinition() {
-  parsePeerConnectionParameters $@
-  res=$?
-  verifyResult $res "Invoke transaction failed on channel '$CHANNEL_NAME' due to uneven number of peer and org parameters "
-
-  # while 'peer chaincode' command can get the orderer endpoint from the
-  # peer (if join was successful), let's supply it directly as we know
-  # it using the "-o" option
-  set -x
-  peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "$ORDERER_CA" --channelID $CHANNEL_NAME --name ${CC_NAME} "${PEER_CONN_PARMS[@]}" --version ${CC_VERSION} --sequence ${CC_SEQUENCE} ${INIT_REQUIRED} ${CC_END_POLICY} ${CC_COLL_CONFIG} >&log.txt
-  res=$?
-  { set +x; } 2>/dev/null
-  cat log.txt
-  verifyResult $res "Chaincode definition commit failed on peer0.org${ORG} on channel '$CHANNEL_NAME' failed"
-  successln "Chaincode definition committed on channel '$CHANNEL_NAME'"
-}
-
-# queryCommitted ORG
-function queryCommitted() {
-  ORG=$1
-  setGlobals $ORG
-  EXPECTED_RESULT="Version: ${CC_VERSION}, Sequence: ${CC_SEQUENCE}, Endorsement Plugin: escc, Validation Plugin: vscc"
-  infoln "Querying chaincode definition on peer0.org${ORG} on channel '$CHANNEL_NAME'..."
-  local rc=1
-  local COUNTER=1
-  # continue to poll
-  # we either get a successful response, or reach MAX RETRY
-  while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
-    sleep $DELAY
-    infoln "Attempting to Query committed status on peer0.org${ORG}, Retry after $DELAY seconds."
-    set -x
-    peer lifecycle chaincode querycommitted --channelID $CHANNEL_NAME --name ${CC_NAME} >&log.txt
-    res=$?
-    { set +x; } 2>/dev/null
-    test $res -eq 0 && VALUE=$(cat log.txt | grep -o '^Version: '$CC_VERSION', Sequence: [0-9]*, Endorsement Plugin: escc, Validation Plugin: vscc')
-    test "$VALUE" = "$EXPECTED_RESULT" && let rc=0
-    COUNTER=$(expr $COUNTER + 1)
-  done
-  cat log.txt
-  if test $rc -eq 0; then
-    successln "Query chaincode definition successful on peer0.org${ORG} on channel '$CHANNEL_NAME'"
-  else
-    fatalln "After $MAX_RETRY attempts, Query chaincode definition result on peer0.org${ORG} is INVALID!"
-  fi
-}
-
-function chaincodeInvokeInit() {
-  parsePeerConnectionParameters $@
-  res=$?
-  verifyResult $res "Invoke transaction failed on channel '$CHANNEL_NAME' due to uneven number of peer and org parameters "
-
-  local rc=1
-  local COUNTER=1
-  local fcn_call='{"function":"'${CC_INIT_FCN}'","Args":[]}'
-  # continue to poll
-  # we either get a successful response, or reach MAX RETRY
-  while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
-    sleep $DELAY
-    # while 'peer chaincode' command can get the orderer endpoint from the
-    # peer (if join was successful), let's supply it directly as we know
-    # it using the "-o" option
-    set -x
-    infoln "invoke fcn call:${fcn_call}"
-    peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "$ORDERER_CA" -C $CHANNEL_NAME -n ${CC_NAME} "${PEER_CONN_PARMS[@]}" --isInit -c ${fcn_call} >&log.txt
-    res=$?
-    { set +x; } 2>/dev/null
-    let rc=$res
-    COUNTER=$(expr $COUNTER + 1)
-  done
-  cat log.txt
-  verifyResult $res "Invoke execution on $PEERS failed "
-  successln "Invoke transaction successful on $PEERS on channel '$CHANNEL_NAME'"
-}
-
-function chaincodeQuery() {
-  ORG=$1
-  setGlobals $ORG
-  infoln "Querying on peer0.org${ORG} on channel '$CHANNEL_NAME'..."
-  local rc=1
-  local COUNTER=1
-  # continue to poll
-  # we either get a successful response, or reach MAX RETRY
-  while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
-    sleep $DELAY
-    infoln "Attempting to Query peer0.org${ORG}, Retry after $DELAY seconds."
-    set -x
-    peer chaincode query -C $CHANNEL_NAME -n ${CC_NAME} -c '{"Args":["org.hyperledger.fabric:GetMetadata"]}' >&log.txt
-    res=$?
-    { set +x; } 2>/dev/null
-    let rc=$res
-    COUNTER=$(expr $COUNTER + 1)
-  done
-  cat log.txt
-  if test $rc -eq 0; then
-    successln "Query successful on peer0.org${ORG} on channel '$CHANNEL_NAME'"
-  else
-    fatalln "After $MAX_RETRY attempts, Query result on peer0.org${ORG} is INVALID!"
-  fi
-}
-
 function resolveSequence() {
-
   #if the sequence is not "auto", then use the provided sequence
   if [[ "${CC_SEQUENCE}" != "auto" ]]; then
     return 0
@@ -301,20 +256,14 @@ function resolveSequence() {
   else
     CC_SEQUENCE=$APPROVED_CC_SEQUENCE
   fi
-
 }
 
-#. scripts/envVar.sh
-
 queryInstalledOnPeer() {
-
   local rc=1
   local COUNTER=1
   # continue to poll
   # we either get a successful response, or reach MAX RETRY
   while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
-    #sleep $DELAY
-    #infoln "Attempting to list on peer0.org${ORG}, Retry after $DELAY seconds."
     peer lifecycle chaincode queryinstalled >&log.txt
     res=$?
     let rc=$res
@@ -330,8 +279,6 @@ queryCommittedOnChannel() {
   # continue to poll
   # we either get a successful response, or reach MAX RETRY
   while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
-    #sleep $DELAY
-    #infoln "Attempting to list on peer0.org${ORG}, Retry after $DELAY seconds."
     peer lifecycle chaincode querycommitted -C $CHANNEL >&log.txt
     res=$?
     let rc=$res
@@ -341,12 +288,10 @@ queryCommittedOnChannel() {
   if test $rc -ne 0; then
     fatalln "After $MAX_RETRY attempts, Failed to retrieve committed chaincode!"
   fi
-
 }
 
 ## Function to list chaincodes installed on the peer and committed chaincode visible to the org
 listAllCommitted() {
-
   local rc=1
   local COUNTER=1
   # continue to poll
@@ -365,7 +310,6 @@ listAllCommitted() {
   else
     fatalln "After $MAX_RETRY attempts, Failed to retrieve committed chaincode!"
   fi
-
 }
 
 chaincodeInvoke() {

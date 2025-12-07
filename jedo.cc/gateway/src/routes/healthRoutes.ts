@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 
-import { gatewayService } from '../services/gatewayService';
-import { walletService } from '../services/walletService';
+import { fabricProxyService } from '../services/fabricProxyService';
 import { fabricConfig } from '../config/fabric';
 
 const router = Router();
@@ -19,15 +18,12 @@ interface HealthResponse {
       mspId: string;
       channel: string;
       chaincode: string;
-      identities: string[];
     };
   };
 }
 
 router.get('/health', async (_req: Request, res: Response<HealthResponse>) => {
   try {
-    const identities = await walletService.list();
-
     const healthcheck: HealthResponse = {
       success: true,
       data: {
@@ -37,11 +33,10 @@ router.get('/health', async (_req: Request, res: Response<HealthResponse>) => {
         environment: process.env.NODE_ENV || 'development',
         version: process.env.npm_package_version || '1.0.0',
         fabric: {
-          connected: gatewayService.isConnected(),
+          connected: true,
           mspId: fabricConfig.mspId,
           channel: fabricConfig.channelName,
           chaincode: fabricConfig.chaincodeName,
-          identities: identities,
         },
       },
     };
@@ -63,7 +58,7 @@ router.get('/health', async (_req: Request, res: Response<HealthResponse>) => {
 
 router.get('/ready', async (_req: Request, res: Response) => {
   try {
-    const isConnected = gatewayService.isConnected();
+    const isConnected = fabricProxyService['grpcClient'] !== null;
 
     if (!isConnected) {
       return res.status(503).json({

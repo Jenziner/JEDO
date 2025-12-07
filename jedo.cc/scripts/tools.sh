@@ -86,21 +86,21 @@ docker exec -it $TOOLS_NAME /bin/bash -c "
     rm -rf bin"
 
 
-# Install Fabric-Token-SDK Tokengen
-echo ""
-echo_info "Tokengen installing..."
-docker exec -it $TOOLS_NAME /bin/bash -c "
-    apt-get update && \
-    apt-get install -y build-essential && \
-    export CGO_ENABLED=1 && \
-    export GO_TAGS=pkcs11 && \
-    go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen@v0.3.0 && \
-    cp \$GOPATH/bin/tokengen /usr/local/bin/tokengen && \
-    chmod +x /usr/local/bin/tokengen "
+# # Install Fabric-Token-SDK Tokengen
+# echo ""
+# echo_info "Tokengen installing..."
+# docker exec -it $TOOLS_NAME /bin/bash -c "
+#     apt-get update && \
+#     apt-get install -y build-essential && \
+#     export CGO_ENABLED=1 && \
+#     export GO_TAGS=pkcs11 && \
+#     go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen@v0.3.0 && \
+#     cp \$GOPATH/bin/tokengen /usr/local/bin/tokengen && \
+#     chmod +x /usr/local/bin/tokengen "
 
 
-# Waiting Root-CA Host startup
-CheckContainer "$TOOLS_NAME" "$DOCKER_CONTAINER_WAIT"
+# # Waiting Root-CA Host startup
+# CheckContainer "$TOOLS_NAME" "$DOCKER_CONTAINER_WAIT"
 
 
 # Write TLS-Root CLIENT config

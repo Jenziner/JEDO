@@ -88,7 +88,7 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
   - &${AGER}
     Name: $AGER
     ID: ${AGER}
-    MSPDir: ${PWD}/infrastructure/$ORBIS/$REGNUM/msp
+    MSPDir: ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp
     Policies: &${AGER}Policies
       Readers:
         Type: Signature

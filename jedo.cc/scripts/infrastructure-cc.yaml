@@ -69,10 +69,6 @@ Orbis:
         Pass: Test1
         IP: 172.30.1.9
         Port: 51091
-    Gateway: #Wallet Gateway
-        Name: gateway.jedo.cc
-        IP: 172.30.1.11
-        Port: 51111
 Regnum:
     - Name: ea
       Administration:
@@ -121,7 +117,7 @@ Ager:
           Port: 53041
           OpPort: 53049
           CAAPI:
-              Name: api.ca.alps.ea.jedo.cc
+              Name: porta.alps.ea.jedo.cc
               IP: 172.30.3.5
               Port: 53051
               SrvPort: 53059
@@ -148,102 +144,99 @@ Ager:
                 Pass: Test1
                 IP: 172.30.3.52
                 Port: 53521
-      CCAAS: 
-          Name: peer.alps.ea.jedo.cc_tcc_ccaas
+            CCAAS: 
+              - Name: jedo-wallet
+                Server: jedo-wallet.peer.alps.ea.jedo.cc
+                IP: 172.30.3.54
+                Port: 53541
+      Gateway: #API-Gateway
+          Name: via.alps.ea.jedo.cc
           IP: 172.30.3.91
           Port: 53911
-      Operators:
+          CC: jedo-wallet
+      Admins:
           - Name: admin.alps.ea.jedo.cc
             Pass: Test1
             Type: admin
             Subject: "C=jd,ST=cc,L=ea,O=alps,CN=admin.alps.ea.jedo.cc"
-      Auditors: #for FSC and User
-          - Name: aud.alps.ea.jedo.cc
-            Subject: "C=jd,ST=cc,L=ea,O=alps,CN=aud.alps.ea.jedo.cc"
-            Pass: Test1
-      Issuers: #for FSC and User
-          - Name: iss.alps.ea.jedo.cc
-            Subject: "C=jd,ST=cc,L=ea,O=alps,CN=iss.alps.ea.jedo.cc"
-            Pass: Test1
-      Owners:  #for FSC and User
+      Gens:
           - Name: WORB
             Subject: "C=jd,ST=cc,L=ea,O=alps,CN=worb.alps.ea.jedo.cc"
             Pass: Test1
-            Users: 
+            Humans: 
                 - Name: do
                   Subject: "C=jd,ST=cc,L=ea,O=alps,CN=do.worb.alps.ea.jedo.cc"
                   Pass: Test1
                 - Name: ra
                   Subject: "C=jd,ST=cc,L=ea,O=alps,CN=ra.worb.alps.ea.jedo.cc"
                   Pass: Test1
-    - Name: jura
-      Administration:
-          Parent: ea
-          Contact: Nik
-          Mail: nik@jedo.me
-          Phone: +41791234567
-      TLS: 
-          Name: tls.jura.ea.jedo.cc
-          Pass: Test1
-          IP: 172.30.4.3
-          Port: 54031
-          OpPort: 54039
-      CA: 
-          Name: ca.jura.ea.jedo.cc
-          Pass: Test1
-          IP: 172.30.4.4
-          Port: 54041
-          OpPort: 54049
-          CAAPI:
-              Name: api.ca.jura.ea.jedo.cc
-              IP: 172.30.4.5
-              Port: 54051
-              SrvPort: 54059
-      Orderers:
-          - Name: orderer.jura.ea.jedo.cc
-            Subject: "C=jd,ST=cc,L=ea,O=jura,CN=orderer.jura.ea.jedo.cc"
-            Pass: Test1
-            IP: 172.30.4.11
-            Port: 54111
-            ClusterPort: 54112
-            OpPort: 54119
-            AdminPort: 54113
-      Peers: # first peer will be used as AnchorPeer
-          - Name: peer.jura.ea.jedo.cc
-            Subject: "C=jd,ST=cc,L=ea,O=jura,CN=peer.jura.ea.jedo.cc"
-            Pass: Test1
-            IP: 172.30.4.51
-            Port1: 54511
-            Port2: 54512
-            OpPort: 54519
-            CLI: 172.30.4.53
-            DB: 
-                Name: db.peer.jura.ea.jedo.cc
-                Pass: Test1
-                IP: 172.30.4.52
-                Port: 54521
-      CCAAS:
-          Name: peer.jura.ea.jedo.cc_tcc_ccaas
-          IP: 172.30.4.91
-          Port: 54911
-      Operators:
-          - Name: admin.jura.ea.jedo.cc
-            Pass: Test1
-            Type: admin
-            Subject: "C=jd,ST=cc,L=ea,O=jura,CN=admin.jenziner.jedo.cc"
-      Issuers: #for FSC and User
-          - Name: iss1.jura.ea.jedo.cc
-            Subject: "C=jd,ST=cc,L=ea,O=jura,CN=iss1.jura.ea.jedo.cc"
-            Pass: Test1
-          - Name: iss2.jura.ea.jedo.cc
-            Subject: "C=jd,ST=cc,L=ea,O=jura,CN=iss2.jura.ea.jedo.cc"
-            Pass: Test1
-      Owners:  #for FSC and User
-          - Name: MOUTIER
-            Subject: "C=jd,ST=cc,L=ea,O=jura,CN=moutier.jura.ea.jedo.cc"
-            Pass: Test1
-            Users: 
-                - Name: monbijou
-                  Subject: "C=jd,ST=cc,L=ea,O=jura,CN=monbijou.moutier.jura.ea.jedo.cc"
-                  Pass: Test1
+    # - Name: jura
+    #   Administration:
+    #       Parent: ea
+    #       Contact: Nik
+    #       Mail: nik@jedo.me
+    #       Phone: +41791234567
+    #   TLS: 
+    #       Name: tls.jura.ea.jedo.cc
+    #       Pass: Test1
+    #       IP: 172.30.4.3
+    #       Port: 54031
+    #       OpPort: 54039
+    #   CA: 
+    #       Name: ca.jura.ea.jedo.cc
+    #       Pass: Test1
+    #       IP: 172.30.4.4
+    #       Port: 54041
+    #       OpPort: 54049
+    #       CAAPI:
+    #           Name: porta.jura.ea.jedo.cc
+    #           IP: 172.30.4.5
+    #           Port: 54051
+    #           SrvPort: 54059
+    #   Orderers:
+    #       - Name: orderer.jura.ea.jedo.cc
+    #         Subject: "C=jd,ST=cc,L=ea,O=jura,CN=orderer.jura.ea.jedo.cc"
+    #         Pass: Test1
+    #         IP: 172.30.4.11
+    #         Port: 54111
+    #         ClusterPort: 54112
+    #         OpPort: 54119
+    #         AdminPort: 54113
+    #   Peers: # first peer will be used as AnchorPeer
+    #       - Name: peer.jura.ea.jedo.cc
+    #         Subject: "C=jd,ST=cc,L=ea,O=jura,CN=peer.jura.ea.jedo.cc"
+    #         Pass: Test1
+    #         IP: 172.30.4.51
+    #         Port1: 54511
+    #         Port2: 54512
+    #         OpPort: 54519
+    #         CLI: 172.30.4.53
+    #         DB: 
+    #             Name: db.peer.jura.ea.jedo.cc
+    #             Pass: Test1
+    #             IP: 172.30.4.52
+    #             Port: 54521
+    #         CCAAS:
+    #           - Name: jedo-wallet
+    #             Server: jedo-wallet.peer.jura.ea.jedo.cc
+    #             IP: 172.30.4.54
+    #             Port: 54541
+    #   Gateway: #API-Gateway
+    #       Name: via.jura.ea.jedo.cc
+    #       IP: 172.30.4.91
+    #       Port: 54911
+    #       CC: jedo-wallet
+    #   Admins:
+    #       - Name: admin.jura.ea.jedo.cc
+    #         Pass: Test1
+    #         Type: admin
+    #         Subject: "C=jd,ST=cc,L=ea,O=jura,CN=admin.jenziner.jedo.cc"
+    #   Gens:
+    #       - Name: MOUTIER
+    #         Subject: "C=jd,ST=cc,L=ea,O=jura,CN=moutier.jura.ea.jedo.cc"
+    #         Pass: Test1
+    #         Humans: 
+    #             - Name: monbijou
+    #               Subject: "C=jd,ST=cc,L=ea,O=jura,CN=monbijou.moutier.jura.ea.jedo.cc"
+    #               Pass: Test1
   

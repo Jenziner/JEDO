@@ -3,7 +3,7 @@ import { env } from './config/environment';
 import { validateFabricConfig } from './config/fabric';
 import logger from './config/logger';
 import { gracefulShutdown } from './utils/shutdown';
-import { gatewayService } from './services/gatewayService';
+import { fabricProxyService } from './services/fabricProxyService';
 
 const startServer = async (): Promise<void> => {
   try {
@@ -11,7 +11,7 @@ const startServer = async (): Promise<void> => {
     validateFabricConfig();
 
     // Connect to Fabric Gateway
-    await gatewayService.connect();
+    await fabricProxyService.initialize();
 
     // Start Express Server
     const app = createApp();
@@ -33,12 +33,12 @@ const startServer = async (): Promise<void> => {
 
     // Graceful Shutdown
     process.on('SIGTERM', async () => {
-      await gatewayService.disconnect();
+      await fabricProxyService.disconnect();
       gracefulShutdown(server, 'SIGTERM');
     });
 
     process.on('SIGINT', async () => {
-      await gatewayService.disconnect();
+      await fabricProxyService.disconnect();
       gracefulShutdown(server, 'SIGINT');
     });
 
@@ -51,7 +51,7 @@ const startServer = async (): Promise<void> => {
     // Uncaught Exceptions
     process.on('uncaughtException', async (error: Error) => {
       logger.error({ err: error }, 'Uncaught Exception');
-      await gatewayService.disconnect();
+      await fabricProxyService.disconnect();
       process.exit(1);
     });
   } catch (error) {

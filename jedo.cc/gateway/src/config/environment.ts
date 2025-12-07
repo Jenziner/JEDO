@@ -2,20 +2,17 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-interface FabricIdentityConfig {
-  name: string;
-  certPath: string;
-  keyPath: string;
-}
-
 interface Environment {
   nodeEnv: string;
   port: number;
   host: string;
+  serviceName: string;
   logLevel: string;
   logPretty: boolean;
+  requireClientCert: boolean;
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
+  maxRequestSize: string;
   corsOrigin: string;
   fabric: {
     networkName: string;
@@ -24,82 +21,105 @@ interface Environment {
     mspId: string;
     peerEndpoint: string;
     peerHostAlias: string;
-    tlsCertPath: string;
-    tlsRootCertPath: string;
-    issuer: FabricIdentityConfig;
-    owner: FabricIdentityConfig;
+    peerTlsCert: string;
+    peerTlsRootCert: string;
   };
-  walletPath: string;
+  caApi: {
+    url: string;
+  };
+  audit: {
+    logPath: string;
+    logLevel: string;
+  };
 }
 
-const getEnv = (key: string, defaultValue?: string): string => {
+/**
+ * Get environment variable - REQUIRED (no default!)
+ */
+const getEnv = (key: string): string => {
   const value = process.env[key];
-  if (!value && defaultValue === undefined) {
+  if (!value) {
     throw new Error(`Environment variable ${key} is required but not set`);
   }
-  return value || defaultValue || '';
+  return value;
 };
 
-const getEnvNumber = (key: string, defaultValue: number): number => {
-  const value = process.env[key];
-  return value ? parseInt(value, 10) : defaultValue;
+/**
+ * Get environment variable with optional default
+ */
+const getEnvWithDefault = (key: string, defaultValue: string): string => {
+  return process.env[key] || defaultValue;
 };
 
-const getEnvBoolean = (key: string, defaultValue: boolean): boolean => {
-  const value = process.env[key];
-  if (!value) return defaultValue;
-  return value.toLowerCase() === 'true';
+/**
+ * Get number from environment variable
+ */
+const getEnvNumber = (key: string): number => {
+  const value = getEnv(key);
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed)) {
+    throw new Error(`Environment variable ${key} must be a number, got: ${value}`);
+  }
+  return parsed;
+};
+
+/**
+ * Get boolean from environment variable
+ */
+const getEnvBoolean = (key: string): boolean => {
+  const value = getEnv(key);
+  const lower = value.toLowerCase();
+  if (lower !== 'true' && lower !== 'false') {
+    throw new Error(`Environment variable ${key} must be 'true' or 'false', got: ${value}`);
+  }
+  return lower === 'true';
 };
 
 export const env: Environment = {
-  nodeEnv: getEnv('NODE_ENV', 'development'),
-  port: getEnvNumber('PORT', 3000),
-  host: getEnv('HOST', '0.0.0.0'),
-  logLevel: getEnv('LOG_LEVEL', 'info'),
-  logPretty: getEnvBoolean('LOG_PRETTY', true),
-  rateLimitWindowMs: getEnvNumber('RATE_LIMIT_WINDOW_MS', 900000),
-  rateLimitMaxRequests: getEnvNumber('RATE_LIMIT_MAX_REQUESTS', 100),
-  corsOrigin: getEnv('CORS_ORIGIN', '*'),
+  // Server Configuration
+  nodeEnv: getEnv('NODE_ENV'),
+  port: getEnvNumber('PORT'),
+  host: getEnv('HOST'),
+  serviceName: getEnv('SERVICE_NAME'),
+
+  // Logging
+  logLevel: getEnv('LOG_LEVEL'),
+  logPretty: getEnvBoolean('LOG_PRETTY'),
+
+  // Security
+  requireClientCert: getEnvBoolean('REQUIRE_CLIENT_CERT'),
+  rateLimitWindowMs: getEnvNumber('RATE_LIMIT_WINDOW_MS'),
+  rateLimitMaxRequests: getEnvNumber('RATE_LIMIT_MAX_REQUESTS'),
+  maxRequestSize: getEnv('MAX_REQUEST_SIZE'),
+
+  // CORS
+  corsOrigin: getEnv('CORS_ORIGIN'),
+
+  // Hyperledger Fabric
   fabric: {
-    networkName: getEnv('FABRIC_NETWORK_NAME', 'jedo'),
-    channelName: getEnv('FABRIC_CHANNEL_NAME', 'ea'),
-    chaincodeName: getEnv('FABRIC_CHAINCODE_NAME', 'jedo-wallet'),
-    mspId: getEnv('FABRIC_MSP_ID', 'alps'),
-    peerEndpoint: getEnv('FABRIC_PEER_ENDPOINT', 'peer.alps.ea.jedo.cc:53511'),
-    peerHostAlias: getEnv('FABRIC_PEER_HOST_ALIAS', 'peer.alps.ea.jedo.cc'),
-    tlsCertPath: getEnv(
-      'FABRIC_TLS_CERT_PATH',
-      './infrastructure/jedo/ea/alps/peer.alps.ea.jedo.cc/tls/signcerts/cert.pem'
-    ),
-    tlsRootCertPath: getEnv(
-      'FABRIC_TLS_ROOT_CERT_PATH',
-      './infrastructure/jedo/ea/alps/peer.alps.ea.jedo.cc/tls/tlscacerts/tls-ca-cert.pem'
-    ),
-    issuer: {
-      name: getEnv('FABRIC_IDENTITY_NAME', 'iss.alps.ea.jedo.cc'),
-      certPath: getEnv(
-        'FABRIC_IDENTITY_CERT_PATH',
-        './infrastructure/jedo/ea/alps/iss.alps.ea.jedo.cc/msp/signcerts/cert.pem'
-      ),
-      keyPath: getEnv(
-        'FABRIC_IDENTITY_KEY_PATH',
-        './infrastructure/jedo/ea/alps/iss.alps.ea.jedo.cc/msp/keystore/*_sk'
-      ),
-    },
-    owner: {
-      name: getEnv('FABRIC_OWNER_NAME', 'worb.alps.ea.jedo.cc'),
-      certPath: getEnv(
-        'FABRIC_OWNER_CERT_PATH',
-        './infrastructure/jedo/ea/alps/worb.alps.ea.jedo.cc/msp/signcerts/cert.pem'
-      ),
-      keyPath: getEnv(
-        'FABRIC_OWNER_KEY_PATH',
-        './infrastructure/jedo/ea/alps/worb.alps.ea.jedo.cc/msp/keystore/*_sk'
-      ),
-    },
+    networkName: getEnv('FABRIC_NETWORK_NAME'),
+    channelName: getEnv('FABRIC_CHANNEL_NAME'),
+    chaincodeName: getEnv('FABRIC_CHAINCODE_NAME'),
+    mspId: getEnv('FABRIC_MSP_ID'),
+    peerEndpoint: getEnv('FABRIC_PEER_ENDPOINT'),
+    peerHostAlias: getEnv('FABRIC_PEER_HOST_ALIAS'),
+    peerTlsCert: getEnv('FABRIC_PEER_TLS_CERT'),
+    peerTlsRootCert: getEnv('FABRIC_PEER_TLS_ROOT_CERT'),
   },
-  walletPath: getEnv('WALLET_PATH', './wallet'),
+
+  // CA-API
+  caApi: {
+    url: getEnv('CA_API_URL'),
+  },
+
+  // Audit Logging
+  audit: {
+    logPath: getEnvWithDefault('AUDIT_LOG_PATH', './logs/audit.log'),
+    logLevel: getEnvWithDefault('AUDIT_LOG_LEVEL', 'info'),
+  },
 };
 
-export const isProduction = (): boolean => env.nodeEnv === 'production';
-export const isDevelopment = (): boolean => env.nodeEnv === 'development';
+// Environment Checks
+export const isProduction = (): boolean => env.nodeEnv === 'me';
+export const isDevelopment = (): boolean => env.nodeEnv === 'dev';
+export const isTest = (): boolean => env.nodeEnv === 'cc';

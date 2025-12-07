@@ -39,7 +39,7 @@ while getopts ":hpda:r:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "tokengen" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "gateway" && "$OPTARG" != "intermediate" ]]; then
+            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "tokengen" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "gateway" && "$OPTARG" != "wallet" && "$OPTARG" != "intermediate" ]]; then
                 echo "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -143,15 +143,6 @@ fi
 
 
 ###############################################################
-# Generate configuration (genesis block and channel configuration)
-###############################################################
-if [[ "$opt_r" == "config" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/config.sh
-    cool_down $opt_a "Genesis Block and Channel Configuration generated."
-fi
-
-
-###############################################################
 # Run Orderer Nodes
 ###############################################################
 if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
@@ -166,6 +157,15 @@ fi
 if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/peer.sh peer
     cool_down $opt_a "Peers running."
+fi
+
+
+###############################################################
+# Generate configuration (genesis block and channel configuration)
+###############################################################
+if [[ "$opt_r" == "config" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/config.sh
+    cool_down $opt_a "Genesis Block and Channel Configuration generated."
 fi
 
 
@@ -188,39 +188,20 @@ fi
 
 
 ###############################################################
-# Tokengen
-###############################################################
-if [[ "$opt_r" == "tokengen" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/tokengen.sh
-    cool_down $opt_a "Param for tokenchaincode generated."
-fi
-
-
-###############################################################
-# Deploy CCAAS
-###############################################################
-if [[ "$opt_r" == "ccaas" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/ccaas.sh
-    cool_down $opt_a "CCAAS deployed."
-fi
-
-
-###############################################################
-# Start TokenNodes
-###############################################################
-# if [[ "$opt_r" == "tokennode" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-#     ./scripts/tokennodes.sh
-#     cool_down $opt_a "Token Nodes started."
-    
-# fi
-
-
-###############################################################
 # Wallet API Gateway
 ###############################################################
 if [[ "$opt_r" == "gateway" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     ./scripts/gateway.sh
     cool_down $opt_a "Wallet API Gateway deployed."
+fi
+
+
+###############################################################
+# Chaincode jedo-wallet Deployment
+###############################################################
+if [[ "$opt_r" == "wallet" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    ./scripts/cc_jedo-wallet.sh
+    cool_down $opt_a "Chaincode jedo-wallet."
 fi
 
 

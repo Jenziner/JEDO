@@ -1,6 +1,7 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 
-import { walletController } from '../controllers/walletController';
+import { extractClientIdentity, FabricProxyRequest } from '../middlewares/fabricProxy';
+import { submitTransaction, evaluateTransaction } from '../controllers/proxyController';
 import {
   validateCreateWallet,
   validateTransfer,
@@ -10,15 +11,28 @@ import { asyncHandler } from '../middlewares/asyncHandler';
 
 const router = Router();
 
+// All routes require Client-Identity
+router.use(extractClientIdentity);
+
 /**
  * @route   POST /api/v1/wallets
- * @desc    Create a new wallet
- * @access  Private
+ * @desc    Create a new wallet (via client identity)
+ * @access  Private (requires X-Fabric-Cert + X-Fabric-Key headers)
  */
 router.post(
   '/',
   validateCreateWallet,
-  asyncHandler(walletController.createWallet.bind(walletController))
+  asyncHandler(async (req: FabricProxyRequest, res: Response) => {
+    req.body = {
+      function: 'CreateWallet',
+      args: [
+        req.body.walletId,
+        req.body.ownerId,
+        req.body.initialBalance?.toString() || '0',
+      ],
+    };
+    await submitTransaction(req, res);
+  })
 );
 
 /**
@@ -29,7 +43,17 @@ router.post(
 router.post(
   '/transfer',
   validateTransfer,
-  asyncHandler(walletController.transfer.bind(walletController))
+  asyncHandler(async (req: FabricProxyRequest, res: Response) => {
+    req.body = {
+      function: 'Transfer',
+      args: [
+        req.body.fromWallet,
+        req.body.toWallet,
+        req.body.amount.toString(),
+      ],
+    };
+    await submitTransaction(req, res);
+  })
 );
 
 /**
@@ -40,7 +64,13 @@ router.post(
 router.get(
   '/:walletId/balance',
   validateWalletId,
-  asyncHandler(walletController.getBalance.bind(walletController))
+  asyncHandler(async (req: FabricProxyRequest, res: Response) => {
+    req.body = {
+      function: 'GetBalance',
+      args: [req.params.walletId],
+    };
+    await evaluateTransaction(req, res);
+  })
 );
 
 /**
@@ -51,7 +81,13 @@ router.get(
 router.get(
   '/:walletId',
   validateWalletId,
-  asyncHandler(walletController.getWallet.bind(walletController))
+  asyncHandler(async (req: FabricProxyRequest, res: Response) => {
+    req.body = {
+      function: 'GetWallet',
+      args: [req.params.walletId],
+    };
+    await evaluateTransaction(req, res);
+  })
 );
 
 /**
@@ -62,7 +98,13 @@ router.get(
 router.get(
   '/:walletId/history',
   validateWalletId,
-  asyncHandler(walletController.getWalletHistory.bind(walletController))
+  asyncHandler(async (req: FabricProxyRequest, res: Response) => {
+    req.body = {
+      function: 'GetWalletHistory',
+      args: [req.params.walletId],
+    };
+    await evaluateTransaction(req, res);
+  })
 );
 
 export default router;

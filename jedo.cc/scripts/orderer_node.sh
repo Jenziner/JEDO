@@ -83,7 +83,7 @@ for AGER in $AGERS; do
 cat <<EOF > $LOCAL_SRV_DIR/orderer.yaml
 ---
 General:
-    ListenAddress: $ORDERER_IP
+    ListenAddress: 0.0.0.0
     ListenPort: $ORDERER_PORT
     TLS:
         Enabled: true
@@ -102,12 +102,14 @@ General:
     MaxSendMsgSize: 104857600
     Cluster:
         SendBufferSize: 100
-        ClientCertificate: 
-        ClientPrivateKey: 
-        ListenPort: 
-        ListenAddress: 
-        ServerCertificate: 
-        ServerPrivateKey: 
+        ClientCertificate: /etc/hyperledger/orderer/tls/signcerts/cert.pem
+        ClientPrivateKey: /etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATEKEY_FILE
+        ListenPort: $ORDERER_CLPORT
+        ListenAddress: 0.0.0.0
+        ServerCertificate: /etc/hyperledger/orderer/tls/signcerts/cert.pem
+        ServerPrivateKey: /etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATEKEY_FILE
+        RootCAs:
+          - /etc/hyperledger/orderer/tls/tlscacerts/$TLS_TLSCACERT_FILE
     LocalMSPDir: /etc/hyperledger/orderer/msp
     LocalMSPID: ${AGER}
     Profile:
@@ -191,6 +193,20 @@ EOF
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/production:/var/hyperledger/production/orderer \
             -v ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls:/etc/hyperledger/clientadmin/tls \
+            -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
+            -e ORDERER_GENERAL_LISTENPORT=$ORDERER_PORT \
+            -e ORDERER_GENERAL_TLS_ENABLED=true \
+            -e ORDERER_GENERAL_TLS_PRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATEKEY_FILE \
+            -e ORDERER_GENERAL_TLS_CERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+            -e ORDERER_GENERAL_TLS_ROOTCAS=[/etc/hyperledger/orderer/tls/tlscacerts/$TLS_TLSCACERT_FILE] \
+            -e ORDERER_GENERAL_CLUSTER_LISTENADDRESS=0.0.0.0 \
+            -e ORDERER_GENERAL_CLUSTER_LISTENPORT=$ORDERER_CLPORT \
+            -e ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
+            -e ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/etc/hyperledger/orderer/tls/keystore/$TLS_PRIVATEKEY_FILE \
+            -e ORDERER_GENERAL_CLUSTER_ROOTCAS=[/etc/hyperledger/orderer/tls/tlscacerts/$TLS_TLSCACERT_FILE] \
+            -e ORDERER_GENERAL_KEEPALIVE_SERVERMININTERVAL=60s \
+            -e ORDERER_GENERAL_KEEPALIVE_SERVERINTERVAL=7200s \
+            -e ORDERER_GENERAL_KEEPALIVE_SERVERTIMEOUT=20s \
             hyperledger/fabric-orderer:3.0
 
         CheckContainer "$ORDERER_NAME" "$DOCKER_CONTAINER_WAIT"

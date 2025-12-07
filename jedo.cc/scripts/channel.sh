@@ -70,9 +70,9 @@ for REGNUM in $REGNUMS; do
             ###############################################################
             PEER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Name" $CONFIG_FILE)
 
-            echo ""
-            echo_info "$PEER_NAME joins $REGNUM..."
-            docker exec -it cli.$PEER_NAME /usr/local/bin/peer channel join -b /var/hyperledger/configuration/genesisblock
+            docker exec \
+                -e CORE_PEER_MSPCONFIGPATH=/var/hyperledger/infrastructure/$ORBIS/$REGNUM/$AGER/admin.$AGER.$REGNUM.jedo.cc/msp \
+                $PEER_NAME peer channel join -b /var/hyperledger/configuration/genesisblock
         done
     done
 done

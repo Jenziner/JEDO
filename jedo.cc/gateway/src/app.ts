@@ -8,6 +8,7 @@ import { requestLogger } from './middlewares/requestLogger';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import healthRoutes from './routes/healthRoutes';
 import walletRoutes from './routes/walletRoutes';
+import proxyRoutes from './routes/proxyRoutes';
 
 export const createApp = (): Application => {
   const app: Application = express();
@@ -41,6 +42,7 @@ export const createApp = (): Application => {
   // Routes
   app.use('/', healthRoutes);
   app.use('/api/v1/wallets', walletRoutes);
+  app.use('/api/v1/proxy', proxyRoutes);
 
   // Error Handlers
   app.use(notFoundHandler);
