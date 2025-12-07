@@ -1,0 +1,451 @@
+openapi: 3.0.3
+info:
+  title: JEDO Wallet Gateway API
+  description: |
+    Stateless REST Gateway for Hyperledger Fabric blockchain network.
+    Provides wallet management and payment transfer functionality using client-side identity (X.509 certificates).
+  version: 1.0.0
+  contact:
+    name: JEDO Development Team
+
+servers:
+  - url: http://via.alps.ea.jedo.cc:53911
+    description: Production Gateway
+  - url: http://localhost:53911
+    description: Local Development
+
+security:
+  - FabricIdentity: []
+
+tags:
+  - name: Health
+    description: Health check and readiness endpoints
+  - name: Wallets
+    description: Wallet management operations
+  - name: Proxy
+    description: Low-level Fabric chaincode proxy
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns gateway health status and Fabric connection info
+      security: []
+      responses:
+        '200':
+          description: Gateway is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness check
+      description: Kubernetes readiness probe - checks gRPC connection to Fabric peer
+      security: []
+      responses:
+        '200':
+          description: Gateway is ready
+        '503':
+          description: Gateway not ready
+
+  /live:
+    get:
+      tags:
+        - Health
+      summary: Liveness check
+      description: Kubernetes liveness probe
+      security: []
+      responses:
+        '200':
+          description: Gateway is alive
+
+  /api/v1/wallets:
+    post:
+      tags:
+        - Wallets
+      summary: Create new wallet
+      description: Creates a new wallet on the blockchain ledger
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWalletRequest'
+      responses:
+        '200':
+          description: Wallet created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/wallets/transfer:
+    post:
+      tags:
+        - Wallets
+      summary: Transfer funds between wallets
+      description: Executes a payment transfer from one wallet to another
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequest'
+      responses:
+        '200':
+          description: Transfer successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/wallets/{walletId}/balance:
+    get:
+      tags:
+        - Wallets
+      summary: Get wallet balance
+      description: Query current balance of a wallet
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: wallet-worb-001
+      responses:
+        '200':
+          description: Balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/wallets/{walletId}:
+    get:
+      tags:
+        - Wallets
+      summary: Get wallet details
+      description: Retrieve full wallet information including owner and balance
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: wallet-worb-001
+      responses:
+        '200':
+          description: Wallet details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/wallets/{walletId}/history:
+    get:
+      tags:
+        - Wallets
+      summary: Get wallet transaction history
+      description: Retrieve complete transaction history for a wallet
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: wallet-worb-001
+      responses:
+        '200':
+          description: History retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/proxy/submit:
+    post:
+      tags:
+        - Proxy
+      summary: Submit Fabric transaction
+      description: |
+        Low-level proxy endpoint to submit any chaincode transaction directly.
+        Requires explicit channelName, chaincodeName, functionName, and args.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProxySubmitRequest'
+      responses:
+        '200':
+          description: Transaction submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/proxy/evaluate:
+    post:
+      tags:
+        - Proxy
+      summary: Evaluate Fabric query
+      description: |
+        Low-level proxy endpoint to evaluate (query) any chaincode function.
+        Does not commit to the ledger.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProxyEvaluateRequest'
+      responses:
+        '200':
+          description: Query evaluated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    FabricIdentity:
+      type: apiKey
+      in: header
+      name: X-Fabric-Cert
+      description: |
+        Client X.509 certificate (Base64-encoded PEM) and private key (X-Fabric-Key header).
+        Both headers required for authentication.
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              example: OK
+            timestamp:
+              type: string
+              format: date-time
+            uptime:
+              type: number
+              example: 123.45
+            environment:
+              type: string
+              example: cc
+            version:
+              type: string
+              example: 1.0.0
+            fabric:
+              type: object
+              properties:
+                connected:
+                  type: boolean
+                  example: true
+                mspId:
+                  type: string
+                  example: alps
+                channel:
+                  type: string
+                  example: ea
+                chaincode:
+                  type: string
+                  example: jedo-wallet
+
+    CreateWalletRequest:
+      type: object
+      required:
+        - walletId
+        - ownerId
+      properties:
+        walletId:
+          type: string
+          example: wallet-worb-001
+        ownerId:
+          type: string
+          example: worb
+        initialBalance:
+          type: number
+          example: 1000
+          default: 0
+
+    TransferRequest:
+      type: object
+      required:
+        - fromWallet
+        - toWallet
+        - amount
+      properties:
+        fromWallet:
+          type: string
+          example: wallet-worb-001
+        toWallet:
+          type: string
+          example: wallet-user-alice
+        amount:
+          type: number
+          example: 50
+
+    ProxySubmitRequest:
+      type: object
+      required:
+        - channelName
+        - chaincodeName
+        - functionName
+        - args
+      properties:
+        channelName:
+          type: string
+          example: ea
+        chaincodeName:
+          type: string
+          example: jedo-wallet
+        functionName:
+          type: string
+          example: Transfer
+        args:
+          type: array
+          items:
+            type: string
+          example: ["wallet-worb-001", "wallet-user-alice", "50"]
+
+    ProxyEvaluateRequest:
+      type: object
+      required:
+        - channelName
+        - chaincodeName
+        - functionName
+        - args
+      properties:
+        channelName:
+          type: string
+          example: ea
+        chaincodeName:
+          type: string
+          example: jedo-wallet
+        functionName:
+          type: string
+          example: GetBalance
+        args:
+          type: array
+          items:
+            type: string
+          example: ["wallet-worb-001"]
+
+    TransactionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            result:
+              type: string
+              example: ""
+            function:
+              type: string
+              example: CreateWallet
+
+    QueryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            result:
+              type: string
+              example: '{"walletId":"wallet-worb-001","ownerId":"worb","balance":1000}'
+            function:
+              type: string
+              example: GetWallet
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Missing client certificate or private key in headers
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid client identity headers
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server or chaincode error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

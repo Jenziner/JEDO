@@ -130,6 +130,22 @@ Ager:
             ClusterPort: 53112
             OpPort: 53119
             AdminPort: 53113
+        #   - Name: orderer2.alps.ea.jedo.cc
+        #     Subject: "C=jd,ST=cc,L=ea,O=alps,CN=orderer2.alps.ea.jedo.cc"
+        #     Pass: Test1
+        #     IP: 172.30.3.12
+        #     Port: 53121
+        #     ClusterPort: 53122
+        #     OpPort: 53129
+        #     AdminPort: 53123
+        #   - Name: orderer3.alps.ea.jedo.cc
+        #     Subject: "C=jd,ST=cc,L=ea,O=alps,CN=orderer3.alps.ea.jedo.cc"
+        #     Pass: Test1
+        #     IP: 172.30.3.13
+        #     Port: 53131
+        #     ClusterPort: 53132
+        #     OpPort: 53139
+        #     AdminPort: 53133
       Peers: # first peer will be used as AnchorPeer
           - Name: peer.alps.ea.jedo.cc
             Subject: "C=jd,ST=cc,L=ea,O=alps,CN=peer.alps.ea.jedo.cc"

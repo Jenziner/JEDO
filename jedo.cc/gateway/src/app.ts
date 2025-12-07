@@ -2,7 +2,6 @@ import express, { Application } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-
 import { env } from './config/environment';
 import { requestLogger } from './middlewares/requestLogger';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
@@ -22,15 +21,15 @@ export const createApp = (): Application => {
     })
   );
 
-  // Rate Limiting
-  const limiter = rateLimit({
+  // Global Rate Limiting (IP-based, coarse protection)
+  const globalLimiter = rateLimit({
     windowMs: env.rateLimitWindowMs,
     max: env.rateLimitMaxRequests,
     message: 'Too many requests from this IP, please try again later',
     standardHeaders: true,
     legacyHeaders: false,
   });
-  app.use(limiter);
+  app.use(globalLimiter);
 
   // Body Parser
   app.use(express.json({ limit: '10mb' }));
@@ -39,10 +38,10 @@ export const createApp = (): Application => {
   // Request Logging
   app.use(requestLogger);
 
-  // Routes
+  // Routes (with cert-based rate limiting inside)
   app.use('/', healthRoutes);
-  app.use('/api/v1/wallets', walletRoutes);
-  app.use('/api/v1/proxy', proxyRoutes);
+  app.use('/api/v1/wallets', walletRoutes);    // Cert-based limits inside
+  app.use('/api/v1/proxy', proxyRoutes);        // Cert-based limits inside
 
   // Error Handlers
   app.use(notFoundHandler);
