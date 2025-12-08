@@ -40,6 +40,19 @@
 - **GENS:** Organisationen
 - **HUMAN:** Einzelpersonen
 
+### 1.3 Code-Speicherung & Distribution
+- **Entwicklung und Test:** GitHub Repository (öffentlich)
+- **Production Releases:** 
+  - Whitepaper, Verfassung, Gesetz, Verordnung,  werden auf IPFS hochgeladen
+  - Chaincode-Versionen werden auf IPFS hochgeladen (CC-CID)
+  - CC-CID wird in Blockchain gespeichert (Smart Contract)
+  - Mindestens 3 Ager pro Regnum pinnen jede Version (= 15 Ager weltweit, Redundanz)
+  - Orbis pinnt alle Versionen dauerhaft (Seed Node)
+- **Abruf:** 
+  - Nodes können via GitHub (schnell) oder IPFS (dezentral) downloaden
+  - Integrität via CID-Vergleich garantiert
+  - Orbis beteiligt sich an IPFS und betreibt einen Node
+
 ***
 
 ## 2. Strukturelle Hierarchie
