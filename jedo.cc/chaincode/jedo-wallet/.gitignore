@@ -1,0 +1,16 @@
+# Go vendor dependencies
+vendor/
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go test cache
+*.test
+*.out
+
+# Go module download cache
+go.sum

@@ -7,29 +7,55 @@ import { fabricConfig, readCertificate } from '../config/fabric';
 
 /**
  * Extract MSP ID from X.509 certificate
- * For JEDO certs with multiple OUs: OU=ea+OU=alps+OU=jedo+OU=client
- * We take the second OU which is the organization/MSP
+ * 
+ * PRODUCTION: JEDO certs with O= field (e.g., O=alps)
+ * DEVELOPMENT: Fabric test-network certs use OU= field
+ * 
+ * Priority:
+ * 1. O= field (Production JEDO certs)
+ * 2. OU=admin → Org1MSP (Development fallback for test-network)
+ * 3. Throw error if neither found
  */
 function extractMspIdFromCert(certPem: string): string {
   try {
     const cert = new crypto.X509Certificate(certPem);
     const subject = cert.subject;
     
-    // Match O= field (Organization)
+    // Production: Match O= field (Organization)
     const oMatch = subject.match(/O=([^,+\s]+)/);
     
-    if (!oMatch || !oMatch[1]) {
-      throw new Error(`Certificate must have O= field. Subject: ${subject}`);
+    if (oMatch && oMatch[1]) {
+      const mspId = oMatch[1].trim();
+      
+      if (!mspId) {
+        throw new Error('MSP ID extracted from certificate O= field is empty');
+      }
+      
+      logger.debug({ mspId, subject }, 'Extracted MSP ID from certificate O= field (Production)');
+      return mspId;
     }
     
-    const mspId = oMatch[1].trim();
+    // Development Fallback: fabric-samples test-network
+    // Test-network certs have OU=admin but no O= field
+    const isDevelopment = process.env.NODE_ENV === 'development';
     
-    if (!mspId) {
-      throw new Error('MSP ID extracted from certificate O= field is empty');
+    if (isDevelopment) {
+      const ouMatch = subject.match(/OU=([^,+\s]+)/);
+      
+      if (ouMatch && ouMatch[1] === 'admin') {
+        const fallbackMsp = 'Org1MSP';
+        logger.warn(
+          { subject, fallbackMsp }, 
+          'Using fallback MSP for test-network admin certificate (Development only)'
+        );
+        return fallbackMsp;
+      }
     }
     
-    logger.debug({ mspId, subject }, 'Extracted MSP ID from certificate O= field');
-    return mspId;
+    // No valid MSP found
+    throw new Error(
+      `Certificate must have O= field for MSP identification. Subject: ${subject}`
+    );
   } catch (error) {
     logger.error({ err: error }, 'Failed to extract MSP ID from certificate');
     throw error;

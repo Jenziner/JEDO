@@ -1,6 +1,23 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+const nodeEnv = process.env.NODE_ENV || 'development';
+
+// Load .env first (base configuration)
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
+// Load environment-specific .env file
+dotenv.config({ path: path.resolve(process.cwd(), `.env.${nodeEnv}`) });
+
+// Load local overrides with OVERRIDE flag (highest priority)
+dotenv.config({ 
+  path: path.resolve(process.cwd(), `.env.${nodeEnv}.local`),
+  override: true 
+});
+dotenv.config({ 
+  path: path.resolve(process.cwd(), '.env.local'),
+  override: true 
+});
 
 interface Environment {
   nodeEnv: string;

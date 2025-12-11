@@ -34,6 +34,19 @@ Thumbs.db
 wallet/
 *.id
 
+# Fabric Network Material (Symlinks + potenzielle Kopien)
+config/fabric-network
+config/crypto-config
+crypto-config/
+organizations/
+infrastructure/
+
+# Secrets
+*.pem
+*.crt
+*.key
+*_sk
+
 # Testing
 coverage/
 .nyc_output/
