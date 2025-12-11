@@ -85,6 +85,11 @@ export const readPrivateKey = (keyPath: string): Buffer => {
 export const validateFabricConfig = (): void => {
   logger.info('Validating Fabric configuration...');
 
+  if (process.env.SKIP_FABRIC_VALIDATION === 'true') {
+    logger.warn('⚠️  Fabric validation skipped (SKIP_FABRIC_VALIDATION=true). Gateway will fail on Fabric operations.');
+    return;
+  }
+
   const checks = [
     {
       name: 'Peer TLS Certificate',

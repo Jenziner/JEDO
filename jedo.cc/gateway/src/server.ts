@@ -10,8 +10,15 @@ const startServer = async (): Promise<void> => {
     // Validate Fabric Configuration
     validateFabricConfig();
 
-    // Connect to Fabric Gateway
-    await fabricProxyService.initialize();
+    // Connect to Fabric Gateway (skip if Fabric not available)
+    const skipFabric = process.env.SKIP_FABRIC_VALIDATION === 'true';
+    
+    if (!skipFabric) {
+      await fabricProxyService.initialize();
+      logger.info('✅ Fabric Gateway connected');
+    } else {
+      logger.warn('⚠️  Running in proxy-only mode (no Fabric connection). Legacy wallet/proxy routes will fail.');
+    }
 
     // Start Express Server
     const app = createApp();
@@ -22,25 +29,27 @@ const startServer = async (): Promise<void> => {
           port: env.port,
           host: env.host,
           environment: env.nodeEnv,
-          fabricNetwork: env.fabric.networkName,
-          fabricChannel: env.fabric.channelName,
-          fabricChaincode: env.fabric.chaincodeName,
+          fabricEnabled: !skipFabric,
+          fabricNetwork: skipFabric ? 'N/A' : env.fabric.networkName,
+          fabricChannel: skipFabric ? 'N/A' : env.fabric.channelName,
+          fabricChaincode: skipFabric ? 'N/A' : env.fabric.chaincodeName,
         },
-        '🚀 JEDO Gateway Server started successfully'
+        '�� JEDO Gateway Server started successfully'
       );
-      logger.info(`📡 Health check available at http://${env.host}:${env.port}/health`);
+      logger.info(`📡 Health check: http://${env.host}:${env.port}/health`);
+      logger.info(`�� Service proxies: http://${env.host}:${env.port}/api/v1/{ca|ledger|recovery|voting}`);
     });
 
     // Graceful Shutdown
-    process.on('SIGTERM', async () => {
-      await fabricProxyService.disconnect();
-      gracefulShutdown(server, 'SIGTERM');
-    });
+    const shutdown = async (signal: string) => {
+      if (!skipFabric) {
+        await fabricProxyService.disconnect();
+      }
+      gracefulShutdown(server, signal);
+    };
 
-    process.on('SIGINT', async () => {
-      await fabricProxyService.disconnect();
-      gracefulShutdown(server, 'SIGINT');
-    });
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
 
     // Unhandled Rejections
     process.on('unhandledRejection', (reason: Error) => {
@@ -51,7 +60,9 @@ const startServer = async (): Promise<void> => {
     // Uncaught Exceptions
     process.on('uncaughtException', async (error: Error) => {
       logger.error({ err: error }, 'Uncaught Exception');
-      await fabricProxyService.disconnect();
+      if (!skipFabric) {
+        await fabricProxyService.disconnect();
+      }
       process.exit(1);
     });
   } catch (error) {

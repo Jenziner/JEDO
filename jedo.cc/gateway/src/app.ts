@@ -6,6 +6,17 @@ import { env } from './config/environment';
 import { requestLogger } from './middlewares/requestLogger';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import healthRoutes from './routes/healthRoutes';
+import { extractClientIdentity } from './middlewares/fabricProxy';
+
+// NEW: Service Proxies
+import { 
+  caServiceProxy, 
+  ledgerServiceProxy, 
+  recoveryServiceProxy, 
+  votingServiceProxy 
+} from './middlewares/proxyRouter';
+
+// LEGACY Routes (TODO: Remove in Epic 4)
 import walletRoutes from './routes/walletRoutes';
 import proxyRoutes from './routes/proxyRoutes';
 
@@ -21,7 +32,7 @@ export const createApp = (): Application => {
     })
   );
 
-  // Global Rate Limiting (IP-based, coarse protection)
+  // Global Rate Limiting
   const globalLimiter = rateLimit({
     windowMs: env.rateLimitWindowMs,
     max: env.rateLimitMaxRequests,
@@ -38,12 +49,23 @@ export const createApp = (): Application => {
   // Request Logging
   app.use(requestLogger);
 
-  // Routes (with cert-based rate limiting inside)
-  app.use('/', healthRoutes);
-  app.use('/api/v1/wallets', walletRoutes);    // Cert-based limits inside
-  app.use('/api/v1/proxy', proxyRoutes);        // Cert-based limits inside
+  // ===== ROUTES (ORDER MATTERS!) =====
 
-  // Error Handlers
+  // NEW: Service Proxies (to backend microservices)
+  app.use('/api/v1/ca', caServiceProxy);
+  app.use('/api/v1/ledger', ledgerServiceProxy);
+  app.use('/api/v1/recovery', recoveryServiceProxy);
+  app.use('/api/v1/voting', votingServiceProxy);
+
+  // LEGACY Routes (TODO: Remove in Epic 4 after migration)
+  // These provide direct Fabric access until backend services are ready
+  app.use('/api/v1/wallets', extractClientIdentity, walletRoutes);
+  app.use('/api/v1/proxy', extractClientIdentity, proxyRoutes);
+
+  // Health Routes (less specific, after API routes)
+  app.use(healthRoutes);
+
+  // Error Handlers (MUST be last!)
   app.use(notFoundHandler);
   app.use(errorHandler);
 
