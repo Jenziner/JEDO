@@ -1,0 +1,14 @@
+{
+  "name": "recovery-service",
+  "version": "1.0.0",
+  "scripts": {
+    "lint": "eslint src --ext .ts,.js",
+    "lint:fix": "eslint src --ext .ts,.js --fix",
+    "test": "jest",
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "express": "^4.21.1"
+  }
+}

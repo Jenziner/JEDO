@@ -42,7 +42,7 @@ router.get('/health', async (_req: Request, res: Response<HealthResponse>) => {
     };
 
     res.status(200).json(healthcheck);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({
       success: false,
       data: {
@@ -78,7 +78,7 @@ router.get('/ready', async (_req: Request, res: Response) => {
         timestamp: new Date().toISOString(),
       },
     });
-  } catch (error) {
+  } catch (_error) {
     return res.status(503).json({
       success: false,
       data: {

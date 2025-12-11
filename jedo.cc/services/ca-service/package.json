@@ -1,11 +1,14 @@
 {
-  "name": "jedo-ca-api",
+  "name": "ca-service",
   "version": "1.0.0",
   "description": "Prerequisites: 1. Node.js 2. Express.js",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "lint": "eslint src --ext .ts,.js",
+    "lint:fix": "eslint src --ext .ts,.js --fix",
+    "test": "jest",
+    "build": "tsc",
+    "clean": "rm -rf dist"
   },
   "keywords": [],
   "author": "",
