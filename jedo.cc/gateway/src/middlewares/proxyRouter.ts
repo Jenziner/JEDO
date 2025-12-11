@@ -10,7 +10,11 @@ const createServiceProxy = (serviceName: ServiceName, _pathPrefix: string): Requ
     target: config.url,
     changeOrigin: true,
     timeout: config.timeout,
-    
+    pathRewrite: serviceName === 'ledgerService'
+      ? { '^/api/v1/ledger': '' } // z.B. /api/v1/ledger/health → /health
+      : serviceName === 'caService'
+      ? { '^/api/v1/ca': '' }
+      : undefined,
     on: {
       error: (err: Error, _req: Request, res: Response) => {
         logger.error(`${serviceName} Proxy Error`, { error: err.message });

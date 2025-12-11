@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { extractClientIdentity, FabricProxyRequest } from '../middlewares/fabricProxy';
 import { submitTransaction, evaluateTransaction } from '../controllers/proxyController';
-import { asyncHandler } from '../utils/asyncHandler';
+import { asyncHandler } from '../middlewares/asyncHandler';
 import { adminProxyLimit, queryProxyLimit } from '../middlewares/routeRateLimits';
 
 const router = Router();

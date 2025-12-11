@@ -57,11 +57,6 @@ export const createApp = (): Application => {
   app.use('/api/v1/recovery', recoveryServiceProxy);
   app.use('/api/v1/voting', votingServiceProxy);
 
-  // LEGACY Routes (TODO: Remove in Epic 4 after migration)
-  // These provide direct Fabric access until backend services are ready
-  app.use('/api/v1/wallets', extractClientIdentity, walletRoutes);
-  app.use('/api/v1/proxy', extractClientIdentity, proxyRoutes);
-
   // Health Routes (less specific, after API routes)
   app.use(healthRoutes);
 

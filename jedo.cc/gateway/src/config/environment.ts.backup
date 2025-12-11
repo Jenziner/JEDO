@@ -44,9 +44,6 @@ interface Environment {
   caApi: {
     url: string;
   };
-  ledgerApi: {
-    url: string;
-  };
   audit: {
     logPath: string;
     logLevel: string;
@@ -132,11 +129,6 @@ export const env: Environment = {
     url: getEnv('CA_API_URL'),
   },
 
-  // Ledger-API (NEW!)
-  ledgerApi: {
-    url: getEnv('LEDGER_API_URL'),
-  },
-
   // Audit Logging
   audit: {
     logPath: getEnvWithDefault('AUDIT_LOG_PATH', './logs/audit.log'),
@@ -145,6 +137,6 @@ export const env: Environment = {
 };
 
 // Environment Checks
-export const isProduction = (): boolean => env.nodeEnv === 'production';
-export const isDevelopment = (): boolean => env.nodeEnv === 'development';
-export const isTest = (): boolean => env.nodeEnv === 'test';
+export const isProduction = (): boolean => env.nodeEnv === 'me';
+export const isDevelopment = (): boolean => env.nodeEnv === 'dev';
+export const isTest = (): boolean => env.nodeEnv === 'cc';

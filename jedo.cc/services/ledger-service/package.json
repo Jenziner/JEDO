@@ -1,14 +1,32 @@
 {
   "name": "ledger-service",
   "version": "1.0.0",
+  "description": "Jedo Ledger Service - Fabric Gateway Client",
+  "main": "dist/server.js",
   "scripts": {
-    "lint": "eslint src --ext .ts,.js",
-    "lint:fix": "eslint src --ext .ts,.js --fix",
-    "test": "jest",
+    "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "clean": "rm -rf dist"
+    "start": "node dist/server.js",
+    "lint": "eslint src --ext .ts",
+    "test": "jest"
   },
   "dependencies": {
-    "express": "^4.21.1"
+    "@hyperledger/fabric-gateway": "^1.10.0",
+    "@grpc/grpc-js": "^1.12.4",
+    "express": "^4.21.2",
+    "dotenv": "^16.4.7",
+    "pino": "^9.6.0",
+    "pino-http": "^10.3.0",
+    "pino-pretty": "^11.2.2",
+    "helmet": "^8.1.0",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.5.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "@types/cors": "^2.8.17",
+    "typescript": "^5.9.3",
+    "tsx": "^4.21.0"
   }
 }

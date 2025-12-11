@@ -32,6 +32,8 @@ router.post(
   walletCreateLimit, // 3/min
   validateCreateWallet,
   asyncHandler(async (req: FabricProxyRequest, res: Response) => {
+    const { walletId, ownerId, initialBalance, metadata } = req.body;
+
     req.body = {
       channelName: 'ea',
       chaincodeName: 'jedo-wallet',
@@ -40,6 +42,7 @@ router.post(
         req.body.walletId,
         req.body.ownerId,
         req.body.initialBalance?.toString() || '0',
+        JSON.stringify(metadata || {}),
       ],
     };
     await submitTransaction(req, res);
