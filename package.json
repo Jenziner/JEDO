@@ -1,7 +1,29 @@
 {
-  "dependencies": {
-    "@ionic-native/barcode-scanner": "^5.36.0",
-    "cors": "^2.8.5",
-    "fabric-ca-client": "^2.2.20"
-  }
+  "name": "jedo-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "gateway",
+    "services/*"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.49.0",
+    "@typescript-eslint/parser": "^8.49.0",
+    "eslint": "^8.57.1",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3"
+  },
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }
