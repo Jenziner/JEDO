@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
 check_script
 
-echo_warn "Prerequisites checking..."
+echo_info "Prerequisites checking..."
 
 ###############################################################
 # Help with prerequisits
@@ -90,4 +90,4 @@ check_command configtxgen
 check_command configtxlator
 check_command cryptogen
 
-echo_ok "Prerequisites checked."
+echo_info "Prerequisites checked."

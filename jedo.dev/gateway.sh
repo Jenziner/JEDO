@@ -7,17 +7,9 @@
 ###############################################################
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/params.sh"
 check_script
 
-
-###############################################################
-# Params
-###############################################################
-CONFIG_FILE="$SCRIPT_DIR/infrastructure-cc.yaml"
-FABRIC_BIN_PATH=$(yq eval '.Fabric.Path' "$CONFIG_FILE")
-DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
-DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
 
 get_hosts
 
@@ -26,117 +18,119 @@ get_hosts
 # Build Gateway Image
 ###############################################################
 GATEWAY_IMAGE="jedo-gateway:1.0"
-GATEWAY_SRC_DIR="${PWD}/gateway"
+GATEWAY_SRC_DIR="${PWD}/../gateway"
+LOCAL_INFRA_DIR=${PWD}/infrastructure
+
 
 echo_info "Checking Gateway..."
 
 # Simple check: Image exists?
 if ! docker images | grep -q "${GATEWAY_IMAGE}"; then
     REBUILD_REQUIRED=true
-    echo_warn "Image not found - will build"
+    echo_info "Image not found - will build"
 else
     REBUILD_REQUIRED=false
-    echo_ok "Image exists"
+    echo_info "Image exists"
     
-    # Optional: Always rebuild if src/ changed in last hour
-    if find ${GATEWAY_SRC_DIR}/src -type f -mmin -60 | grep -q .; then
-        echo_warn "Source changed recently - will rebuild"
-        REBUILD_REQUIRED=true
-    fi
 fi
 
 # Build if required
 if [ "$REBUILD_REQUIRED" = true ]; then
-    echo_warn "Building ${GATEWAY_IMAGE}..."
-    cd ${GATEWAY_SRC_DIR}
+    echo_info "Building ${GATEWAY_IMAGE}..."
     
     # Install dependencies
     echo_info "Installing dependencies..."
-    npm install
+    (cd "${GATEWAY_SRC_DIR}" && npm install) || { echo_error "npm install failed"; exit 1; }
     
+  
     # Clean and build
     echo_info "Building TypeScript..."
-    rm -rf dist/
-    npm run build || { echo_error "Build failed"; exit 1; }
+    (cd ${GATEWAY_SRC_DIR} && rm -rf dist/ && npm run build) || { echo_error "Build failed"; exit 1; }
     
     # Build Docker image
     echo_info "Building Docker image..."
-    docker build -t ${GATEWAY_IMAGE} . || { echo_error "Docker build failed"; exit 1; }
-    
-    cd ..
-    echo_ok "Image built"
+    docker build -t ${GATEWAY_IMAGE} ${GATEWAY_SRC_DIR} || { echo_error "Docker build failed"; exit 1; }
+
+    echo_info "Image built"
 else
-    echo_ok "Image up-to-date"
+    echo_info "Image up-to-date"
 fi
 
 
 ###############################################################
 # Gateway
 ###############################################################
-ORBIS=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
-REGNUMS=$(yq e ".Regnum[].Name" $CONFIG_FILE)
 for REGNUM in $REGNUMS; do
-    AGERS=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
-    for AGER in $AGERS; do
-        ###############################################################
-        # Params
-        ###############################################################
-        GATEWAY_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.Name" $CONFIG_FILE)
-        GATEWAY_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.IP" $CONFIG_FILE)
-        GATEWAY_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.Port" $CONFIG_FILE)
-        GATEWAY_CC=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.CC" $CONFIG_FILE)
+    CCS=$(yq eval ".Chaincode[] | .Name" $CONFIG_FILE)
+    for CC in $CCS; do
+        CC_NAME=$(yq eval ".Chaincode[] | select(.Name == \"$CC\") | .Name" $CONFIG_FILE)
+        for AGER in $AGERS; do
+            ###############################################################
+            # Params
+            ###############################################################
+            GATEWAY_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.Name" $CONFIG_FILE)
+            GATEWAY_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.IP" $CONFIG_FILE)
+            GATEWAY_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.Port" $CONFIG_FILE)
 
-        # First Peer
-        PEER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[0].Name" $CONFIG_FILE)
-        PEER_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[0].IP" $CONFIG_FILE)
-        PEER_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[0].Port1" $CONFIG_FILE)
+            # First Peer
+            PEER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[0].Name" $CONFIG_FILE)
+            PEER_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[0].IP" $CONFIG_FILE)
+            PEER_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[0].Port1" $CONFIG_FILE)
 
-        # CA-API
-        CAAPI_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.CAAPI.Name" $CONFIG_FILE)
-        CAAPI_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.CAAPI.IP" $CONFIG_FILE)
-        CAAPI_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.CAAPI.Port1" $CONFIG_FILE)
+            # CA-API
+            CAAPI_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.CAAPI.Name" $CONFIG_FILE)
+            CAAPI_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.CAAPI.IP" $CONFIG_FILE)
+            CAAPI_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.CAAPI.Port1" $CONFIG_FILE)
 
-        echo ""
-        echo_warn "Docker $GATEWAY_NAME starting..."
-        echo_info "Executing with the following:"
-        echo_info "- Chaincode: ${GREEN}${GATEWAY_CC}${NC}"
-        echo_info "- Gateway: ${GREEN}${GATEWAY_NAME} (${GATEWAY_IP}:${GATEWAY_PORT})${NC}"
-        echo_info "- Peer: ${GREEN}${PEER_NAME} (${PEER_IP}:${PEER_PORT})${NC}"
+            echo ""
+            if [[ $DEBUG == true ]]; then
+                echo_debug "Executing with the following:"
+                echo_value_debug "- Regnum Name:" "$REGNUM"
+                echo_value_debug "- Chaincode:" "${CC_NAME}"
+                echo_value_debug "- Gateway:" "${GATEWAY_NAME} (${GATEWAY_IP}:${GATEWAY_PORT})"
+                echo_value_debug "- Peer:" "${PEER_NAME} (${PEER_IP}:${PEER_PORT})"
+            fi
+            echo_info "Docker $GATEWAY_NAME starting..."
 
-        LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$GATEWAY_NAME
-        mkdir -p $LOCAL_SRV_DIR
-
-
-        ###############################################################
-        # Resolve file paths with wildcards
-        ###############################################################
-        # TLS Cert
-        TLS_CERT_FULL=$(ls "${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/signcerts"/*.pem 2>/dev/null | head -1)
-        if [ -z "$TLS_CERT_FULL" ]; then
-            echo_error "TLS cert not found for $PEER_NAME"
-            exit 1
-        fi
-        TLS_CERT_FILE=$(basename "$TLS_CERT_FULL")
-        echo_info "- TLS Cert: $TLS_CERT_FILE"
-        
-        # TLS Root Cert
-        TLS_ROOT_CERT_FULL=$(ls "${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/tlscacerts"/*.pem 2>/dev/null | head -1)
-        if [ -z "$TLS_ROOT_CERT_FULL" ]; then
-            echo_error "TLS root cert not found for $PEER_NAME"
-            exit 1
-        fi
-        TLS_ROOT_CERT_FILE=$(basename "$TLS_ROOT_CERT_FULL")
-        echo_info "- TLS Root: $TLS_ROOT_CERT_FILE"
+            LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$GATEWAY_NAME
+            mkdir -p $LOCAL_SRV_DIR
+            chmod -R 750 $LOCAL_SRV_DIR
 
 
-        ###############################################################
-        # Write .env
-        ###############################################################
-        echo ""
-        echo_info "Environment for $GATEWAY_NAME writing..."
+            ###############################################################
+            # Resolve file paths with wildcards
+            ###############################################################
+            # TLS Cert
+            TLS_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/signcerts"/*.pem 2>/dev/null | head -1)
+            if [ -z "$TLS_CERT_FULL" ]; then
+                echo_error "TLS cert not found for $PEER_NAME"
+                exit 1
+            fi
+            TLS_CERT_FILE=$(basename "$TLS_CERT_FULL")
+            if [[ $DEBUG == true ]]; then
+                echo_value_debug "- TLS Cert:" "$TLS_CERT_FILE"
+            fi
+            
+            # TLS Root Cert
+            TLS_ROOT_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/tlscacerts"/*.pem 2>/dev/null | head -1)
+            if [ -z "$TLS_ROOT_CERT_FULL" ]; then
+                echo_error "TLS root cert not found for $PEER_NAME"
+                exit 1
+            fi
+            TLS_ROOT_CERT_FILE=$(basename "$TLS_ROOT_CERT_FULL")
+            if [[ $DEBUG == true ]]; then
+                echo_value_debug "- TLS Root:" "$TLS_ROOT_CERT_FILE"
+            fi
+
+
+            ###############################################################
+            # Write .env
+            ###############################################################
+            echo ""
+            echo_info "Environment for $GATEWAY_NAME writing..."
 cat <<EOF > $LOCAL_SRV_DIR/.env
 # Server Configuration
-NODE_ENV=cc
+NODE_ENV=$ORBIS_ENV
 PORT=$GATEWAY_PORT
 HOST=0.0.0.0
 SERVICE_NAME=$GATEWAY_NAME
@@ -157,7 +151,7 @@ CORS_ORIGIN=*
 # Hyperledger Fabric
 FABRIC_NETWORK_NAME=$DOCKER_NETWORK_NAME
 FABRIC_CHANNEL_NAME=$REGNUM
-FABRIC_CHAINCODE_NAME=$GATEWAY_CC
+FABRIC_CHAINCODE_NAME=$CC_NAME
 FABRIC_MSP_ID=$AGER
 
 # Fabric Peer Connection
@@ -170,8 +164,13 @@ FABRIC_PEER_TLS_ROOT_CERT=./infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/t
 FABRIC_AGER_MSP_CA_CERTS_PATH=./infrastructure/$ORBIS/$REGNUM/$AGER/msp/cacerts
 FABRIC_AGER_MSP_INTERMEDIATE_CERTS_PATH=./infrastructure/$ORBIS/$REGNUM/$AGER/msp/intermediatecerts
 
+LEDGER_API_URL=http://ledger-service:8080
+CA_API_URL=http://ca-service:8081
+RECOVERY_API_URL=http://recovery-service:8082
+VOTING_API_URL=http://voting-service:8083
+
 # CA-API für Certificate Management
-CA_API_URL=https://$CAAPI_NAME:$CAAPI_PORT
+#CA_API_URL=https://$CAAPI_NAME:$CAAPI_PORT
 #CA_API_TLS_CERT=./infrastructure/$ORBIS/$REGNUM/$AGER/$CAAPI_NAME/tls/signcerts/cert.pem --> Gibts noch nicht
 
 # Audit Logging
@@ -180,33 +179,35 @@ AUDIT_LOG_LEVEL=info
 EOF
 
 
-        ###############################################################
-        # GATEWAY
-        ###############################################################
-        echo ""
-        echo_info "Docker $GATEWAY_NAME starting..."
-        docker run -d \
-            --name $GATEWAY_NAME \
-            --network $DOCKER_NETWORK_NAME \
-            --ip $GATEWAY_IP \
-            $hosts_args \
-            --restart=on-failure:1 \
-            --health-cmd="node -e \"require('http').get('http://localhost:${GATEWAY_PORT}/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\"" \
-            --health-interval=30s \
-            --health-timeout=10s \
-            --health-start-period=40s \
-            --health-retries=3 \
-            -e PORT=$GATEWAY_PORT \
-            -p $GATEWAY_PORT:$GATEWAY_PORT \
-            -v $LOCAL_SRV_DIR/.env:/app/.env \
-            -v ${PWD}/infrastructure:/app/infrastructure:ro \
-            jedo-gateway:1.0
+            ###############################################################
+            # GATEWAY
+            ###############################################################
+            echo ""
+            echo_info "Docker $GATEWAY_NAME starting..."
+            docker run -d \
+                --user $(id -u):$(id -g) \
+                --name $GATEWAY_NAME \
+                --network $DOCKER_NETWORK_NAME \
+                --ip $GATEWAY_IP \
+                $hosts_args \
+                --restart=on-failure:1 \
+                --health-cmd="node -e \"require('http').get('http://localhost:${GATEWAY_PORT}/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\"" \
+                --health-interval=30s \
+                --health-timeout=10s \
+                --health-start-period=40s \
+                --health-retries=3 \
+                -e PORT=$GATEWAY_PORT \
+                -p $GATEWAY_PORT:$GATEWAY_PORT \
+                -v $LOCAL_SRV_DIR/.env:/app/.env \
+                -v $LOCAL_INFRA_DIR:/app/infrastructure:ro \
+                jedo-gateway:1.0
 
-        CheckContainer "$GATEWAY_NAME" "$DOCKER_CONTAINER_WAIT"
-        CheckContainerLog "$GATEWAY_NAME" "Health check available at" "$DOCKER_CONTAINER_WAIT"
+            CheckContainer "$GATEWAY_NAME" "$DOCKER_CONTAINER_WAIT"
+            CheckContainerLog "$GATEWAY_NAME" "JEDO Gateway Server started successfully" "$DOCKER_CONTAINER_WAIT"
 
-        echo ""
-        echo_ok "Gateway $GATEWAY_NAME started."
+            echo ""
+            echo_info "Gateway $GATEWAY_NAME started."
+        done
     done
 done
 ###############################################################

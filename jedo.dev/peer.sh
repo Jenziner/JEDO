@@ -7,19 +7,8 @@
 ###############################################################
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/params.sh"
 check_script
-
-
-###############################################################
-# Params
-###############################################################
-CONFIG_FILE="$SCRIPT_DIR/infrastructure-cc.yaml"
-FABRIC_BIN_PATH=$(yq eval '.Fabric.Path' "$CONFIG_FILE")
-DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
-DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
-
-INFRA_DIR=/etc/hyperledger/infrastructure
 
 
 get_hosts
@@ -28,41 +17,33 @@ get_hosts
 ###############################################################
 # Get Orbis TLS-CA
 ###############################################################
-ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
-ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
-
 ORBIS_TLS_NAME=$(yq eval ".Orbis.TLS.Name" "$CONFIG_FILE")
 ORBIS_TLS_PASS=$(yq eval ".Orbis.TLS.Pass" "$CONFIG_FILE")
 ORBIS_TLS_PORT=$(yq eval ".Orbis.TLS.Port" "$CONFIG_FILE")
+ORBIS_TLS_DIR=/etc/hyperledger/fabric-ca-server
+ORBIS_TLS_INFRA=/etc/hyperledger/infrastructure
+ORBIS_TLS_CERT=$ORBIS_TLS_INFRA/$ORBIS/$ORBIS_TLS_NAME/ca-cert.pem
 
-ORBIS=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
-ORBIS_CA_NAME=$(yq eval ".Orbis.CA.Name" "$CONFIG_FILE")
-ORBIS_CA_PASS=$(yq eval ".Orbis.CA.Pass" "$CONFIG_FILE")
-ORBIS_CA_IP=$(yq eval ".Orbis.CA.IP" "$CONFIG_FILE")
-ORBIS_CA_PORT=$(yq eval ".Orbis.CA.Port" "$CONFIG_FILE")
+ORBIS_MSP_NAME=$(yq eval ".Orbis.MSP.Name" "$CONFIG_FILE")
+ORBIS_MSP_PASS=$(yq eval ".Orbis.MSP.Pass" "$CONFIG_FILE")
+ORBIS_MSP_IP=$(yq eval ".Orbis.MSP.IP" "$CONFIG_FILE")
+ORBIS_MSP_PORT=$(yq eval ".Orbis.MSP.Port" "$CONFIG_FILE")
+ORBIS_MSP_DIR=/etc/hyperledger/fabric-ca-server
+ORBIS_MSP_INFRA=/etc/hyperledger/infrastructure
 
 
 ###############################################################
 # Params for ager
 ###############################################################
-AGERS=$(yq eval '.Ager[] | .Name' "$CONFIG_FILE")
 for AGER in $AGERS; do
 
-    # ✅ NEU: Ager-CA Params holen
-    AGER_CA_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.Name" "$CONFIG_FILE")
-    AGER_CA_PASS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.Pass" "$CONFIG_FILE")
-    AGER_CA_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.Port" "$CONFIG_FILE")
-
     REGNUM=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Administration.Parent" $CONFIG_FILE)
-    AFFILIATION_NODE=$ORBIS.$REGNUM.$AGER
 
     PEERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[].Name" $CONFIG_FILE)
     for PEER in $PEERS; do
         ###############################################################
         # Params
         ###############################################################
-        echo ""
-        echo_warn "Peer $PEER starting..."
         PEER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Name" "$CONFIG_FILE")
         PEER_SUBJECT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Subject" "$CONFIG_FILE")
         PEER_PASS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Pass" "$CONFIG_FILE")
@@ -80,8 +61,8 @@ for AGER in $AGERS; do
         FIRST_ORDERER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[0].Name" "$CONFIG_FILE")
         FIRST_ORDERER_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[0].Port" "$CONFIG_FILE")
 
-        LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER
-        HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
+        LOCAL_INFRA_DIR=${PWD}/infrastructure
+        LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER
 
         # Extract fields from subject
         C=$(echo "$PEER_SUBJECT" | awk -F',' '{for(i=1;i<=NF;i++) if ($i ~ /^C=/) {sub(/^C=/, "", $i); print $i}}')
@@ -91,59 +72,58 @@ for AGER in $AGERS; do
         CSR_NAMES=$(echo "$PEER_SUBJECT" | sed 's/,CN=[^,]*//')
         AFFILIATION=$ORBIS.$REGNUM
 
+
         ###############################################################
-        # Enroll peer @ ORBIS-CA (wie Orderer!)
+        # Enroll peer @ ORBIS-CA
         ###############################################################
         echo ""
-        echo_info "$PEER_NAME registering at Orbis-CA..."
-        
-        # ✅ Register bei Orbis-CA (mit Orbis msp)
-        docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register \
-            -u https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
-            --home $ORBIS_TOOLS_CACLI_DIR \
-            --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-            --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_CA_NAME/msp \
-            --id.name $PEER_NAME \
-            --id.secret $PEER_PASS \
-            --id.type peer \
-            --id.affiliation $AFFILIATION
-        
-        # ✅ Enroll bei Orbis-CA
-        echo_info "$PEER_NAME enrolling from Orbis-CA..."
-        docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll \
-            -u https://$PEER_NAME:$PEER_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
-            --home $ORBIS_TOOLS_CACLI_DIR \
-            --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-            --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp \
-            --csr.hosts ${PEER_NAME},${PEER_IP},*.jedo.cc,*.jedo.me \
+        echo_info "Peer $PEER starting..."
+        echo ""
+        if [[ $DEBUG == true ]]; then
+            echo_debug "Executing with the following:"
+            echo_value_debug "- TLS Cert:" "$ORBIS_TLS_CERT"
+            echo_value_debug "- Orbis MSP Name:" "$ORBIS_MSP_NAME"
+            echo_value_debug "***" "***"
+            echo_value_debug "- Peer Name:" "$PEER_NAME"
+            echo_value_debug "- MSP Affiliation:" "$AFFILIATION"
+        fi
+        echo ""
+        echo_info "$PEER_NAME registering and enrolling at Orbis-MSP..."
+
+        # Register and enroll MSP-ID
+        docker exec -it $ORBIS_MSP_NAME fabric-ca-client register -u https://$ORBIS_MSP_NAME:$ORBIS_MSP_PASS@$ORBIS_MSP_NAME:$ORBIS_MSP_PORT \
+            --home $ORBIS_MSP_DIR \
+            --tls.certfiles "$ORBIS_TLS_CERT" \
+            --mspdir $ORBIS_MSP_INFRA/$ORBIS/$ORBIS_MSP_NAME/msp \
+            --id.name $PEER_NAME --id.secret $PEER_PASS --id.type peer --id.affiliation $AFFILIATION
+        docker exec -it $ORBIS_MSP_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$ORBIS_MSP_NAME:$ORBIS_MSP_PORT \
+            --home $ORBIS_MSP_DIR \
+            --tls.certfiles "$ORBIS_TLS_CERT" \
+            --mspdir $ORBIS_MSP_INFRA/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp \
+            --csr.hosts ${PEER_NAME},${PEER_IP},*.$ORBIS.$ORBIS_ENV \
             --csr.cn $CN --csr.names "$CSR_NAMES"
             
-        # TLS bleibt bei TLS-CA (richtig so!)
-        docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register \
-            -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-            --home $ORBIS_TOOLS_CACLI_DIR \
-            --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-            --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
-            --id.name $PEER_NAME \
-            --id.secret $PEER_PASS \
-            --id.type client \
-            --id.affiliation $AFFILIATION
+        # Register and enroll TLS-ID
+        docker exec -it $ORBIS_TLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+            --home $ORBIS_TLS_DIR \
+            --tls.certfiles "$ORBIS_TLS_CERT" \
+            --mspdir $ORBIS_TLS_INFRA/$ORBIS/$ORBIS_TLS_NAME/tls \
+            --id.name $PEER_NAME --id.secret $PEER_PASS --id.type client --id.affiliation $AFFILIATION
         
-        docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll \
-            -u https://$PEER_NAME:$PEER_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-            --home $ORBIS_TOOLS_CACLI_DIR \
-            --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-            --enrollment.profile tls \
-            --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls \
-            --csr.hosts ${PEER_NAME},${PEER_IP},*.jedo.cc,*.jedo.me \
-            --csr.cn $CN --csr.names "$CSR_NAMES"
+        docker exec -it $ORBIS_TLS_NAME fabric-ca-client enroll -u https://$PEER_NAME:$PEER_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+            --home $ORBIS_TLS_DIR \
+            --tls.certfiles "$ORBIS_TLS_CERT" \
+            --mspdir $ORBIS_TLS_INFRA/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls \
+            --csr.hosts ${PEER_NAME},${PEER_IP},*.$ORBIS.$ORBIS_ENV \
+            --csr.cn $CN --csr.names "$CSR_NAMES" \
+            --enrollment.profile tls
 
         # Generating NodeOUs-File
         echo ""
         echo_info "NodeOUs-File writing..."
-        CA_CERT_FILE=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp/intermediatecerts/*.pem)
+        CA_CERT_FILE=$(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp/intermediatecerts/*.pem)
         
-        cat <<EOF > ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp/config.yaml
+        cat <<EOF > $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp/config.yaml
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
@@ -160,7 +140,10 @@ NodeOUs:
     OrganizationalUnitIdentifier: orderer
 EOF
 
-        chmod -R 777 infrastructure
+        chmod -R 750 infrastructure
+
+        echo ""
+        echo_info "$PEER_NAME registered and enrolled."
 
 
         ###############################################################
@@ -182,6 +165,11 @@ EOF
         done
 
         echo ""
+        if [[ $DEBUG == true ]]; then
+            echo_debug "Executing with the following:"
+            echo_value_debug "- Peer Name:" "$PEER_NAME"
+            echo_value_debug "- TLS Cert:" "$TLS_TLSCACERT_FILE"
+        fi
         echo_info "Server-Config for $PEER_NAME writing..."
 cat <<EOF > $LOCAL_SRV_DIR/core.yaml
 ---
@@ -450,19 +438,22 @@ EOF
         ###############################################################
         echo ""
         echo_info "CouchDB $PEER_DB_NAME starting..."
+        mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_DB_NAME
+        chmod -R 750 $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_DB_NAME
         docker run -d \
-        --name $PEER_DB_NAME \
-        --network $DOCKER_NETWORK_NAME \
-        --ip $PEER_DB_IP \
-        $hosts_args \
-        --label net.unraid.docker.icon="https://raw.githubusercontent.com/apache/couchdb/main/branding/logo/CouchDB_Logo_192px.png" \
-        -e COUCHDB_USER=$PEER_DB_NAME \
-        -e COUCHDB_PASSWORD=$PEER_DB_PASS \
-        -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_DB_NAME:/opt/couchdb/data \
-        -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_DB_NAME:/opt/couchdb/etc/local.d \
-        -p $PEER_DB_PORT:5984 \
-        --restart unless-stopped \
-        couchdb:latest
+            --user $(id -u):$(id -g) \
+            --name $PEER_DB_NAME \
+            --network $DOCKER_NETWORK_NAME \
+            --ip $PEER_DB_IP \
+            $hosts_args \
+            --label net.unraid.docker.icon="https://raw.githubusercontent.com/apache/couchdb/main/branding/logo/CouchDB_Logo_192px.png" \
+            -e COUCHDB_USER=$PEER_DB_NAME \
+            -e COUCHDB_PASSWORD=$PEER_DB_PASS \
+            -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_DB_NAME:/opt/couchdb/data \
+            -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_DB_NAME:/opt/couchdb/etc/local.d \
+            -p $PEER_DB_PORT:5984 \
+            --restart unless-stopped \
+            couchdb:latest
 
         CheckContainer "$PEER_DB_NAME" "$DOCKER_CONTAINER_WAIT"
         CheckCouchDB "$PEER_DB_NAME" "$PEER_DB_IP" "$DOCKER_CONTAINER_WAIT"
@@ -477,7 +468,12 @@ EOF
         echo ""
         echo_info "Peer $PEER_NAME starting..."
         export FABRIC_CFG_PATH=/etc/hyperledger/fabric
+        mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/production
+        chmod -R 750 $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/production
+        mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/configuration
+        chmod -R 750 $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/configuration
         docker run -d \
+            --user $(id -u):$(id -g) \
             --name $PEER_NAME \
             --network $DOCKER_NETWORK_NAME \
             --ip $PEER_IP \
@@ -487,12 +483,13 @@ EOF
             -p $PEER_PORT1:$PEER_PORT1 \
             -p $PEER_PORT2:$PEER_PORT2 \
             -p $PEER_OPPORT:$PEER_OPPORT \
-            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME:/etc/hyperledger/fabric \
-            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/production:/var/hyperledger/production \
+            -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME:/etc/hyperledger/fabric \
+            -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/production:/var/hyperledger/production \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            -v ${PWD}/infrastructure:/var/hyperledger/infrastructure \
-            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/configuration:/var/hyperledger/configuration \
-            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$FIRST_ORDERER_NAME/tls:/var/hyperledger/orderer/tls \
+            -v $LOCAL_INFRA_DIR:/var/hyperledger/infrastructure \
+            -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/configuration:/var/hyperledger/configuration \
+            -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$FIRST_ORDERER_NAME/tls:/var/hyperledger/orderer/tls \
+            -e FABRIC_LOGGING_SPEC=$FABRIC_LOGGING_SPEC \
             -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
             -e CORE_VM_ENDPOINT=unix:///var/run/docker.sock \
             -e CORE_PEER_TLS_ENABLED=true \
@@ -503,56 +500,13 @@ EOF
             -e CORE_PEER_KEEPALIVE_CLIENT_INTERVAL=60s \
             -e CORE_PEER_KEEPALIVE_CLIENT_TIMEOUT=20s \
             -e CORE_PEER_KEEPALIVE_MININTERVAL=60s \
-                hyperledger/fabric-peer:3.0
+            hyperledger/fabric-peer:3.0
 
         CheckContainer "$PEER_NAME" "$DOCKER_CONTAINER_WAIT"
         CheckContainerLog "$PEER_NAME" "Started peer with ID" "$DOCKER_CONTAINER_WAIT"
 
-
-        ###############################################################
-        # Peer CLI
-        ###############################################################
-        # echo ""
-        # echo_info "CLI  cli.$PEER_NAME starting..."
-
-        # export TLS_CA_ROOT_CERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem))
-        # export FABRIC_CFG_PATH=/etc/hyperledger/fabric
-
-        # docker run -d \
-        #     --name cli.$PEER_NAME \
-        #     --network $DOCKER_NETWORK_NAME \
-        #     --ip $PEER_CLI \
-        #     $hosts_args \
-        #     --restart=on-failure:1 \
-        #     --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/infrastructure/src/fabric_cli_logo.png" \
-        #     -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp:/etc/hyperledger/peer/msp \
-        #     -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls:/etc/hyperledger/fabric/tls \
-        #     -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$FIRST_ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
-        #     -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/production:/var/hyperledger/production \
-        #     -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME:/opt/gopath/src/github.com/hyperledger/fabric/chaincode \
-        #     -v ${PWD}/infrastructure:/var/hyperledger/infrastructure \
-        #     -v ${PWD}/infrastructure/$ORBIS/$REGNUM/configuration:/var/hyperledger/configuration \
-        #     -v /var/run/docker.sock:/var/run/docker.sock \
-        #     -w /opt/gopath/src/github.com/hyperledger/fabric \
-        #     -e GOPATH=/opt/gopath \
-        #     -e CORE_PEER_ID=cli.$PEER_NAME \
-        #     -e CORE_PEER_ADDRESS=$PEER_NAME:$PEER_PORT1 \
-        #     -e CORE_PEER_LOCALMSPID=${AGER} \
-        #     -e CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp \
-        #     -e CORE_PEER_TLS_ENABLED=true \
-        #     -e CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/signcerts/cert.pem \
-        #     -e CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/tlscacerts/$TLS_TLSCACERT_FILE \
-        #     -e CORE_ORDERER_ADDRESS=$FIRST_ORDERER_NAME:$FIRST_ORDERER_PORT \
-        #     -e CORE_ORDERER_TLS_ENABLED=true \
-        #     -e CORE_ORDERER_TLS_CERT_FILE=/etc/hyperledger/orderer/tls/signcerts/cert.pem \
-        #     -e FABRIC_LOGGING_SPEC=DEBUG \
-        #     -it \
-        #     hyperledger/fabric-tools:latest
-
-        # CheckContainer "cli.$PEER_NAME" "$DOCKER_CONTAINER_WAIT"
-
         echo ""
-        echo_ok "Peer $PEER started."
+        echo_info "Peer $PEER started."
     done
 done
 ###############################################################

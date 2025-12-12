@@ -1,13 +1,14 @@
 ###############################################################
 #!/bin/bash
 #
-# This script generates a new jedo-network according network-config.yaml
-# Documentation: https://hyperledger-fabric.readthedocs.io
+# This script generates a new jedo-network according infrastructure.yaml
+# Fabric Documentation: https://hyperledger-fabric.readthedocs.io
 #
 ###############################################################
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
 source "$SCRIPT_DIR/help.sh"
+source "$SCRIPT_DIR/params.sh"
 
 export JEDO_INITIATED="yes"
 
@@ -21,7 +22,11 @@ fi
 opt_d=false
 opt_a="n/a"
 opt_r="n/a"
-while getopts ":hpda:r:" opt; do
+export DEBUG=false
+export FABRIC_LOGGING_SPEC="INFO"
+export FABRIC_CA_SERVER_LOGLEVEL="info"
+
+while getopts ":hpda:r:-:" opt; do
     case ${opt} in
         h )
             up_help
@@ -32,43 +37,47 @@ while getopts ":hpda:r:" opt; do
             ;;
         a )
             if [[ "$OPTARG" != "go" && "$OPTARG" != "pause" ]]; then
-                echo "invalid argument for -a: $OPTARG" >&2
+                echo_error "invalid argument for -a: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
             fi
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "config" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "tokengen" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "gateway" && "$OPTARG" != "wallet" && "$OPTARG" != "intermediate" ]]; then
-                echo "invalid argument for -r: $OPTARG" >&2
+            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "genesis" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "tokengen" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "gateway" && "$OPTARG" != "wallet" && "$OPTARG" != "intermediate" ]]; then
+                echo_error "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
             fi
             opt_r="$OPTARG"
             ;;
+        - )
+            case "${OPTARG}" in
+                debug)
+                    export DEBUG=true
+                    export FABRIC_LOGGING_SPEC="DEBUG"
+                    export FABRIC_CA_SERVER_LOGLEVEL="debug"
+                    echo_info "Debug-Modus aktiviert"
+                    ;;
+                *)
+                    echo_error "invalid long option: --$OPTARG" >&2
+                    exit 2
+                    ;;
+            esac
+            ;;
         \? )
-            echo "invalid option: -$OPTARG" >&2
+            echo_error "invalid option: -$OPTARG" >&2
             exit 2
             ;;
         : )
-            echo "option -$OPTARG requires argument." >&2
+            echo_error "option -$OPTARG requires argument." >&2
             exit 2
             ;;
     esac
 done
 
-
-###############################################################
-# Params
-###############################################################
-CONFIG_FILE="$SCRIPT_DIR/infrastructure-cc.yaml"
-FABRIC_PATH=$(yq eval '.Fabric.Path' $CONFIG_FILE)
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
-DOCKER_NETWORK_SUBNET=$(yq eval '.Docker.Network.Subnet' $CONFIG_FILE)
-DOCKER_NETWORK_GATEWAY=$(yq eval '.Docker.Network.Gateway' $CONFIG_FILE)
-DOCKER_CONTAINER_FABRICTOOLS=$(yq eval '.Docker.Container.FabricTools' $CONFIG_FILE)
-export PATH=$PATH:$FABRIC_PATH/bin:$FABRIC_PATH/config
-export FABRIC_CFG_PATH=./config
+echo ""
+echo_warn "JEDO-Ecosystem $DOCKER_NETWORK_NAME starting..."
 
 
 ###############################################################
@@ -105,15 +114,6 @@ fi
 
 
 ###############################################################
-# Run Fabric Tools
-###############################################################
-if [[ "$opt_r" == "tools" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    $SCRIPT_DIR/tools.sh
-    cool_down $opt_a "Fabric Tools started."
-fi
-
-
-###############################################################
 # Run LDAP
 ###############################################################
 # if [[ "$opt_r" == "ldap" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
@@ -129,24 +129,17 @@ if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/ca_tls-node.sh
     $SCRIPT_DIR/ca_tls-certs.sh
     $SCRIPT_DIR/ca_ca-nodes.sh
+    $SCRIPT_DIR/enroll.sh
     cool_down $opt_a "CA started."
 fi
 
 
 ###############################################################
-# Run Orderer Certificates
+# Run Orderer
 ###############################################################
 if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/orderer_cert.sh
-    cool_down $opt_a "Orderers running."
-fi
-
-
-###############################################################
-# Run Orderer Nodes
-###############################################################
-if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/orderer_node.sh
+    $SCRIPT_DIR/orderer_cert.sh
+    $SCRIPT_DIR/orderer_node.sh
     cool_down $opt_a "Orderers running."
 fi
 
@@ -155,16 +148,16 @@ fi
 # Run Peer
 ###############################################################
 if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/peer.sh peer
+   $SCRIPT_DIR/peer.sh peer
     cool_down $opt_a "Peers running."
 fi
 
 
 ###############################################################
-# Generate configuration (genesis block and channel configuration)
+# Generate genesis block and channel configuration
 ###############################################################
-if [[ "$opt_r" == "config" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/config.sh
+if [[ "$opt_r" == "genesis" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    $SCRIPT_DIR/genesis-block.sh
     cool_down $opt_a "Genesis Block and Channel Configuration generated."
 fi
 
@@ -173,17 +166,8 @@ fi
 # Create Channel
 ###############################################################
 if [[ "$opt_r" == "channel" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/channel.sh
+    $SCRIPT_DIR/channel.sh
     cool_down $opt_a "Channel created."
-fi
-
-
-###############################################################
-# Enroll Certificates
-###############################################################
-if [[ "$opt_r" == "enroll" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/enroll.sh
-    cool_down $opt_a "Certificates enrolled."
 fi
 
 
@@ -191,7 +175,7 @@ fi
 # Chaincode jedo-wallet Deployment
 ###############################################################
 if [[ "$opt_r" == "wallet" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/cc_jedo-wallet.sh
+    $SCRIPT_DIR/cc_jedo-wallet.sh
     cool_down $opt_a "Chaincode jedo-wallet."
 fi
 
@@ -200,7 +184,7 @@ fi
 # Wallet API Gateway
 ###############################################################
 if [[ "$opt_r" == "gateway" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    ./scripts/gateway.sh
+    $SCRIPT_DIR/gateway.sh
     cool_down $opt_a "Wallet API Gateway deployed."
 fi
 
@@ -208,17 +192,6 @@ fi
 ###############################################################
 # FINISH
 ###############################################################
-echo_ok "Script for $DOCKER_NETWORK_NAME completed"
-# echo_error "Run CA-API-Server now: ./ca-api/ca-api.sh"
+echo_ok "JEDO-Ecosystem $DOCKER_NETWORK_NAME started."
 exit 0
-
-
-
-
-temp_end
-
-
-
-
-
 

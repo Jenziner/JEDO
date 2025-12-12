@@ -7,21 +7,15 @@
 ###############################################################
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/params.sh"
 check_script
-
-
-###############################################################
-# Params
-###############################################################
-CONFIG_FILE="$SCRIPT_DIR/infrastructure-cc.yaml"
-DOCKER_NETWORK_NAME=$(yq eval ".Docker.Network.Name" "$CONFIG_FILE")
 
 
 ###############################################################
 # Remove Docker-Stuff
 ###############################################################
 echo ""
-echo_warn "$DOCKER_NETWORK_NAME removing..."
+echo_warn "Old JEDO-Ecosystem $DOCKER_NETWORK_NAME removing..."
 
 
 # Remove Docker Container
@@ -47,7 +41,9 @@ docker network rm  $DOCKER_NETWORK_NAME || true
 echo ""
 echo_info "Folder removing..."
 rm -rf infrastructure
-rm -rf configuration
+# rm -rf configuration
+# rm -rf chaincode
+# rm -rf gateway
 
 
 # Remove Chaincode Packages
@@ -56,4 +52,4 @@ echo_info "Chaincode packages removing..."
 rm -f *.tar.gz
 
 
-echo_ok "$DOCKER_NETWORK_NAME removed."
+echo_ok "Old JEDO-Ecosystem $DOCKER_NETWORK_NAME removed."

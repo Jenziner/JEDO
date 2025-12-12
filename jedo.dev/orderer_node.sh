@@ -7,45 +7,16 @@
 ###############################################################
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/params.sh"
 check_script
-
-
-###############################################################
-# Params
-###############################################################
-CONFIG_FILE="$SCRIPT_DIR/infrastructure-cc.yaml"
-FABRIC_BIN_PATH=$(yq eval '.Fabric.Path' "$CONFIG_FILE")
-DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
-DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
-
-INFRA_DIR=/etc/hyperledger/infrastructure
 
 
 get_hosts
 
 
 ###############################################################
-# Get Orbis TLS-CA
-###############################################################
-ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
-ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
-
-ORBIS_TLS_NAME=$(yq eval ".Orbis.TLS.Name" "$CONFIG_FILE")
-ORBIS_TLS_PASS=$(yq eval ".Orbis.TLS.Pass" "$CONFIG_FILE")
-ORBIS_TLS_PORT=$(yq eval ".Orbis.TLS.Port" "$CONFIG_FILE")
-
-ORBIS=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
-ORBIS_CA_NAME=$(yq eval ".Orbis.CA.Name" "$CONFIG_FILE")
-ORBIS_CA_PASS=$(yq eval ".Orbis.CA.Pass" "$CONFIG_FILE")
-ORBIS_CA_IP=$(yq eval ".Orbis.CA.IP" "$CONFIG_FILE")
-ORBIS_CA_PORT=$(yq eval ".Orbis.CA.Port" "$CONFIG_FILE")
-
-
-###############################################################
 # Params for ager
 ###############################################################
-AGERS=$(yq eval '.Ager[] | .Name' "$CONFIG_FILE")
 for AGER in $AGERS; do
 
     REGNUM=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Administration.Parent" $CONFIG_FILE)
@@ -56,8 +27,6 @@ for AGER in $AGERS; do
         ###############################################################
         # Params
         ###############################################################
-        echo ""
-        echo_warn "Orderer $ORDERER starting..."
         ORDERER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Name" $CONFIG_FILE)
         ORDERER_SUBJECT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Subject" $CONFIG_FILE)
         ORDERER_PASS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .Pass" $CONFIG_FILE)
@@ -67,18 +36,24 @@ for AGER in $AGERS; do
         ORDERER_OPPORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .OpPort" $CONFIG_FILE)
         ORDERER_ADMPORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[] | select(.Name == \"$ORDERER\") | .AdminPort" $CONFIG_FILE)
 
-        LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER/
+        LOCAL_INFRA_DIR=${PWD}/infrastructure
+        LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER/
         HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
 
 
         ###############################################################
         # Write orderer.yaml
         ###############################################################
-        TLS_PRIVATEKEY_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/keystore/*_sk))
-        TLS_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/tlscacerts/*.pem))
-        CLIENT_TLSCACERT_FILE=$(basename $(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem))
+        TLS_PRIVATEKEY_FILE=$(basename $(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/keystore/*_sk))
+        TLS_TLSCACERT_FILE=$(basename $(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/tlscacerts/*.pem))
+        CLIENT_TLSCACERT_FILE=$(basename $(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem))
 
         echo ""
+        if [[ $DEBUG == true ]]; then
+            echo_debug "Executing with the following:"
+            echo_value_debug "- Orderer Name:" "$ORDERER_NAME"
+            echo_value_debug "- TLS Cert:" "$TLS_TLSCACERT_FILE"
+        fi
         echo_info "Server-Config for $ORDERER_NAME writing..."
 cat <<EOF > $LOCAL_SRV_DIR/orderer.yaml
 ---
@@ -176,23 +151,26 @@ EOF
         echo ""
         echo_info "Docker $ORDERER_NAME starting..."
         export FABRIC_CFG_PATH=/etc/hyperledger/fabric
+        mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/production
+        chmod -R 750 $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/production
         docker run -d \
+            --user $(id -u):$(id -g) \
             --name $ORDERER_NAME \
             --network $DOCKER_NETWORK_NAME \
             --ip $ORDERER_IP \
             $hosts_args \
             --restart=on-failure:1 \
             --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/infrastructure/src/fabric_logo.png" \
-            -e FABRIC_LOGGING_SPEC=DEBUG \
             -p $ORDERER_PORT:$ORDERER_PORT \
             -p $ORDERER_OPPORT:$ORDERER_OPPORT \
             -p $ORDERER_CLPORT:$ORDERER_CLPORT \
             -p $ORDERER_ADMPORT:$ORDERER_ADMPORT \
-            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME:/etc/hyperledger/fabric \
-            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/msp:/etc/hyperledger/orderer/msp \
-            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
-            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/production:/var/hyperledger/production/orderer \
-            -v ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls:/etc/hyperledger/clientadmin/tls \
+            -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME:/etc/hyperledger/fabric \
+            -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/msp:/etc/hyperledger/orderer/msp \
+            -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls:/etc/hyperledger/orderer/tls \
+            -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/production:/var/hyperledger/production/orderer \
+            -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/_Admin/tls:/etc/hyperledger/clientadmin/tls \
+            -e FABRIC_LOGGING_SPEC=$FABRIC_LOGGING_SPEC \
             -e ORDERER_GENERAL_LISTENADDRESS=0.0.0.0 \
             -e ORDERER_GENERAL_LISTENPORT=$ORDERER_PORT \
             -e ORDERER_GENERAL_TLS_ENABLED=true \
@@ -213,7 +191,7 @@ EOF
         CheckContainerLog "$ORDERER_NAME" "Beginning to serve requests" "$DOCKER_CONTAINER_WAIT"
 
         echo ""
-        echo_ok "Orderer $ORDERER started."
+        echo_info "Orderer $ORDERER started."
     done
 done
 ###############################################################

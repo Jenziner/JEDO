@@ -1,0 +1,167 @@
+################################################################################
+#
+#   Infrastructure for JEDO-DEV
+#
+#   IP Base: 172.16.x.y
+#     x:
+#       0: Root (Port 50yyz)
+#       1: Orbis (Port 51yyz)
+#       2: Regnum (Port 52yyz)
+#       3: Ager (Port 53yyz)
+#     y:
+#       01: spare
+#       02: spare (LDAP)
+#       03: TLS-CA
+#       04: MSP-CA
+#       05: CA-API       
+#       10-19: Orderer
+#       20-29: Peer0 (1:Peer / 2:DB / 3-0:Chaincode )
+#       30-39: Peer1
+#       90: Gateway
+#       91: CA-Service
+#       92: Ledger-Service
+#       93: Voting-Service
+#       94: Recovery-Service
+#     z:
+#       0:   spare
+#       1-9: increment
+#
+#
+################################################################################
+Fabric:
+    # path to fabric-folder where bin and config subfolders exist
+    Path: 
+Docker:
+    Localhost: 0.0.0.0
+    Network:
+        Name: jedo-dev
+        Subnet: 172.16.0.0/16
+        Gateway: 172.16.0.1
+    Container:
+        Wait: 60 # Max waiting time in seconds to start a docker container prior to exit
+        FabricTools: fabric-tools-container # Name of Fabric-Tools Docker Container, togengen must be available
+Root:
+    Name: root
+    Env: me
+    CA:
+        Name: rca.jedo.me # Root-CA is always rca.jedo.me, independant of the environment
+        IP: 192.168.0.13
+Orbis:
+    Name: jedo
+    Env: dev
+    Administration:
+        Parent: root
+        Contact: Nik
+        Mail: nik@jedo.me
+        Phone: +41791234567
+    TLS:
+          Name: tls.jedo.dev
+          Pass: Test1
+          IP: 172.16.1.3
+          Port: 51031
+          OpPort: 51039
+    MSP:
+        Name: msp.jedo.dev
+        Pass: Test1
+        IP: 172.16.1.4
+        Port: 51041
+        OpPort: 51049
+Regnum:
+    - Name: ea
+      Administration:
+          Parent: jedo
+          Contact: Nik
+          Subject: "C=jd,ST=dev,O=ea,CN=nik.ea.jedo.dev"
+          Pass: Test1
+          Mail: nik@jedo.me
+          Phone: +41791234567
+      TLS: 
+          Name: tls.ea.jedo.dev
+          Pass: Test1
+          IP: 172.16.2.3
+          Port: 52031
+          OpPort: 52039
+      MSP: 
+          Name: msp.ea.jedo.dev
+          Pass: Test1
+          IP: 172.16.2.4
+          Port: 52041
+          OpPort: 52049
+Ager:
+    - Name: alps
+      Administration:
+          Parent: ea
+          Contact: Nik
+          Mail: nik@jedo.me
+          Phone: +41791234567
+      TLS: 
+          Name: tls.alps.ea.jedo.dev
+          Pass: Test1
+          IP: 172.16.3.3
+          Port: 53031
+          OpPort: 53039
+      MSP: 
+          Name: msp.alps.ea.jedo.dev
+          Pass: Test1
+          IP: 172.16.3.4
+          Port: 53041
+          OpPort: 53049
+          CAAPI:
+              Name: porta.alps.ea.jedo.dev
+              IP: 172.16.3.5
+              Port: 53051
+              SrvPort: 53059
+      Orderers:
+          - Name: orderer.alps.ea.jedo.dev
+            Subject: "C=jd,ST=dev,L=ea,O=alps,CN=orderer.alps.ea.jedo.dev"
+            Pass: Test1
+            IP: 172.16.3.11
+            Port: 53111
+            ClusterPort: 53112
+            OpPort: 53119
+            AdminPort: 53113
+      Peers: # first peer will be used as AnchorPeer
+          - Name: peer.alps.ea.jedo.dev
+            Subject: "C=jd,ST=dev,L=ea,O=alps,CN=peer.alps.ea.jedo.dev"
+            Pass: Test1
+            IP: 172.16.3.21
+            Port1: 53211
+            Port2: 53212
+            OpPort: 53219
+            DB: 
+                Name: db.peer.alps.ea.jedo.dev
+                Pass: Test1
+                IP: 172.16.3.22
+                Port: 53221
+            CCAAS: 
+              - Name: jedo-wallet
+                Server: jedo-wallet.peer.alps.ea.jedo.dev
+                IP: 172.16.3.23
+                Port: 53231
+      Gateway: #API-Gateway
+          Name: via.alps.ea.jedo.dev
+          IP: 172.16.3.90
+          Port: 53901
+          CA-Service: ca.via.alps.ea.jedo.dev
+          Ledger-Service: ledger.via.alps.ea.jedo.dev #porta.via.alps...?
+          Voting-Service: voting.via.alps.ea.jedo.dev
+          Recovery-Service: recovery.via.alps.ea jedo.dev
+      Admins:
+          - Name: admin.alps.ea.jedo.dev
+            Pass: Test1
+            Type: admin
+            Subject: "C=jd,ST=dev,L=ea,O=alps,CN=admin.alps.ea.jedo.dev"
+      Gens:
+          - Name: WORB
+            Subject: "C=jd,ST=dev,L=ea,O=alps,CN=worb.alps.ea.jedo.dev"
+            Pass: Test1
+            Humans: 
+                - Name: do
+                  Subject: "C=jd,ST=dev,L=ea,O=alps,CN=do.worb.alps.ea.jedo.dev"
+                  Pass: Test1
+                - Name: ra
+                  Subject: "C=jd,ST=dev,L=ea,O=alps,CN=ra.worb.alps.ea.jedo.dev"
+                  Pass: Test1
+Chaincode:
+    - Name: jedo-wallet
+      Version: 1.0

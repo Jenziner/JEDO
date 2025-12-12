@@ -19,93 +19,94 @@
 ###############################################################
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/params.sh"
 source "$SCRIPT_DIR/ca_utils.sh"
 check_script
 
-
-###############################################################
-# Params
-###############################################################
-CONFIG_FILE="$SCRIPT_DIR/infrastructure-cc.yaml"
-DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
-DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
-
-ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
-ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
-
 echo ""
-echo_warn "TLS certs enrolling... (Defaults: https://hyperledger-fabric-ca.readthedocs.io/en/latest/serverconfig.html)"
+echo_info "TLS certs enrolling... (Defaults: https://hyperledger-fabric-ca.readthedocs.io/en/latest/serverconfig.html)"
 
 
 ###############################################################
 # Params for Orbis-TLS
 ###############################################################
-ORBIS=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
 ORBIS_TLS_NAME=$(yq eval ".Orbis.TLS.Name" "$CONFIG_FILE")
 ORBIS_TLS_PASS=$(yq eval ".Orbis.TLS.Pass" "$CONFIG_FILE")
 ORBIS_TLS_PORT=$(yq eval ".Orbis.TLS.Port" "$CONFIG_FILE")
+ORBIS_TLS_DIR=/etc/hyperledger/fabric-ca-server
+ORBIS_TLS_INFRA=/etc/hyperledger/infrastructure
+ORBIS_TLS_CERT=$ORBIS_TLS_DIR/ca-cert.pem
 
 
 ###############################################################
-# Register and entroll TLS certs for Orbis-CA
+# Register and entroll TLS certs for Orbis-MSP
 ###############################################################
-ORBIS_CA_NAME=$(yq eval ".Orbis.CA.Name" "$CONFIG_FILE")
-ORBIS_CA_PASS=$(yq eval ".Orbis.CA.Pass" "$CONFIG_FILE")
-ORBIS_CA_IP=$(yq eval ".Orbis.CA.IP" "$CONFIG_FILE")
+ORBIS_MSP_NAME=$(yq eval ".Orbis.MSP.Name" "$CONFIG_FILE")
+ORBIS_MSP_PASS=$(yq eval ".Orbis.MSP.Pass" "$CONFIG_FILE")
+ORBIS_MSP_IP=$(yq eval ".Orbis.MSP.IP" "$CONFIG_FILE")
 AFFILIATION=$ORBIS
 
 
 echo ""
-echo_info "Orbis-CA $ORBIS_CA_NAME TLS registering and enrolling..."
-docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-    --home $ORBIS_TOOLS_CACLI_DIR \
-    --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-    --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
-    --id.name $ORBIS_CA_NAME --id.secret $ORBIS_CA_PASS --id.type client --id.affiliation $AFFILIATION
-docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-    --home $ORBIS_TOOLS_CACLI_DIR \
-    --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+if [[ $DEBUG == true ]]; then
+    echo_debug "Executing with the following:"
+    echo_value_debug "- TLS Name:" "$ORBIS_TLS_NAME"
+    echo_value_debug "- TLS Dir:" "$ORBIS_TLS_DIR"
+    echo_value_debug "- TLS Cert:" "$ORBIS_TLS_CERT"
+    echo_value_debug "***" "***"
+    echo_value_debug "- MSP Name:" "$ORBIS_MSP_NAME"
+    echo_value_debug "- MSP Affiliation:" "$AFFILIATION"
+fi
+echo_info "Orbis-CA $ORBIS_MSP_NAME TLS registering and enrolling..."
+docker exec -it "$ORBIS_TLS_NAME" fabric-ca-client register -u "https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT" \
+    --home "$ORBIS_TLS_DIR" \
+    --tls.certfiles "$ORBIS_TLS_CERT" \
+    --mspdir "$ORBIS_TLS_INFRA/$ORBIS/$ORBIS_TLS_NAME/tls" \
+    --id.name "$ORBIS_MSP_NAME" --id.secret "$ORBIS_MSP_PASS" --id.type "client" --id.affiliation "$AFFILIATION"
+docker exec -it $ORBIS_TLS_NAME fabric-ca-client enroll -u https://$ORBIS_MSP_NAME:$ORBIS_MSP_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+    --home $ORBIS_TLS_DIR \
+    --tls.certfiles "$ORBIS_TLS_CERT" \
     --enrollment.profile tls \
-    --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_CA_NAME/tls \
-    --csr.hosts ${ORBIS_CA_NAME},*.jedo.cc
+    --mspdir $ORBIS_TLS_INFRA/$ORBIS/$ORBIS_MSP_NAME/tls \
+    --csr.hosts ${ORBIS_MSP_NAME},*.$ORBIS.$ORBIS_ENV
 
 
 ###############################################################
-# Register and entroll TLS certs for Regnums-CA
+# Register and entroll TLS certs for Regnums-MSP
 ###############################################################
-REGNUMS=$(yq eval '.Regnum[] | .Name' "$CONFIG_FILE")
 for REGNUM in $REGNUMS; do
     # Params for regnum
-    REGNUM_CA_NAME=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.Name" "$CONFIG_FILE")
-    REGNUM_CA_PASS=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.Pass" "$CONFIG_FILE")
-    REGNUM_CA_IP=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.IP" "$CONFIG_FILE")
+    REGNUM_MSP_NAME=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .MSP.Name" "$CONFIG_FILE")
+    REGNUM_MSP_PASS=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .MSP.Pass" "$CONFIG_FILE")
+    REGNUM_MSP_IP=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .MSP.IP" "$CONFIG_FILE")
     AFFILIATION=$ORBIS.$REGNUM
 
 
-    # Register Regnum-CA identity
+    # Register Regnum-MSP identity
     echo ""
-    echo_info "Regnum-CA $REGNUM_CA_NAME TLS registering and enrolling..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
-        --id.name $REGNUM_CA_NAME --id.secret $REGNUM_CA_PASS --id.type client --id.affiliation $AFFILIATION
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+    if [[ $DEBUG == true ]]; then
+        echo_debug "Executing with the following:"
+        echo_value_debug "- MSP Name:" "$REGNUM_MSP_NAME"
+        echo_value_debug "- MSP Affiliation:" "$AFFILIATION"
+    fi
+    echo_info "Regnum-MSP $REGNUM_MSP_NAME TLS registering and enrolling..."
+    docker exec -it $ORBIS_TLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TLS_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --mspdir "$ORBIS_TLS_INFRA/$ORBIS/$ORBIS_TLS_NAME/tls" \
+        --id.name $REGNUM_MSP_NAME --id.secret $REGNUM_MSP_PASS --id.type client --id.affiliation $AFFILIATION
+    docker exec -it $ORBIS_TLS_NAME fabric-ca-client enroll -u https://$REGNUM_MSP_NAME:$REGNUM_MSP_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TLS_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
         --enrollment.profile tls \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/tls \
-        --csr.hosts ${REGNUM_CA_NAME},*.jedo.cc
+        --mspdir $ORBIS_TLS_INFRA/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/tls \
+        --csr.hosts ${REGNUM_MSP_NAME},*.$ORBIS.$ORBIS_ENV
 
 
     #Copy files to Organization msp
     echo_info "Organization msp creating (TLS)..."
     mkdir -p ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/tlscacerts
-    cp ${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/tls/tlscacerts/* ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/tlscacerts
-    # Not yet in use
-    # mkdir -p ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/tlsintermediatecerts
-    # cp ${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/tls/tlsintermediatecerts/* ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/tlsintermediatecerts
+    cp ${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/tls/tlscacerts/* ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/tlscacerts
 
 
     # Params for Regnum-Admin
@@ -121,18 +122,24 @@ for REGNUM in $REGNUMS; do
 
     # Register Regnum-Admin identity
     echo ""
+    if [[ $DEBUG == true ]]; then
+        echo_debug "Executing with the following:"
+        echo_value_debug "- MSP Name:" "$REGNUM_ADMIN_NAME"
+        echo_value_debug "- MSP Subject:" "$REGNUM_ADMIN_SUBJECT"
+        echo_value_debug "- MSP CSR" "$CSR_NAMES"
+    fi
     echo_info "Regnum-Admin $REGNUM_ADMIN_NAME TLS registering and enrolling..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
+    docker exec -it $ORBIS_TLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TLS_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --mspdir "$ORBIS_TLS_INFRA/$ORBIS/$ORBIS_TLS_NAME/tls" \
         --id.name $REGNUM_ADMIN_NAME --id.secret $REGNUM_ADMIN_PASS --id.type admin --id.affiliation $AFFILIATION
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$REGNUM_ADMIN_NAME:$REGNUM_ADMIN_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+    docker exec -it $ORBIS_TLS_NAME fabric-ca-client enroll -u https://$REGNUM_ADMIN_NAME:$REGNUM_ADMIN_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TLS_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
         --enrollment.profile tls \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/_Admin/$REGNUM_ADMIN_NAME/tls \
-        --csr.hosts ${REGNUM_CA_NAME},*.jedo.cc \
+        --mspdir $ORBIS_TLS_INFRA/$ORBIS/$REGNUM/_Admin/$REGNUM_ADMIN_NAME/tls \
+        --csr.hosts ${REGNUM_MSP_NAME},*.$ORBIS.$ORBIS_ENV \
         --csr.cn $CN --csr.names "$CSR_NAMES"
 
 
@@ -144,14 +151,13 @@ done
 
 
 ###############################################################
-# Register and entroll Ager-CA TLS certs
+# Register and entroll Ager-MSP TLS certs
 ###############################################################
-AGERS=$(yq eval '.Ager[] | .Name' "$CONFIG_FILE")
 for AGER in $AGERS; do
     # Params for ager
-    AGER_CA_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.Name" "$CONFIG_FILE")
-    AGER_CA_PASS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.Pass" "$CONFIG_FILE")
-    AGER_CA_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.IP" "$CONFIG_FILE")
+    AGER_MSP_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.Name" "$CONFIG_FILE")
+    AGER_MSP_PASS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.Pass" "$CONFIG_FILE")
+    AGER_MSP_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.IP" "$CONFIG_FILE")
     REGNUM=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Administration.Parent" "$CONFIG_FILE")
     AFFILIATION=$ORBIS.$REGNUM.$AGER
 
@@ -160,31 +166,36 @@ for AGER in $AGERS; do
     AFFILIATION=$ORBIS.$REGNUM.$AGER
     echo ""
     echo_info "Affiliation $AFFILIATION adding..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client affiliation add $AFFILIATION  -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls 
+    docker exec -it $ORBIS_TLS_NAME fabric-ca-client affiliation add $AFFILIATION  -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TLS_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --mspdir $ORBIS_TLS_INFRA/$ORBIS/$ORBIS_TLS_NAME/tls 
 
 
-    # Register Ager-CA identity
+    # Register Ager-MSP identity
     echo ""
-    echo_info "Ager-CA $AGER_CA_NAME TLS registering and enrolling..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
-        --id.name $AGER_CA_NAME --id.secret $AGER_CA_PASS --id.type client --id.affiliation $AFFILIATION
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$AGER_CA_NAME:$AGER_CA_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+    if [[ $DEBUG == true ]]; then
+        echo_debug "Executing with the following:"
+        echo_value_debug "- MSP Name:" "$AGER_MSP_NAME"
+        echo_value_debug "- MSP Affiliation" "$AFFILIATION"
+    fi
+    echo_info "Ager-MSP $AGER_MSP_NAME TLS registering and enrolling..."
+    docker exec -it $ORBIS_TLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TLS_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --mspdir "$ORBIS_TLS_INFRA/$ORBIS/$ORBIS_TLS_NAME/tls" \
+        --id.name $AGER_MSP_NAME --id.secret $AGER_MSP_PASS --id.type client --id.affiliation $AFFILIATION
+    docker exec -it $ORBIS_TLS_NAME fabric-ca-client enroll -u https://$AGER_MSP_NAME:$AGER_MSP_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TLS_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
         --enrollment.profile tls \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/tls \
-        --csr.hosts ${AGER_CA_NAME},*.jedo.cc
+        --mspdir $ORBIS_TLS_INFRA/$ORBIS/$REGNUM/$AGER/$AGER_MSP_NAME/tls \
+        --csr.hosts ${AGER_MSP_NAME},*.$ORBIS.$ORBIS_ENV
 done
 
 ###############################################################
 # Last Tasks
 ###############################################################
-chmod -R 777 infrastructure
+chmod -R 750 infrastructure
 echo ""
-echo_ok "TLS certs enrolled."
+echo_info "TLS certs enrolled."

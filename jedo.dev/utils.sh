@@ -12,32 +12,68 @@ set -Eeuo pipefail
 ###############################################################
 function check_script() {
     if [[ "$JEDO_INITIATED" != "yes" ]]; then
-        echo_error "Script does not run independently, use ./dev/jedo.sh"
+        echo_error "Script does not run independently, use ./jedo.sh"
         exit 1
     fi
 }
 
 
 ###############################################################
-# Function to echo in colors
+# Functions to echo in colors
 ###############################################################
+WHITEB='\033[1;29m'
+WHITE='\033[0;29m'
+BLACKB='\033[1;30m'
+BLACK='\033[0;30m'
+REDB='\033[1;31m'
 RED='\033[0;31m'
-ORANGE='\033[0;33m'
-YELLOW='\033[1;33m'
+GREENB='\033[1;32m'
 GREEN='\033[0;32m'
-BLUE='\033[1;34m'
+YELLOWB='\033[1;33m'
+YELLOW='\033[0;33m'
+BLUEB='\033[1;34m'
+BLUE='\033[0;34m'
+PURPLEB='\033[1;35m'
+PURPLE='\033[0;35m'
+TURQUOISEB='\033[1;36m'
+TURQUOISE='\033[0;36m'
 NC='\033[0m' # No Color
 function echo_error() {
-    echo -e "${RED}ScriptInfo: $1${NC}"
+    echo -e "${REDB}ScriptError: ${RED}$1${NC}"
 }
 function echo_warn() {
-    echo -e "${YELLOW}ScriptInfo: $1${NC}"
+    echo -e "${YELLOWB}ScriptWarn: ${YELLOW}$1${NC}"
 }
 function echo_ok() {
-    echo -e "${GREEN}ScriptInfo: $1${NC}"
+    echo -e "${GREENB}ScriptOk: ${GREEN}$1${NC}"
 }
 function echo_info() {
-    echo -e "${BLUE}ScriptInfo: $1${NC}"
+    echo -e "${BLUEB}ScriptInfo: ${BLUE}$1${NC}"
+}
+function echo_debug() {
+    echo -e "${PURPLEB}ScriptDebug: ${PURPLE}$1${NC}"
+}
+function echo_test() {
+    echo -e "${TURQUOISEB}ScripTest: ${TURQUOISE}$1${NC}"
+}
+
+function echo_value_error() {
+    echo -e "${REDB}$1 ${RED}$2${NC}"
+}
+function echo_value_warn() {
+    echo -e "${YELLOWB}$1 ${YELLOW}$2${NC}"
+}
+function echo_value_ok() {
+    echo -e "${GREENB}$1 ${GREEN}$2${NC}"
+}
+function echo_value_info() {
+    echo -e "${BLUEB}$1 ${BLUE}$2${NC}"
+}
+function echo_value_debug() {
+    echo -e "${PURPLEB}$1 ${PURPLE}$2${NC}"
+}
+function echo_value_test() {
+    echo -e "${TURQUOISEB}$1 ${TURQUOISE}$2${NC}"
 }
 
 
@@ -49,7 +85,7 @@ cool_down() {
     local message="$2"
     if [[ "$kind" == "pause" ]]; then
         while true; do
-            echo_info "${message}  Check console."
+            echo_warn "${message}  Check console."
             read -p "Continue? (Y/n): " response
             response=${response:-Y}  # "Y" if Enter
             case $response in
@@ -75,7 +111,6 @@ temp_end() {
 # Define args for hosts-file
 ###############################################################
 get_hosts() {
-    CONFIG_FILE="$SCRIPT_DIR/infrastructure-cc.yaml"
     hosts_args=""
 
     local ip_paths

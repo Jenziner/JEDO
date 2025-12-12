@@ -5,9 +5,9 @@
 #
 # Preparation
 # ===========
-# 1. mkdir jedo
-# 2. cp ca.cnf ./jedo/ca.cnf
-# 3. cd jedo
+# 1. mkdir temp
+# 2. cp ca.cnf ./temp/ca.cnf
+# 3. cd temp
 # 4. touch index.txt serial
 # 5. echo 1000 > serial
 # 6. echo 1000 > crlnumber
@@ -19,23 +19,23 @@
 #
 # Orbis-CA
 # ========
-# ca.jedo.me:
-# 1. openssl ecparam -name prime256v1 -genkey -noout -out ca-jedo-me.key
-# 2. openssl req -new -sha256 -key ca-jedo-me.key -out ca-jedo-me.csr -subj "/C=XX/ST=prod/L=orbis/O=JEDO/CN=ca.jedo.me"
-# 3. openssl ca -batch -config ca.cnf -extensions v3_intermediate_ca -days 365 -notext -md sha256 -in ca-jedo-me.csr -out ca-jedo-me.cert
-# 4. cat ca-jedo-me.cert rca.cert > ca-jedo-me-chain.cert
+# msp.jedo.me:
+# 1. openssl ecparam -name prime256v1 -genkey -noout -out msp-jedo-me.key
+# 2. openssl req -new -sha256 -key msp-jedo-me.key -out msp-jedo-me.csr -subj "/C=XX/ST=prod/L=orbis/O=JEDO/CN=msp.jedo.me"
+# 3. openssl ca -batch -config ca.cnf -extensions v3_intermediate_ca -days 365 -notext -md sha256 -in msp-jedo-me.csr -out msp-jedo-me.cert
+# 4. cat msp-jedo-me.cert rca.cert > msp-jedo-me-chain.cert
 #
-# ca.jedo.cc:
-# 1. openssl ecparam -name prime256v1 -genkey -noout -out ca-jedo-cc.key
-# 2. openssl req -new -sha256 -key ca-jedo-cc.key -out ca-jedo-cc.csr -subj "/C=XX/ST=demo/L=orbis/O=JEDO/CN=ca.jedo.cc"
-# 3. openssl ca -batch -config ca.cnf -extensions v3_intermediate_ca -days 365 -notext -md sha256 -in ca-jedo-cc.csr -out ca-jedo-cc.cert
-# 4. cat ca-jedo-cc.cert rca.cert > ca-jedo-cc-chain.cert
+# msp.jedo.cc:
+# 1. openssl ecparam -name prime256v1 -genkey -noout -out msp-jedo-cc.key
+# 2. openssl req -new -sha256 -key msp-jedo-cc.key -out msp-jedo-cc.csr -subj "/C=XX/ST=demo/L=orbis/O=JEDO/CN=msp.jedo.cc"
+# 3. openssl ca -batch -config ca.cnf -extensions v3_intermediate_ca -days 365 -notext -md sha256 -in msp-jedo-cc.csr -out msp-jedo-cc.cert
+# 4. cat msp-jedo-cc.cert rca.cert > msp-jedo-cc-chain.cert
 #
-# ca.jedo.dev:
-# 1. openssl ecparam -name prime256v1 -genkey -noout -out ca-jedo-dev.key
-# 2. openssl req -new -sha256 -key ca-jedo-dev.key -out ca-jedo-dev.csr -subj "/C=XX/ST=dev/L=orbis/O=JEDO/CN=ca.jedo.dev"
-# 3. openssl ca -batch -config ca.cnf -extensions v3_intermediate_ca -days 365 -notext -md sha256 -in ca-jedo-dev.csr -out ca-jedo-dev.cert
-# 4. cat ca-jedo-dev.cert rca.cert > ca-jedo-dev-chain.cert
+# msp.jedo.dev:
+# 1. openssl ecparam -name prime256v1 -genkey -noout -out msp-jedo-dev.key
+# 2. openssl req -new -sha256 -key msp-jedo-dev.key -out msp-jedo-dev.csr -subj "/C=XX/ST=dev/L=orbis/O=JEDO/CN=msp.jedo.dev"
+# 3. openssl ca -batch -config ca.cnf -extensions v3_intermediate_ca -days 365 -notext -md sha256 -in msp-jedo-dev.csr -out msp-jedo-dev.cert
+# 4. cat msp-jedo-dev.cert rca.cert > msp-jedo-dev-chain.cert
 ###############################################################
 
 [ ca ]

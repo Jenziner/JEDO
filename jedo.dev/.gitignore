@@ -1,0 +1,8 @@
+# Test scripts
+test/
+
+# Generated directories from script
+infrastructure/
+configuration/
+chaincode/
+gateway/

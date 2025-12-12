@@ -7,109 +7,124 @@
 ###############################################################
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/params.sh"
 source "$SCRIPT_DIR/ca_utils.sh"
 check_script
 
-###############################################################
-# Params
-###############################################################
-CONFIG_FILE="$SCRIPT_DIR/infrastructure-cc.yaml"
-DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
-DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
-ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
-ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
-
 get_hosts
 
-echo ""
-echo_warn "CA nodes starting..."
 
 ###############################################################
 # ORBIS-CA (Root CA)
 ###############################################################
-ORBIS=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
-ORBIS_CA_NAME=$(yq eval ".Orbis.CA.Name" "$CONFIG_FILE")
-ORBIS_CA_PASS=$(yq eval ".Orbis.CA.Pass" "$CONFIG_FILE")
-ORBIS_CA_IP=$(yq eval ".Orbis.CA.IP" "$CONFIG_FILE")
-ORBIS_CA_PORT=$(yq eval ".Orbis.CA.Port" "$CONFIG_FILE")
-ORBIS_CA_OPPORT=$(yq eval ".Orbis.CA.OpPort" "$CONFIG_FILE")
-HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
-LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$ORBIS_CA_NAME
+ORBIS_TLS_NAME=$(yq eval ".Orbis.TLS.Name" "$CONFIG_FILE")
+ORBIS_TLS_INFRA=/etc/hyperledger/infrastructure
+ORBIS_TLS_CERT=$ORBIS_TLS_INFRA/$ORBIS/$ORBIS_TLS_NAME/ca-cert.pem
+
+ORBIS_MSP_NAME=$(yq eval ".Orbis.MSP.Name" "$CONFIG_FILE")
+ORBIS_MSP_PASS=$(yq eval ".Orbis.MSP.Pass" "$CONFIG_FILE")
+ORBIS_MSP_IP=$(yq eval ".Orbis.MSP.IP" "$CONFIG_FILE")
+ORBIS_MSP_PORT=$(yq eval ".Orbis.MSP.Port" "$CONFIG_FILE")
+ORBIS_MSP_OPPORT=$(yq eval ".Orbis.MSP.OpPort" "$CONFIG_FILE")
+ORBIS_MSP_DIR=/etc/hyperledger/fabric-ca-server
+ORBIS_MSP_INFRA=/etc/hyperledger/infrastructure
+
+LOCAL_INFRA_DIR=${PWD}/infrastructure
+LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$ORBIS_MSP_NAME
 
 mkdir -p $LOCAL_SRV_DIR
 
-# TEMP - needs to be changed, if certs are available in git, copy then from git when needed
-cp -r ./RootCA/ROOT/jedo.cc/$ORBIS_CA_NAME/. $LOCAL_SRV_DIR
+
+echo ""
+echo_info "CA nodes starting..."
+
+
+cp -r ../$ORBIS.$ROOT_ENV/RootCA/$ORBIS.$ORBIS_ENV/$ORBIS_MSP_NAME/. $LOCAL_SRV_DIR
 
 # Start Orbis-CA
-ca_writeCfg "orbis" "$ORBIS_CA_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
-ca_start "$ORBIS_CA_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
+if [[ $DEBUG == true ]]; then
+    echo_debug "Executing with the following:"
+    echo_value_debug "- TLS Cert:" "$ORBIS_TLS_CERT"
+    echo_value_debug "- MSP Name:" "$ORBIS_MSP_NAME"
+    echo_value_debug "- MSP Dir:" "$LOCAL_SRV_DIR"
+fi
+ca_writeCfg "orbis" "$ORBIS_MSP_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
+ca_start "$ORBIS_MSP_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
+
 
 # Enroll Orbis-CA bootstrap identity
 echo ""
 echo_info "Orbis-CA enrolling bootstrap identity..."
-docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll \
-    -u https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
-    --home $ORBIS_TOOLS_CACLI_DIR \
-    --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-    --enrollment.profile ca \
-    --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_CA_NAME/msp
+docker exec -it $ORBIS_MSP_NAME fabric-ca-client enroll \
+    -u https://$ORBIS_MSP_NAME:$ORBIS_MSP_PASS@$ORBIS_MSP_NAME:$ORBIS_MSP_PORT \
+    --home $ORBIS_MSP_DIR \
+    --tls.certfiles "$ORBIS_TLS_CERT" \
+    --mspdir $ORBIS_MSP_INFRA/$ORBIS/$ORBIS_MSP_NAME/msp \
+    --enrollment.profile ca
+
 
 ###############################################################
-# Regnum-CA (Intermediate CA Level 1)
+# Regnum-MSP (Intermediate CA Level 1)
 ###############################################################
 REGNUMS=$(yq eval '.Regnum[] | .Name' "$CONFIG_FILE")
 for REGNUM in $REGNUMS; do
     # Params for regnum
-    REGNUM_CA_NAME=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.Name" "$CONFIG_FILE")
-    REGNUM_CA_PASS=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.Pass" "$CONFIG_FILE")
-    REGNUM_CA_IP=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.IP" "$CONFIG_FILE")
-    REGNUM_CA_PORT=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.Port" "$CONFIG_FILE")
-    REGNUM_CA_OPPORT=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.OpPort" "$CONFIG_FILE")
+    REGNUM_MSP_NAME=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .MSP.Name" "$CONFIG_FILE")
+    REGNUM_MSP_PASS=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .MSP.Pass" "$CONFIG_FILE")
+    REGNUM_MSP_IP=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .MSP.IP" "$CONFIG_FILE")
+    REGNUM_MSP_PORT=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .MSP.Port" "$CONFIG_FILE")
+    REGNUM_MSP_OPPORT=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .MSP.OpPort" "$CONFIG_FILE")
     
     ORBIS=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
-    ORBIS_CA_NAME=$(yq eval ".Orbis.CA.Name" "$CONFIG_FILE")
-    ORBIS_CA_PASS=$(yq eval ".Orbis.CA.Pass" "$CONFIG_FILE")
-    ORBIS_CA_PORT=$(yq eval ".Orbis.CA.Port" "$CONFIG_FILE")
+    ORBIS_MSP_NAME=$(yq eval ".Orbis.MSP.Name" "$CONFIG_FILE")
+    ORBIS_MSP_PASS=$(yq eval ".Orbis.MSP.Pass" "$CONFIG_FILE")
+    ORBIS_MSP_PORT=$(yq eval ".Orbis.MSP.Port" "$CONFIG_FILE")
     
-    LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/
-    HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
+    LOCAL_INFRA_DIR=${PWD}/infrastructure/
+    LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/
     AFFILIATION=$ORBIS.$REGNUM
     
     mkdir -p $LOCAL_SRV_DIR
     
-    # Register Regnum-CA ID identity at Orbis-CA (using Orbis bootstrap msp)
+    # Register Regnum-MSP ID identity at Orbis-CA (using Orbis bootstrap msp)
     echo ""
-    echo_info "Regnum-CA ID $REGNUM_CA_NAME registering..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register \
-        -u https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_CA_NAME/msp \
-        --id.name $REGNUM_CA_NAME \
-        --id.secret $REGNUM_CA_PASS \
+    if [[ $DEBUG == true ]]; then
+        echo_debug "Executing with the following:"
+        echo_value_debug "- TLS Cert:" "$ORBIS_TLS_CERT"
+        echo_value_debug "- Orbis MSP Name:" "$ORBIS_MSP_NAME"
+        echo_value_debug "***" "***"
+        echo_value_debug "- MSP Name:" "$REGNUM_MSP_NAME"
+        echo_value_debug "- MSP Affiliation:" "$AFFILIATION"
+    fi
+    echo_info "Regnum-MSP ID $REGNUM_MSP_NAME registering..."
+    docker exec -it $ORBIS_MSP_NAME fabric-ca-client register \
+        -u https://$ORBIS_MSP_NAME:$ORBIS_MSP_PASS@$ORBIS_MSP_NAME:$ORBIS_MSP_PORT \
+        --home $ORBIS_MSP_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --mspdir $ORBIS_MSP_INFRA/$ORBIS/$ORBIS_MSP_NAME/msp \
+        --id.name $REGNUM_MSP_NAME \
+        --id.secret $REGNUM_MSP_PASS \
         --id.type client \
         --id.affiliation $AFFILIATION \
         --id.attrs '"hf.Registrar.Roles=user,admin","hf.Revoker=true","hf.IntermediateCA=true"'
     
-    # Enroll Regnum-CA at Orbis-CA (for server certificate)
+    # Enroll Regnum-MSP at Orbis-CA (for server certificate)
     echo ""
-    echo_info "Regnum-CA enrolling for server certificate..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll \
-        -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+    echo_info "Regnum-MSP enrolling for server certificate..."
+    docker exec -it $ORBIS_MSP_NAME fabric-ca-client enroll \
+        -u https://$REGNUM_MSP_NAME:$REGNUM_MSP_PASS@$ORBIS_MSP_NAME:$ORBIS_MSP_PORT \
+        --home $ORBIS_MSP_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
         --enrollment.profile ca \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/msp \
-        --csr.hosts ${REGNUM_CA_NAME},*.jedo.cc
+        --mspdir $ORBIS_MSP_INFRA/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/msp \
+        --csr.hosts ${REGNUM_MSP_NAME},*.$ORBIS.$ORBIS_ENV
     
     # Generating NodeOUs-File
     echo ""
     echo_info "NodeOUs-File writing..."
-    CA_CERT_FILE=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/msp/cacerts/*.pem)
+    CA_CERT_FILE=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/msp/cacerts/*.pem)
     
-    cat <<EOF > ${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/msp/config.yaml
+    cat <<EOF > ${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/msp/config.yaml
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
@@ -125,40 +140,41 @@ NodeOUs:
     Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: orderer
 EOF
-    
-    # Start Regnum-CA
-    ca_writeCfg "regnum" "$REGNUM_CA_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
-    ca_start "$REGNUM_CA_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
-    
-    # Enroll Regnum-CA bootstrap identity (for admin operations)
+
+
+    # Start Regnum-MSP
+    ca_writeCfg "regnum" "$REGNUM_MSP_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
+    ca_start "$REGNUM_MSP_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
+
+
+    # Enroll Regnum-MSP bootstrap identity (for admin operations)
     echo ""
-    echo_info "Enrolling Regnum-CA bootstrap identity for admin operations..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll \
-        -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$REGNUM_CA_NAME:$REGNUM_CA_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/msp-bootstrap
-    
+    echo_info "Enrolling Regnum-MSP bootstrap identity for admin operations..."
+    docker exec -it $ORBIS_MSP_NAME fabric-ca-client enroll \
+        -u https://$REGNUM_MSP_NAME:$REGNUM_MSP_PASS@$REGNUM_MSP_NAME:$REGNUM_MSP_PORT \
+        --home $ORBIS_MSP_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --mspdir $ORBIS_MSP_INFRA/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/msp-bootstrap
+
+
     # Copy files to Organization msp (from FIRST enroll only!)
     echo ""
     echo_info "Organization msp creating..."
-    rm -rf ${PWD}/infrastructure/$ORBIS/$REGNUM/msp
-    mkdir -p ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/cacerts
-    mkdir -p ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/intermediatecerts
-    
-    # Copy root CA
-    cp ${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/msp/cacerts/* \
-       ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/cacerts/
-    
-    # Copy intermediate certs
-    cp ${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/msp/intermediatecerts/* \
-       ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/intermediatecerts/
-    
-    # Copy config
-    cp ${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/msp/config.yaml \
-       ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/
+    rm -rf $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/msp
+    mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/msp/cacerts
+    mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/msp/intermediatecerts
+
+
+    # Copy root CA, intermediate certs, config
+    cp $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/msp/cacerts/* \
+       $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/msp/cacerts/
+    cp $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/msp/intermediatecerts/* \
+       $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/msp/intermediatecerts/
+    cp $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/msp/config.yaml \
+       $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/msp/
 
 done
+
 
 ###############################################################
 # Ager-CA (Intermediate CA Level 2)
@@ -166,46 +182,56 @@ done
 AGERS=$(yq eval '.Ager[] | .Name' "$CONFIG_FILE")
 for AGER in $AGERS; do
     # Params for ager
-    AGER_CA_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.Name" "$CONFIG_FILE")
-    AGER_CA_PASS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.Pass" "$CONFIG_FILE")
-    AGER_CA_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.IP" "$CONFIG_FILE")
-    AGER_CA_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.Port" "$CONFIG_FILE")
-    AGER_CA_OPPORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.OpPort" "$CONFIG_FILE")
-    AGER_CAAPI_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.CAAPI.Name" "$CONFIG_FILE")
-    AGER_CAAPI_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.CAAPI.IP" "$CONFIG_FILE")
-    AGER_CAAPI_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.CAAPI.SrvPort" "$CONFIG_FILE")
+    AGER_MSP_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.Name" "$CONFIG_FILE")
+    AGER_MSP_PASS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.Pass" "$CONFIG_FILE")
+    AGER_MSP_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.IP" "$CONFIG_FILE")
+    AGER_MSP_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.Port" "$CONFIG_FILE")
+    AGER_MSP_OPPORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.OpPort" "$CONFIG_FILE")
+    AGER_CAAPI_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.CAAPI.Name" "$CONFIG_FILE")
+    AGER_CAAPI_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.CAAPI.IP" "$CONFIG_FILE")
+    AGER_CAAPI_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.CAAPI.SrvPort" "$CONFIG_FILE")
     AGER_REGNUM=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Administration.Parent" "$CONFIG_FILE")
     
     REGNUM=$(yq eval ".Regnum[] | select(.Name == \"$AGER_REGNUM\") | .Name" "$CONFIG_FILE")
-    REGNUM_CA_NAME=$(yq eval ".Regnum[] | select(.Name == \"$AGER_REGNUM\") | .CA.Name" "$CONFIG_FILE")
-    REGNUM_CA_PASS=$(yq eval ".Regnum[] | select(.Name == \"$AGER_REGNUM\") | .CA.Pass" "$CONFIG_FILE")
-    REGNUM_CA_PORT=$(yq eval ".Regnum[] | select(.Name == \"$AGER_REGNUM\") | .CA.Port" "$CONFIG_FILE")
+    REGNUM_MSP_NAME=$(yq eval ".Regnum[] | select(.Name == \"$AGER_REGNUM\") | .MSP.Name" "$CONFIG_FILE")
+    REGNUM_MSP_PASS=$(yq eval ".Regnum[] | select(.Name == \"$AGER_REGNUM\") | .MSP.Pass" "$CONFIG_FILE")
+    REGNUM_MSP_PORT=$(yq eval ".Regnum[] | select(.Name == \"$AGER_REGNUM\") | .MSP.Port" "$CONFIG_FILE")
+    REGNUM_MSP_DIR=/etc/hyperledger/fabric-ca-server
+    REGNUM_MSP_INFRA=/etc/hyperledger/infrastructure
     
-    LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/
-    HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
+    LOCAL_INFRA_DIR=${PWD}/infrastructure/
+    LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$AGER_MSP_NAME/
     AFFILIATION=$ORBIS.$REGNUM.$AGER
     
     mkdir -p $LOCAL_SRV_DIR
     
     # Add affiliation to Regnum-CA (using Regnum-CA bootstrap msp)
     echo ""
-    echo_info "Affiliation $AFFILIATION adding to Regnum-CA..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client affiliation add $AFFILIATION \
-        -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$REGNUM_CA_NAME:$REGNUM_CA_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/msp-bootstrap
+    if [[ $DEBUG == true ]]; then
+        echo_debug "Executing with the following:"
+        echo_value_debug "- TLS Cert:" "$ORBIS_TLS_CERT"
+        echo_value_debug "- Regnum MSP Name:" "$REGNUM_MSP_NAME"
+        echo_value_debug "***" "***"
+        echo_value_debug "- MSP Name:" "$AGER_MSP_NAME"
+        echo_value_debug "- MSP Affiliation:" "$AFFILIATION"
+    fi
+    echo_info "Affiliation $AFFILIATION adding to Regnum-MSP..."
+    docker exec -it $REGNUM_MSP_NAME fabric-ca-client affiliation add $AFFILIATION \
+        -u https://$REGNUM_MSP_NAME:$REGNUM_MSP_PASS@$REGNUM_MSP_NAME:$REGNUM_MSP_PORT \
+        --home $REGNUM_MSP_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --mspdir $REGNUM_MSP_INFRA/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/msp-bootstrap
     
-    # Register Ager-CA ID identity at Regnum-CA (using bootstrap msp)
+    # Register Ager-MSP ID identity at Regnum-MSP (using bootstrap msp)
     echo ""
-    echo_info "Ager-CA ID $AGER_CA_NAME registering..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register \
-        -u https://$REGNUM_CA_NAME:$REGNUM_CA_PASS@$REGNUM_CA_NAME:$REGNUM_CA_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$REGNUM_CA_NAME/msp-bootstrap \
-        --id.name $AGER_CA_NAME \
-        --id.secret $AGER_CA_PASS \
+    echo_info "Ager-MSP ID $AGER_MSP_NAME registering..."
+    docker exec -it $REGNUM_MSP_NAME fabric-ca-client register \
+        -u https://$REGNUM_MSP_NAME:$REGNUM_MSP_PASS@$REGNUM_MSP_NAME:$REGNUM_MSP_PORT \
+        --home $REGNUM_MSP_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --mspdir $REGNUM_MSP_INFRA/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/msp-bootstrap \
+        --id.name $AGER_MSP_NAME \
+        --id.secret $AGER_MSP_PASS \
         --id.type client \
         --id.affiliation $AFFILIATION \
         --id.attrs '"hf.Registrar.Roles=user,admin","hf.Revoker=true","hf.IntermediateCA=true"'
@@ -213,20 +239,20 @@ for AGER in $AGERS; do
     # Enroll Ager-CA at Regnum-CA (for server certificate)
     echo ""
     echo_info "Ager-CA enrolling for server certificate..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll \
-        -u https://$AGER_CA_NAME:$AGER_CA_PASS@$REGNUM_CA_NAME:$REGNUM_CA_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+    docker exec -it $REGNUM_MSP_NAME fabric-ca-client enroll \
+        -u https://$AGER_MSP_NAME:$AGER_MSP_PASS@$REGNUM_MSP_NAME:$REGNUM_MSP_PORT \
+        --home $REGNUM_MSP_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
         --enrollment.profile ca \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/msp \
-        --csr.hosts ${REGNUM_CA_NAME},*.jedo.cc
+        --mspdir $REGNUM_MSP_INFRA/$ORBIS/$REGNUM/$AGER/$AGER_MSP_NAME/msp \
+        --csr.hosts ${REGNUM_MSP_NAME},*.jedo.cc
     
     # Generating NodeOUs-File
     echo ""
     echo_info "NodeOUs-File writing..."
-    CA_CERT_FILE=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/msp/cacerts/*.pem)
+    CA_CERT_FILE=$(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$AGER_MSP_NAME/msp/cacerts/*.pem)
     
-    cat <<EOF > ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/msp/config.yaml
+    cat <<EOF > $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$AGER_MSP_NAME/msp/config.yaml
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
@@ -242,57 +268,58 @@ NodeOUs:
     Certificate: intermediatecerts/$(basename $CA_CERT_FILE)
     OrganizationalUnitIdentifier: orderer
 EOF
-    
-    # Start Ager-CA
-    ca_writeCfg "ager" "$AGER_CA_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
-    ca_start "$AGER_CA_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
-    
-    # Enroll Ager-CA bootstrap identity (for admin operations)
-    echo ""
-    echo_info "Enrolling Ager-CA bootstrap identity for admin operations..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll \
-        -u https://$AGER_CA_NAME:$AGER_CA_PASS@$AGER_CA_NAME:$AGER_CA_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/msp-bootstrap
-    
-    # ✅ Build Organization MSP (for Genesis Block - nodes enrolled at Orbis-CA!)
-    echo ""
-    echo_info "Organization msp creating (for nodes enrolled at Orbis-CA)..."
-    rm -rf ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp
-    mkdir -p ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp/cacerts
-    mkdir -p ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp/intermediatecerts
-    mkdir -p ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp/tlscacerts
 
-    # Copy root CA (Orbis Root CA)
-    cp ${PWD}/infrastructure/$ORBIS/$ORBIS_CA_NAME/msp/cacerts/* \
-       ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp/cacerts/
+    # Start Ager-MSP
+    ca_writeCfg "ager" "$AGER_MSP_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
+    ca_start "$AGER_MSP_NAME" "$CONFIG_FILE" "$LOCAL_SRV_DIR"
     
-    # ✅ Copy ONLY Orbis-CA intermediate cert (NOT complete chain!)
-    # Nodes (Orderer/Peer) are enrolled at Orbis-CA, so they have Orbis-CA as issuer
-    ORBIS_CA_INTERMEDIATE=$(ls ${PWD}/infrastructure/$ORBIS/$ORBIS_CA_NAME/msp/intermediatecerts/*.pem 2>/dev/null | head -1)
-    if [ -n "$ORBIS_CA_INTERMEDIATE" ]; then
-        cp $ORBIS_CA_INTERMEDIATE \
-           ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp/intermediatecerts/
+    # Enroll Ager-MSP bootstrap identity (for admin operations)
+    echo ""
+    echo_info "Enrolling Ager-MSP bootstrap identity for admin operations..."
+    docker exec -it $REGNUM_MSP_NAME fabric-ca-client enroll \
+        -u https://$AGER_MSP_NAME:$AGER_MSP_PASS@$AGER_MSP_NAME:$AGER_MSP_PORT \
+        --home $REGNUM_MSP_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --mspdir $REGNUM_MSP_INFRA/$ORBIS/$REGNUM/$AGER/$AGER_MSP_NAME/msp-bootstrap
+    
+    # Build Organization MSP (for Genesis Block - nodes enrolled at Orbis-MSP!)
+    echo ""
+    echo_info "Organization msp creating (for nodes enrolled at Orbis-MSP)..."
+    rm -rf $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/msp
+    mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/msp/cacerts
+    mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/msp/intermediatecerts
+    mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/msp/tlscacerts
+
+    # Copy root MSP (Orbis Root MSP)
+    cp $LOCAL_INFRA_DIR/$ORBIS/$ORBIS_MSP_NAME/msp/cacerts/* \
+       $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/msp/cacerts/
+    
+    # Copy ONLY Orbis-MSP intermediate cert (NOT complete chain!)
+    # Nodes (Orderer/Peer) are enrolled at Orbis-MSP, so they have Orbis-MSP as issuer
+    ORBIS_MSP_INTERMEDIATE=$(ls $LOCAL_INFRA_DIR/$ORBIS/$ORBIS_MSP_NAME/msp/intermediatecerts/*.pem 2>/dev/null | head -1)
+    if [ -n "$ORBIS_MSP_INTERMEDIATE" ]; then
+        cp $ORBIS_MSP_INTERMEDIATE \
+           $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/msp/intermediatecerts/
     fi
     
-    # ⬅️ NEU: Copy TLS Root CA!
-    echo_info "Adding TLS Root CA to Organization MSP..."
-    cp ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem \
-      ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp/tlscacerts/
+    # Copy TLS Root CA!
+    echo ""
+    echo_info "Adding TLS Root Cert to Organization MSP..."
+    cp $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem \
+      $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/msp/tlscacerts/
    
     # NodeOUs config
-    CA_CERT_FILE=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp/intermediatecerts/*.pem 2>/dev/null | head -1)
+    CA_CERT_FILE=$(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/msp/intermediatecerts/*.pem 2>/dev/null | head -1)
     
     if [ -z "$CA_CERT_FILE" ]; then
         # Fallback: use cacerts if no intermediate
-        CA_CERT_FILE=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp/cacerts/*.pem)
+        CA_CERT_FILE=$(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/msp/cacerts/*.pem)
         CERT_PATH="cacerts/$(basename $CA_CERT_FILE)"
     else
         CERT_PATH="intermediatecerts/$(basename $CA_CERT_FILE)"
     fi
     
-    cat <<EOF > ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/msp/config.yaml
+    cat <<EOF > $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/msp/config.yaml
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
@@ -310,23 +337,21 @@ NodeOUs:
 EOF
 
 
-    # Add affiliation to Ager-CA (using Ager-CA bootstrap msp)
+    # Add affiliation to Ager-MSP (using Ager-MSP bootstrap msp)
     echo ""
-    echo_info "Affiliation $AFFILIATION adding to Ager-CA..."
-    docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client affiliation add $AFFILIATION \
-        -u https://$AGER_CA_NAME:$AGER_CA_PASS@$AGER_CA_NAME:$AGER_CA_PORT \
-        --home $ORBIS_TOOLS_CACLI_DIR \
-        --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-        --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$AGER_CA_NAME/msp-bootstrap
+    echo_info "Affiliation $AFFILIATION adding to Ager-MSP..."
+    docker exec -it $REGNUM_MSP_NAME fabric-ca-client affiliation add $AFFILIATION \
+        -u https://$AGER_MSP_NAME:$AGER_MSP_PASS@$AGER_MSP_NAME:$AGER_MSP_PORT \
+        --home $REGNUM_MSP_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --mspdir $REGNUM_MSP_INFRA/$ORBIS/$REGNUM/$AGER/$AGER_MSP_NAME/msp-bootstrap
 
 
     ###############################################################
-    # Enroll Admins @ Orbis-CA (like Orderer/Peer!)
+    # Enroll Admins @ Orbis-MSP (like Orderer/Peer!)
     ###############################################################
     ADMINS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Admins[].Name" $CONFIG_FILE)
     for ADMIN in $ADMINS; do
-        echo ""
-        echo_info "Admins for $AGER enrolling at Orbis-CA..."
         ADMIN_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Admins[] | select(.Name == \"$ADMIN\") | .Name" $CONFIG_FILE)
         ADMIN_SUBJECT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Admins[] | select(.Name == \"$ADMIN\") | .Subject" $CONFIG_FILE)
         ADMIN_PASS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Admins[] | select(.Name == \"$ADMIN\") | .Pass" $CONFIG_FILE)
@@ -340,30 +365,41 @@ EOF
         CSR_NAMES="C=$C,ST=$ST,L=$L,O=$O"
         AFFILIATION=$ORBIS.$REGNUM
 
-        # ✅ Register Admin at Orbis-CA (using Orbis bootstrap msp)
-        docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client register \
-            -u https://$ORBIS_CA_NAME:$ORBIS_CA_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
-            --home $ORBIS_TOOLS_CACLI_DIR \
-            --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-            --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_CA_NAME/msp \
+        echo ""
+        if [[ $DEBUG == true ]]; then
+            echo_debug "Executing with the following:"
+            echo_value_debug "- Ager:" "$AGER"
+            echo_value_debug "- Admin:" "$ADMIN_NAME"
+            echo_value_debug "- Subject:" "$ADMIN_SUBJECT"
+            echo_value_debug "- Affiliation:" "$AFFILIATION"
+        fi
+        echo_info "Admins for $AGER enrolling at Orbis-CA..."
+
+
+        # Register Admin at Orbis-CA (using Orbis bootstrap msp)
+        docker exec -it $ORBIS_MSP_NAME fabric-ca-client register \
+            -u https://$ORBIS_MSP_NAME:$ORBIS_MSP_PASS@$ORBIS_MSP_NAME:$ORBIS_MSP_PORT \
+            --home $ORBIS_MSP_DIR \
+            --tls.certfiles "$ORBIS_TLS_CERT" \
+            --mspdir $ORBIS_MSP_INFRA/$ORBIS/$ORBIS_MSP_NAME/msp \
             --id.name $ADMIN_NAME \
             --id.secret $ADMIN_PASS \
             --id.type admin \
             --id.affiliation $AFFILIATION \
             --id.attrs "role=admin:ecert"
         
-        # ✅ Enroll Admin at Orbis-CA
-        docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll \
-            -u https://$ADMIN_NAME:$ADMIN_PASS@$ORBIS_CA_NAME:$ORBIS_CA_PORT \
-            --home $ORBIS_TOOLS_CACLI_DIR \
-            --tls.certfiles tls-root-cert/tls-ca-cert.pem \
-            --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$REGNUM/$AGER/$ADMIN_NAME/msp \
-            --csr.hosts "$CA_NAME,$AGER_CAAPI_NAME,$AGER_CAAPI_IP,*.jedo.cc" \
+        # Enroll Admin at Orbis-CA
+        docker exec -it $ORBIS_MSP_NAME fabric-ca-client enroll \
+            -u https://$ADMIN_NAME:$ADMIN_PASS@$ORBIS_MSP_NAME:$ORBIS_MSP_PORT \
+            --home $ORBIS_MSP_DIR \
+            --tls.certfiles "$ORBIS_TLS_CERT" \
+            --mspdir $ORBIS_MSP_INFRA/$ORBIS/$REGNUM/$AGER/$ADMIN_NAME/msp \
+            --csr.hosts "$AGER_MSP_NAME,$AGER_CAAPI_NAME,$AGER_CAAPI_IP,*.$ORBIS.$ORBIS_ENV" \
             --csr.cn $CN --csr.names "$CSR_NAMES"
         
         # NodeOUs config
-        CA_CERT_FILE=$(ls ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ADMIN_NAME/msp/intermediatecerts/*.pem)
-        cat <<EOF > ${PWD}/infrastructure/$ORBIS/$REGNUM/$AGER/$ADMIN_NAME/msp/config.yaml
+        CA_CERT_FILE=$(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ADMIN_NAME/msp/intermediatecerts/*.pem)
+        cat <<EOF > $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ADMIN_NAME/msp/config.yaml
 NodeOUs:
   Enable: true
   ClientOUIdentifier:
@@ -380,29 +416,16 @@ NodeOUs:
     OrganizationalUnitIdentifier: orderer
 EOF
     done
-    echo_ok "Admins for $AGER enrolled at Orbis-CA."
+    echo_info "Admins for $AGER enrolled at Orbis-MSP."
 
 
-done  # ⬅️ Ende der Ager-Loop
+done  #
 
 
 ###############################################################
 # Final Tasks
 ###############################################################
-chmod -R 777 infrastructure
+chmod -R 750 infrastructure
 
 echo ""
-echo_ok "CA nodes started successfully!"
-echo ""
-echo_info "Summary:"
-echo_info "  ✅ Root CA: $ORBIS_CA_NAME (with bootstrap msp)"
-for REGNUM in $REGNUMS; do
-    REGNUM_CA_NAME=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .CA.Name" "$CONFIG_FILE")
-    echo_info "  ✅ Regnum CA: $REGNUM_CA_NAME (with msp + msp-bootstrap)"
-done
-for AGER in $AGERS; do
-    AGER_CA_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.Name" "$CONFIG_FILE")
-    echo_info "  ✅ Ager CA: $AGER_CA_NAME (with msp + msp-bootstrap)"
-    echo_info "      Org MSP: Uses Orbis-CA cert (for nodes enrolled at Orbis)"
-done
-echo ""
+echo_info "MSP-CA nodes started."

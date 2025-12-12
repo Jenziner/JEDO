@@ -19,20 +19,9 @@
 ###############################################################
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/params.sh"
 source "$SCRIPT_DIR/ca_utils.sh"
 check_script
-
-
-###############################################################
-# Params
-###############################################################
-CONFIG_FILE="$SCRIPT_DIR/infrastructure-cc.yaml"
-DOCKER_UNRAID=$(yq eval '.Docker.Unraid' $CONFIG_FILE)
-DOCKER_NETWORK_NAME=$(yq eval '.Docker.Network.Name' $CONFIG_FILE)
-DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
-
-ORBIS_TOOLS_NAME=$(yq eval ".Orbis.Tools.Name" "$CONFIG_FILE")
-ORBIS_TOOLS_CACLI_DIR=/etc/hyperledger/fabric-ca-client
 
 get_hosts
 
@@ -40,25 +29,24 @@ get_hosts
 ###############################################################
 # Params for Orbis-TLS
 ###############################################################
-ORBIS=$(yq eval ".Orbis.Name" "$CONFIG_FILE")
 ORBIS_TLS_NAME=$(yq eval ".Orbis.TLS.Name" "$CONFIG_FILE")
 ORBIS_TLS_PASS=$(yq eval ".Orbis.TLS.Pass" "$CONFIG_FILE")
 ORBIS_TLS_IP=$(yq eval ".Orbis.TLS.IP" "$CONFIG_FILE")
 ORBIS_TLS_PORT=$(yq eval ".Orbis.TLS.Port" "$CONFIG_FILE")
 ORBIS_TLS_OPPORT=$(yq eval ".Orbis.TLS.OpPort" "$CONFIG_FILE")
+ORBIS_TLS_SRV_DIR=/etc/hyperledger/fabric-ca-server
+ORBIS_TLS_INFRA_DIR=/etc/hyperledger/infrastructure
+ORBIS_TLS_CERT=$ORBIS_TLS_SRV_DIR/ca-cert.pem
+LOCAL_INFRA_DIR=${PWD}/infrastructure
+LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$ORBIS_TLS_NAME
+mkdir -p $LOCAL_SRV_DIR
 
 
 ###############################################################
 # Start Orbis-TLS
 ###############################################################
 echo ""
-echo_warn "TLS-CA $ORBIS_TLS_NAME starting... (Defaults: https://hyperledger-fabric-ca.readthedocs.io/en/latest/serverconfig.html)"
-
-
-# LOCAL_INFRA_DIR=${PWD}/infrastructure
-LOCAL_SRV_DIR=${PWD}/infrastructure/$ORBIS/$ORBIS_TLS_NAME
-HOST_SRV_DIR=/etc/hyperledger/fabric-ca-server
-mkdir -p $LOCAL_SRV_DIR
+echo_info "TLS-CA $ORBIS_TLS_NAME starting... (Defaults: https://hyperledger-fabric-ca.readthedocs.io/en/latest/serverconfig.html)"
 
 
 # Write Orbis-TLS SERVER config
@@ -66,7 +54,6 @@ cat <<EOF > $LOCAL_SRV_DIR/fabric-ca-server-config.yaml
 ---
 version: 0.0.1
 port: $ORBIS_TLS_PORT
-debug: true
 tls:
     enabled: true
     clientauth:
@@ -151,6 +138,7 @@ EOF
 echo ""
 echo_info "Docker Container $ORBIS_TLS_NAME starting..."
 docker run -d \
+    --user $(id -u):$(id -g) \
     --name $ORBIS_TLS_NAME \
     --network $DOCKER_NETWORK_NAME \
     --ip $ORBIS_TLS_IP \
@@ -159,10 +147,12 @@ docker run -d \
     --label net.unraid.docker.icon="https://raw.githubusercontent.com/Jenziner/JEDO/main/src/fabric_ca_logo.png" \
     -p $ORBIS_TLS_PORT:$ORBIS_TLS_PORT \
     -p $ORBIS_TLS_OPPORT:$ORBIS_TLS_OPPORT \
-    -v $LOCAL_SRV_DIR:$HOST_SRV_DIR \
+    -v $LOCAL_SRV_DIR:$ORBIS_TLS_SRV_DIR \
+    -v $LOCAL_INFRA_DIR:$ORBIS_TLS_INFRA_DIR \
+    -e FABRIC_CA_SERVER_LOGLEVEL=$FABRIC_CA_SERVER_LOGLEVEL \
     hyperledger/fabric-ca:latest \
     sh -c "fabric-ca-server start -b $ORBIS_TLS_NAME:$ORBIS_TLS_PASS \
-    --home $HOST_SRV_DIR"
+    --home $ORBIS_TLS_SRV_DIR"
 
 
 # Waiting Orbis-TLS Container startup
@@ -170,28 +160,22 @@ CheckContainer "$ORBIS_TLS_NAME" "$DOCKER_CONTAINER_WAIT"
 CheckContainerLog "$ORBIS_TLS_NAME" "Listening on https://0.0.0.0:$ORBIS_TLS_PORT" "$DOCKER_CONTAINER_WAIT"
 
 
-# copy ca-cert.pem to TLS-key directory and ca-client directory
-cp -r $LOCAL_SRV_DIR/ca-cert.pem $LOCAL_SRV_DIR/tls-ca-cert.pem
-mkdir ${PWD}/infrastructure/$ORBIS/$ORBIS_TOOLS_NAME/ca-client/tls-root-cert
-cp -r $LOCAL_SRV_DIR/ca-cert.pem ${PWD}/infrastructure/$ORBIS/$ORBIS_TOOLS_NAME/ca-client/tls-root-cert/tls-ca-cert.pem
-
-
 # Enroll TLS certs for Orbis-TLS
 echo ""
 echo_info "Certificate for $ORBIS_TLS_NAME enrolling..."
-docker exec -it $ORBIS_TOOLS_NAME fabric-ca-client enroll -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
-    --home $ORBIS_TOOLS_CACLI_DIR \
-    --tls.certfiles tls-root-cert/tls-ca-cert.pem \
+docker exec -it $ORBIS_TLS_NAME fabric-ca-client enroll -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+    --home "$ORBIS_TLS_SRV_DIR" \
+    --tls.certfiles "$ORBIS_TLS_CERT" \
+    --mspdir "$ORBIS_TLS_INFRA_DIR/$ORBIS/$ORBIS_TLS_NAME/tls" \
     --enrollment.profile tls \
-    --mspdir $ORBIS_TOOLS_CACLI_DIR/infrastructure/$ORBIS/$ORBIS_TLS_NAME/tls \
 
 
 ###############################################################
 # Last Tasks
 ###############################################################
-chmod -R 777 infrastructure
+chmod -R 750 infrastructure
 echo ""
-echo_ok "TLS-CA $ORBIS_TLS_NAME started."
+echo_info "TLS-CA $ORBIS_TLS_NAME started."
 
 
 

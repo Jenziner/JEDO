@@ -1,7 +1,10 @@
 import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
-import { Request, Response } from 'express';
+import { Request } from 'express';
+import { IncomingMessage, ServerResponse } from 'http';
 import { serviceConfig, ServiceName } from '../config/services';
 import { logger } from '../config/logger';
+import { Socket } from 'net';
+
 
 const createServiceProxy = (serviceName: ServiceName, _pathPrefix: string): RequestHandler => {
   const config = serviceConfig[serviceName];
@@ -11,42 +14,54 @@ const createServiceProxy = (serviceName: ServiceName, _pathPrefix: string): Requ
     changeOrigin: true,
     timeout: config.timeout,
     pathRewrite: serviceName === 'ledgerService'
-      ? { '^/api/v1/ledger': '' } // z.B. /api/v1/ledger/health → /health
+      ? { '^/api/v1/ledger': '' }
       : serviceName === 'caService'
       ? { '^/api/v1/ca': '' }
       : undefined,
     on: {
-      error: (err: Error, _req: Request, res: Response) => {
-        logger.error(`${serviceName} Proxy Error`, { error: err.message });
-        if (!res.headersSent) {
-          res.status(502).json({ 
-            error: `${serviceName} unavailable`,
-            message: 'Service temporarily unavailable'
-          });
+      error: (err: Error, _req: IncomingMessage, res: ServerResponse | Socket) => {
+        logger.error({ err, serviceName }, 'Proxy Error');
+        
+        if ('writeHead' in res && typeof res.writeHead === 'function') {
+          if (!res.headersSent) {
+            res.writeHead(502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ 
+              error: `${serviceName} unavailable`,
+              message: 'Service temporarily unavailable'
+            }));
+          }
         }
       },
       
-      proxyReq: (proxyReq, req: Request) => {
-        const correlationId = (req as any).id;
+      proxyReq: (proxyReq, req: IncomingMessage) => {
+        const expressReq = req as unknown as Request;
+        const correlationId = (expressReq as any).id;
+        
         if (correlationId) {
           proxyReq.setHeader('x-correlation-id', correlationId);
         }
-        logger.debug(`Proxying to ${serviceName}`, {
-          method: req.method,
-          path: req.originalUrl,
-          target: `${config.url}${proxyReq.path}`
-        });
+        
+        logger.debug({
+          method: expressReq.method,
+          path: expressReq.originalUrl,
+          target: `${config.url}${proxyReq.path}`,
+          serviceName
+        }, 'Proxying request');
       },
       
-      proxyRes: (proxyRes, req: Request) => {
-        logger.debug(`Response from ${serviceName}`, {
+      proxyRes: (proxyRes, req: IncomingMessage) => {
+        const expressReq = req as unknown as Request;
+        
+        logger.debug({
           status: proxyRes.statusCode,
-          path: req.originalUrl
-        });
+          path: expressReq.originalUrl,
+          serviceName
+        }, 'Received proxy response');
       }
     }
   });
 };
+
 
 export const caServiceProxy = createServiceProxy('caService', '/ca');
 export const ledgerServiceProxy = createServiceProxy('ledgerService', '/ledger');

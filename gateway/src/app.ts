@@ -6,7 +6,7 @@ import { env } from './config/environment';
 import { requestLogger } from './middlewares/requestLogger';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import healthRoutes from './routes/healthRoutes';
-import { extractClientIdentity } from './middlewares/fabricProxy';
+//import { extractClientIdentity } from './middlewares/fabricProxy';
 
 // NEW: Service Proxies
 import { 
@@ -15,10 +15,6 @@ import {
   recoveryServiceProxy, 
   votingServiceProxy 
 } from './middlewares/proxyRouter';
-
-// LEGACY Routes (TODO: Remove in Epic 4)
-import walletRoutes from './routes/walletRoutes';
-import proxyRoutes from './routes/proxyRoutes';
 
 export const createApp = (): Application => {
   const app: Application = express();
