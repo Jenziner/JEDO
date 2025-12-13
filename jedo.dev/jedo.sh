@@ -12,6 +12,8 @@ source "$SCRIPT_DIR/params.sh"
 
 export JEDO_INITIATED="yes"
 
+echo ""
+echo_warn "JEDO-Ecosystem $DOCKER_NETWORK_NAME starting..."
 
 ###############################################################
 # Arguments
@@ -22,6 +24,7 @@ fi
 opt_d=false
 opt_a="n/a"
 opt_r="n/a"
+export LOGLEVEL="INFO"
 export DEBUG=false
 export FABRIC_LOGGING_SPEC="INFO"
 export FABRIC_CA_SERVER_LOGLEVEL="info"
@@ -44,7 +47,7 @@ while getopts ":hpda:r:-:" opt; do
             opt_a="$OPTARG"
             ;;
         r )
-            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "genesis" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "tokengen" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "gateway" && "$OPTARG" != "wallet" && "$OPTARG" != "intermediate" ]]; then
+            if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "genesis" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "tokengen" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "gateway" && "$OPTARG" != "wallet" && "$OPTARG" != "services" && "$OPTARG" != "intermediate" ]]; then
                 echo_error "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
@@ -54,10 +57,11 @@ while getopts ":hpda:r:-:" opt; do
         - )
             case "${OPTARG}" in
                 debug)
+                    export LOGLEVEL="DEBUG"
                     export DEBUG=true
                     export FABRIC_LOGGING_SPEC="DEBUG"
                     export FABRIC_CA_SERVER_LOGLEVEL="debug"
-                    echo_info "Debug-Modus aktiviert"
+                    echo_info "Debug-Modus aktiviert" >&2
                     ;;
                 *)
                     echo_error "invalid long option: --$OPTARG" >&2
@@ -75,9 +79,6 @@ while getopts ":hpda:r:-:" opt; do
             ;;
     esac
 done
-
-echo ""
-echo_warn "JEDO-Ecosystem $DOCKER_NETWORK_NAME starting..."
 
 
 ###############################################################
@@ -181,11 +182,20 @@ fi
 
 
 ###############################################################
-# Wallet API Gateway
+# API Gateway
 ###############################################################
 if [[ "$opt_r" == "gateway" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/gateway.sh
-    cool_down $opt_a "Wallet API Gateway deployed."
+    cool_down $opt_a "API Gateway deployed."
+fi
+
+
+###############################################################
+# Gateway Services
+###############################################################
+if [[ "$opt_r" == "services" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    $SCRIPT_DIR/gateway-services.sh
+    cool_down $opt_a "Gateway services deployed."
 fi
 
 

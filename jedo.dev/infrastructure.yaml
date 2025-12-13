@@ -140,12 +140,30 @@ Ager:
                 Port: 53231
       Gateway: #API-Gateway
           Name: via.alps.ea.jedo.dev
+          Version: 1.0
           IP: 172.16.3.90
           Port: 53901
-          CA-Service: ca.via.alps.ea.jedo.dev
-          Ledger-Service: ledger.via.alps.ea.jedo.dev #porta.via.alps...?
-          Voting-Service: voting.via.alps.ea.jedo.dev
-          Recovery-Service: recovery.via.alps.ea jedo.dev
+          Services:
+            - Name: ca.via.alps.ea.jedo.dev
+              Source: services/ca-service
+              Version: 1.0
+              IP: 172.16.3.91
+              Port: 53911
+            - Name: ledger.via.alps.ea.jedo.dev #porta.via.alps...?
+              Source: services/ledger-service
+              Version: 1.0
+              IP: 172.16.3.92
+              Port: 53921
+            # - Name: voting.via.alps.ea.jedo.dev
+            #   Source: services/voting-service
+            #   Version: 1.0
+            #   IP: 172.16.3.93
+            #   Port: 53931
+            # - Name: recovery.via.alps.ea jedo.dev
+            #   Source: services/recovery-service
+            #   Version: 1.0
+            #   IP: 172.16.3.94
+            #   Port: 53941
       Admins:
           - Name: admin.alps.ea.jedo.dev
             Pass: Test1

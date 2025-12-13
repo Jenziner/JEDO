@@ -1,6 +1,6 @@
 import { fabricProxyService } from './services/fabricProxyService';
 
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
 import express from 'express';

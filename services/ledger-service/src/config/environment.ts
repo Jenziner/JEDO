@@ -1,6 +1,13 @@
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
-// Load .env.local for development
+// Load .env (works for Docker volume mount AND local dev)
+try {
+  dotenv.config({ path: '/app/.env' }); // Docker
+} catch {
+  dotenv.config(); // Local dev (searches current directory)
+}
+
+// Load .env.local for development overrides
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config({ path: '.env.local' });
 }

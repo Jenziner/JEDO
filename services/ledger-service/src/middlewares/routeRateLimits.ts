@@ -1,3 +1,4 @@
+import { Request, Response, NextFunction } from 'express';
 import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit';
 import { FabricProxyRequest } from './fabricProxy';
 import { getCertIdentifier } from '../utils/certIdentifier';
@@ -13,20 +14,20 @@ import logger from '../config/logger';
 export function createCertRateLimit(
   max: number,
   type: string
-): RateLimitRequestHandler {
+): CompatibleRateLimitHandler { 
   return rateLimit({
     windowMs: 60 * 1000, // 1 minute
     max,
 
     // Generate key per certificate + operation type
     keyGenerator: (req) => {
-      const identifier = getCertIdentifier(req as FabricProxyRequest);
+      const identifier = getCertIdentifier(req as unknown as FabricProxyRequest);
       return `${type}:${identifier}`;
     },
 
     // Custom handler for better error messages
     handler: (req, res) => {
-      const identifier = getCertIdentifier(req as FabricProxyRequest);
+      const identifier = getCertIdentifier(req as unknown as FabricProxyRequest);
       
       logger.warn(
         {
@@ -61,8 +62,14 @@ export function createCertRateLimit(
 
     // Skip failed requests from counting (optional)
     skipFailedRequests: false,
-  });
+  })as unknown as CompatibleRateLimitHandler;
 }
+
+export type CompatibleRateLimitHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => void | Promise<void>;
 
 // ============================================
 // Predefined rate limiters for common operations

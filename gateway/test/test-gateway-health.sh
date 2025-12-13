@@ -4,7 +4,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../jedo.dev" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
 source "$SCRIPT_DIR/params.sh"
 
-echo_warn "Testing Fabric Gateway Connection..."
+echo_warn "Testing Gateway Connection..."
 for REGNUM in $REGNUMS; do
     for AGER in $AGERS; do
         GATEWAY_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.Name" $CONFIG_FILE)
@@ -33,8 +33,16 @@ for REGNUM in $REGNUMS; do
         echo_info "- Key:  $(basename $KEY_FILE)"
 
         echo ""
-        echo_info "Testing Health Endpoint..."
+        echo_info "Test 1: Testing Gateway Health..."
         curl -s http://$GATEWAY_IP:$GATEWAY_PORT/health | jq '.'
+
+        echo ""
+        echo_info "Test 2: Testing Ledger Service via Gateway Health..."
+        curl -s \
+          -H "Content-Type: application/json" \
+          -H "X-Client-Cert: $CERT_B64" \
+          -H "X-Client-Key: $KEY_B64" \
+          http://$GATEWAY_IP:$GATEWAY_PORT/api/v1/ledger/health | jq '.'
 
     done
 done

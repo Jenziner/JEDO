@@ -124,6 +124,29 @@ for REGNUM in $REGNUMS; do
 
 
             ###############################################################
+            # Parse Services from YAML
+            ###############################################################
+            log_debug "" "Parsing services from infrastructure.yaml..."
+
+            declare -A SERVICE_URLS
+            SERVICES=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.Services[]" $CONFIG_FILE -o=json)
+
+            while IFS= read -r service; do
+                if [ -n "$service" ]; then
+                    SVC_NAME=$(echo "$service" | jq -r '.Name')
+                    SVC_IP=$(echo "$service" | jq -r '.IP')
+                    SVC_PORT=$(echo "$service" | jq -r '.Port')
+                    
+                    # Extract Service-Typ from Name (ledger.via... -> LEDGER)
+                    SVC_TYPE=$(echo "$SVC_NAME" | cut -d'.' -f1 | tr '[:lower:]' '[:upper:]')
+                    
+                    SERVICE_URLS["${SVC_TYPE}_API_URL"]="http://${SVC_IP}:${SVC_PORT}"
+                    log_debug "${SVC_TYPE}_API_URL" "http://${SVC_IP}:${SVC_PORT}"
+                fi
+            done < <(echo "$SERVICES" | jq -c '.')
+
+
+            ###############################################################
             # Write .env
             ###############################################################
             echo ""
@@ -164,10 +187,14 @@ FABRIC_PEER_TLS_ROOT_CERT=./infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/t
 FABRIC_AGER_MSP_CA_CERTS_PATH=./infrastructure/$ORBIS/$REGNUM/$AGER/msp/cacerts
 FABRIC_AGER_MSP_INTERMEDIATE_CERTS_PATH=./infrastructure/$ORBIS/$REGNUM/$AGER/msp/intermediatecerts
 
-LEDGER_API_URL=http://ledger-service:8080
-CA_API_URL=http://ca-service:8081
-RECOVERY_API_URL=http://recovery-service:8082
-VOTING_API_URL=http://voting-service:8083
+# Microservices (dynamically generated)
+EOF
+
+for key in "${!SERVICE_URLS[@]}"; do
+    echo "$key=${SERVICE_URLS[$key]}" >> $LOCAL_SRV_DIR/.env
+done
+
+cat <<EOF >> $LOCAL_SRV_DIR/.env
 
 # CA-API für Certificate Management
 #CA_API_URL=https://$CAAPI_NAME:$CAAPI_PORT
