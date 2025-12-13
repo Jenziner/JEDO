@@ -1,0 +1,603 @@
+openapi: 3.0.3
+info:
+  title: JEDO CA Service API
+  description: |
+    Certificate Authority Service für Hyperledger Fabric.
+    
+    Ermöglicht die hierarchische Erstellung von Zertifikaten:
+    - Regnum → Ager
+    - Ager → Gens
+    - Gens → Human
+    
+    Verwendet Idemix für Privacy-Preserving Authentication.
+  version: 1.0.0
+  contact:
+    name: JEDO Team
+    email: support@jedo.dev
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3001
+    description: Local Development
+  - url: https://ca-service.jedo.dev
+    description: Production
+
+tags:
+  - name: Certificates
+    description: Certificate Lifecycle Management
+  - name: Health
+    description: Service Health & Monitoring
+
+paths:
+  /certificates/register:
+    post:
+      tags:
+        - Certificates
+      summary: Register a new user
+      description: |
+        Registriert einen neuen Benutzer (Gens oder Human) beim CA-Server.
+        Gibt ein Secret zurück, das für das Enrollment benötigt wird.
+        
+        **Authorization:**
+        - Ager-Cert kann Gens registrieren
+        - Gens-Cert kann Human registrieren
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserRequest'
+            examples:
+              registerGens:
+                summary: Register Gens
+                value:
+                  username: gens001
+                  secret: SecurePass123
+                  role: gens
+                  affiliation: jedo.alps.worb
+                  attrs:
+                    email: gens001@example.com
+              registerHuman:
+                summary: Register Human
+                value:
+                  username: human001
+                  secret: SecurePass456
+                  role: human
+                  affiliation: jedo.alps.worb.bern
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /certificates/enroll:
+    post:
+      tags:
+        - Certificates
+      summary: Enroll a user
+      description: |
+        Enrollt einen registrierten Benutzer und gibt das X.509-Zertifikat zurück.
+        Verwendet Idemix für Privacy-Preserving Credentials.
+      operationId: enrollUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollUserRequest'
+            examples:
+              enrollGens:
+                summary: Enroll Gens
+                value:
+                  username: gens001
+                  secret: SecurePass123
+                  role: gens
+                  csrOptions:
+                    cn: gens001
+                    hosts:
+                      - gens001.jedo.dev
+                      - localhost
+      responses:
+        '200':
+          description: User successfully enrolled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /certificates/reenroll:
+    post:
+      tags:
+        - Certificates
+      summary: Re-enroll an existing user
+      description: |
+        Re-enrollt einen existierenden Benutzer (Certificate Renewal).
+        Erneuert das Zertifikat ohne neue Registration.
+      operationId: reenrollUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+              properties:
+                username:
+                  type: string
+                  description: User identifier
+                  example: gens001
+      responses:
+        '200':
+          description: User successfully re-enrolled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReenrollUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /certificates/revoke:
+    post:
+      tags:
+        - Certificates
+      summary: Revoke a user certificate
+      description: |
+        Widerruft das Zertifikat eines Benutzers.
+        Nur für Admin/Ager-Rollen verfügbar.
+      operationId: revokeUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeUserRequest'
+      responses:
+        '200':
+          description: Certificate successfully revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /certificates/{username}:
+    get:
+      tags:
+        - Certificates
+      summary: Get certificate information
+      description: Ruft Informationen über ein Zertifikat ab
+      operationId: getCertificate
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: User identifier
+          schema:
+            type: string
+            example: gens001
+      responses:
+        '200':
+          description: Certificate information retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateInfoResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Basic health check
+      description: Returns service health status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /health/ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness probe
+      description: Checks if service is ready to accept traffic (includes CA connectivity)
+      operationId: readinessCheck
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+
+  /health/live:
+    get:
+      tags:
+        - Health
+      summary: Liveness probe
+      description: Checks if service is alive
+      operationId: livenessCheck
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    RegisterUserRequest:
+      type: object
+      required:
+        - username
+        - secret
+        - role
+        - affiliation
+      properties:
+        username:
+          type: string
+          pattern: '^[a-zA-Z0-9]+$'
+          minLength: 3
+          maxLength: 50
+          description: Unique user identifier (alphanumeric)
+          example: gens001
+        secret:
+          type: string
+          minLength: 8
+          maxLength: 64
+          description: User password (minimum 8 characters)
+          example: SecurePass123
+        role:
+          type: string
+          enum: [gens, human]
+          description: User role in the hierarchy
+          example: gens
+        affiliation:
+          type: string
+          pattern: '^[a-z0-9.]+$'
+          description: Organizational affiliation (dot-separated)
+          example: jedo.alps.worb
+        attrs:
+          type: object
+          additionalProperties:
+            type: string
+          description: Additional user attributes
+          example:
+            email: gens001@example.com
+            department: operations
+
+    RegisterUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            username:
+              type: string
+              example: gens001
+            secret:
+              type: string
+              description: Secret for enrollment
+              example: xyz123secret
+            role:
+              type: string
+              example: gens
+            affiliation:
+              type: string
+              example: jedo.alps.worb
+
+    EnrollUserRequest:
+      type: object
+      required:
+        - username
+        - secret
+        - role
+      properties:
+        username:
+          type: string
+          example: gens001
+        secret:
+          type: string
+          description: Secret from registration
+          example: xyz123secret
+        role:
+          type: string
+          enum: [gens, human]
+          example: gens
+        csrOptions:
+          type: object
+          description: Certificate Signing Request options
+          properties:
+            cn:
+              type: string
+              description: Common Name
+              example: gens001
+            hosts:
+              type: array
+              items:
+                type: string
+              description: Subject Alternative Names (DNS)
+              example: [gens001.jedo.dev, localhost]
+            names:
+              type: array
+              items:
+                type: object
+                properties:
+                  C:
+                    type: string
+                    description: Country
+                    example: CH
+                  ST:
+                    type: string
+                    description: State
+                    example: Bern
+                  L:
+                    type: string
+                    description: Locality
+                    example: Worb
+                  O:
+                    type: string
+                    description: Organization
+                    example: JEDO
+
+    EnrollUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            username:
+              type: string
+              example: gens001
+            certificate:
+              type: string
+              description: PEM-encoded X.509 certificate
+              example: "-----BEGIN CERTIFICATE-----\nMIIC..."
+            mspId:
+              type: string
+              example: AlpsMSP
+            role:
+              type: string
+              example: gens
+
+    ReenrollUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            username:
+              type: string
+              example: gens001
+            certificate:
+              type: string
+              description: Renewed PEM-encoded certificate
+              example: "-----BEGIN CERTIFICATE-----\nMIIC..."
+
+    RevokeUserRequest:
+      type: object
+      required:
+        - username
+      properties:
+        username:
+          type: string
+          example: gens001
+        reason:
+          type: string
+          enum:
+            - unspecified
+            - keyCompromise
+            - affiliationChanged
+            - superseded
+            - cessationOfOperation
+          default: unspecified
+          example: affiliationChanged
+
+    RevokeUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            username:
+              type: string
+              example: gens001
+            revoked:
+              type: boolean
+              example: true
+
+    CertificateInfoResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            username:
+              type: string
+              example: gens001
+            mspId:
+              type: string
+              example: AlpsMSP
+            type:
+              type: string
+              example: X.509
+            certificate:
+              type: object
+              properties:
+                pem:
+                  type: string
+                  example: "-----BEGIN CERTIFICATE-----\nMIIC..."
+                valid:
+                  type: boolean
+                  example: true
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        service:
+          type: string
+          example: ca-service
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-12-13T13:00:00.000Z"
+
+    ReadinessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ready, not ready]
+          example: ready
+        service:
+          type: string
+          example: ca-service
+        ca:
+          type: object
+          properties:
+            healthy:
+              type: boolean
+              example: true
+            caName:
+              type: string
+              example: ca.alps.ea.jedo.dev
+            version:
+              type: string
+              example: 1.5.7
+        timestamp:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Validation error
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: username
+              message:
+                type: string
+                example: username is required
+
+  responses:
+    BadRequest:
+      description: Bad Request - Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized - Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: Unauthorized
+            details: Client certificate required
+
+    NotFound:
+      description: Not Found - Resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: User not found
+
+    Conflict:
+      description: Conflict - Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: User already registered
+
+    InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: Internal Server Error

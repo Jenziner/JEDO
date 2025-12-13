@@ -1,0 +1,19 @@
+const pinoHttp = require('pino-http');
+const { logger } = require('../config/logger');
+
+const requestLogger = pinoHttp({
+  logger,
+  autoLogging: {
+    ignore: (req) => req.url === '/health' || req.url === '/health/live',
+  },
+  customLogLevel: (req, res, err) => {
+    if (res.statusCode >= 400 && res.statusCode < 500) {
+      return 'warn';
+    } else if (res.statusCode >= 500 || err) {
+      return 'error';
+    }
+    return 'info';
+  },
+});
+
+module.exports = { requestLogger };

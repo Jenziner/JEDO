@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
-
-import { fabricProxyService } from '../services/fabricProxyService';
-import { fabricConfig } from '../config/fabric';
+import { serviceConfig } from '../config/services';
+import logger from '../config/logger';
 
 const router = Router();
 
@@ -13,36 +12,32 @@ interface HealthResponse {
     uptime: number;
     environment: string;
     version: string;
-    fabric?: {
-      connected: boolean;
-      mspId: string;
-      channel: string;
-      chaincode: string;
-    };
+    services?: {
+      name: string;
+      status: 'up' | 'down';
+    }[];
   };
 }
 
-router.get('/health', async (_req: Request, res: Response<HealthResponse>) => {
+/**
+ * GET /health
+ * Liveness probe - is the Gateway running?
+ */
+router.get('/health', (_req: Request, res: Response<HealthResponse>) => {
   try {
     const healthcheck: HealthResponse = {
       success: true,
       data: {
-        status: 'OK',
+        status: 'Healthy',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         environment: process.env.NODE_ENV || 'development',
-        version: process.env.npm_package_version || '1.0.0',
-        fabric: {
-          connected: true,
-          mspId: fabricConfig.mspId,
-          channel: fabricConfig.channelName,
-          chaincode: fabricConfig.chaincodeName,
-        },
+        version: '1.0.0',
       },
     };
 
     res.status(200).json(healthcheck);
-  } catch (_error) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       data: {
@@ -50,23 +45,43 @@ router.get('/health', async (_req: Request, res: Response<HealthResponse>) => {
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         environment: process.env.NODE_ENV || 'development',
-        version: process.env.npm_package_version || '1.0.0',
+        version: '1.0.0',
       },
     });
   }
 });
 
+/**
+ * GET /ready
+ * Readiness probe - are backend services reachable?
+ */
 router.get('/ready', async (_req: Request, res: Response) => {
   try {
-    const isConnected = fabricProxyService['grpcClient'] !== null;
+    // Check backend services
+    const serviceChecks = await Promise.allSettled([
+      checkServiceHealth('ledgerService'),
+      checkServiceHealth('caService'),
+    ]);
 
-    if (!isConnected) {
+    const results = [
+      { name: 'ledger', status: serviceChecks[0].status === 'fulfilled' && serviceChecks[0].value ? 'up' : 'down' },
+      { name: 'ca', status: serviceChecks[1].status === 'fulfilled' && serviceChecks[1].value ? 'up' : 'down' },
+    ];
+
+    const allReady = results.every((r) => r.status === 'up');
+
+    if (!allReady) {
+      logger.warn({ services: results }, 'Gateway not ready');
       return res.status(503).json({
         success: false,
         data: {
           status: 'Not Ready',
-          message: 'Fabric Gateway not connected',
+          message: 'Backend services unavailable',
           timestamp: new Date().toISOString(),
+          uptime: process.uptime(),
+          environment: process.env.NODE_ENV || 'development',
+          version: '1.0.0',
+          services: results,
         },
       });
     }
@@ -76,19 +91,32 @@ router.get('/ready', async (_req: Request, res: Response) => {
       data: {
         status: 'Ready',
         timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+        version: '1.0.0',
+        services: results,
       },
     });
-  } catch (_error) {
+  } catch (error) {
+    logger.error({ err: error }, 'Readiness check failed');
     return res.status(503).json({
       success: false,
       data: {
         status: 'Not Ready',
+        message: 'Readiness check failed',
         timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+        version: '1.0.0',
       },
     });
   }
 });
 
+/**
+ * GET /live
+ * Simple liveness check
+ */
 router.get('/live', (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
@@ -98,5 +126,32 @@ router.get('/live', (_req: Request, res: Response) => {
     },
   });
 });
+
+/**
+ * Helper: Check if backend service is healthy
+ */
+async function checkServiceHealth(
+  serviceName: keyof typeof serviceConfig
+): Promise<boolean> {
+  const config = serviceConfig[serviceName];
+  const healthUrl = `${config.url}${config.healthPath}`;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
+    const response = await fetch(healthUrl, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: { 'User-Agent': 'jedo-gateway-health' },
+    });
+
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch (error) {
+    logger.debug({ service: serviceName, error }, 'Service health check failed');
+    return false;
+  }
+}
 
 export default router;

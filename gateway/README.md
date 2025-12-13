@@ -25,6 +25,53 @@ Stateless REST API Gateway for Hyperledger Fabric 3.0 JEDO-Ecosystem blockchain 
 └─────────────┘ X-Fabric-Key (Base64 PEM)   └──────────────────┘ via Gateway SDK    └─────────────┘
 
 
+┌─────────────────────────────────────────────┐
+│  Mobile App (Client)                        │
+└──────────────────┬──────────────────────────┘
+                   │ HTTPS
+                   ▼
+┌─────────────────────────────────────────────┐
+│  Gateway (Proxy Only)                       │
+│  - express                                  │
+│  - http-proxy-middleware                    │
+│  - helmet, cors, rate-limit                 │
+└──────────┬──────────────┬───────────────────┘
+           │              │
+           ▼              ▼
+┌──────────────────┐  ┌──────────────────────┐
+│  ledger-service  │  │  ca-service          │
+│  - fabric-gateway│  │  - fabric-ca-client  │
+│  - grpc          │  │  - fabric-network    │
+└──────────────────┘  └──────────────────────┘
+
+
+┌─────────────────────────────────────────┐
+│           Mobile App (Clients)          │
+└─────────────────┬───────────────────────┘
+                  │ HTTPS
+                  ▼
+┌─────────────────────────────────────────┐
+│         API Gateway (Port 3000)         │
+│  ┌──────────────────────────────────┐   │
+│  │    Proxy Router & Rate Limiting  │   │
+│  └──────────────────────────────────┘   │
+└─────────┬─────────────────┬─────────────┘
+          │                 │
+    ┌─────▼─────┐     ┌────▼──────┐
+    │CA Service │     │  Ledger   │
+    │Port 53911 │     │Port 53921 │
+    └─────┬─────┘     └────┬──────┘
+          │                │
+          ▼                ▼
+    ┌──────────────────────────┐
+    │  Hyperledger Fabric CA   │
+    │  Peer: 172.16.3.21:53211 │
+    │  Channel: ea             │
+    │  Chaincode: jedo-wallet  │
+    └──────────────────────────┘
+
+
+
 **Key Concept**: Client sends their own X.509 certificate and private key in HTTP headers. Gateway builds Fabric identity dynamically per request and submits transactions **as that client**.## Features
 
 ## Technologie-Stack

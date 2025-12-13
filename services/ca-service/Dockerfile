@@ -1,25 +1,47 @@
-# Verwende ein leichtgewichtiges Node.js-Image als Basis
-FROM node:lts-alpine
+# ========================================
+# STAGE 1: Dependencies
+# ========================================
+FROM node:20-alpine AS dependencies
 
-# Setze das Arbeitsverzeichnis auf /app
-WORKDIR /app
+WORKDIR /build
 
-# Kopiere package.json und package-lock.json, um die Abhängigkeiten zu installieren
+# Copy package files
 COPY package*.json ./
 
-# Installiere die notwendigen Node.js-Abhängigkeiten
-RUN npm install
+# Use npm install (monorepo-friendly, no lock file needed)
+RUN npm install --only=production --ignore-scripts
 
-# Kopiere den Rest der App-Dateien ins Arbeitsverzeichnis
-COPY . .
+# ========================================
+# STAGE 2: Production Runtime
+# ========================================
+FROM node:20-alpine
 
-# Setze Ausführungsberechtigungen für das Start-Skript
-RUN chmod +x /app/start.sh
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
 
-# Exponiere den Port, auf dem der API-Server läuft
-EXPOSE 3000
+# Create app directory with correct permissions
+RUN mkdir -p /app && chown -R node:node /app
 
-# Starte den API-Server
-#CMD ["node", "server.js"]
-CMD ["sh", "/app/start.sh"]
+WORKDIR /app
 
+# Switch to non-root user
+USER node
+
+# Copy dependencies from dependencies stage
+COPY --from=dependencies --chown=node:node /build/node_modules ./node_modules
+
+# Copy application source
+COPY --chown=node:node . .
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start application
+CMD ["node", "server.js"]

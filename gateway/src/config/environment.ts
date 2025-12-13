@@ -32,9 +32,6 @@ interface Environment {
   maxRequestSize: string;
   corsOrigin: string;
   fabric: {
-    networkName: string;
-    channelName: string;
-    chaincodeName: string;
     mspId: string;
     peerEndpoint: string;
     peerHostAlias: string;
@@ -117,9 +114,6 @@ export const env: Environment = {
 
   // Hyperledger Fabric
   fabric: {
-    networkName: getEnv('FABRIC_NETWORK_NAME'),
-    channelName: getEnv('FABRIC_CHANNEL_NAME'),
-    chaincodeName: getEnv('FABRIC_CHAINCODE_NAME'),
     mspId: getEnv('FABRIC_MSP_ID'),
     peerEndpoint: getEnv('FABRIC_PEER_ENDPOINT'),
     peerHostAlias: getEnv('FABRIC_PEER_HOST_ALIAS'),
