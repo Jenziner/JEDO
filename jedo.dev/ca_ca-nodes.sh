@@ -386,8 +386,8 @@ EOF
             --id.secret $ADMIN_PASS \
             --id.type admin \
             --id.affiliation $AFFILIATION \
-            --id.attrs "role=admin:ecert"
-        
+            --id.attrs '"role=admin","hf.Registrar.Roles=client,user,admin","hf.Registrar.DelegateRoles=client,user","hf.Registrar.Attributes=*","hf.Revoker=true","hf.GenCRL=true"'
+   
         # Enroll Admin at Orbis-CA
         docker exec -it $ORBIS_MSP_NAME fabric-ca-client enroll \
             -u https://$ADMIN_NAME:$ADMIN_PASS@$ORBIS_MSP_NAME:$ORBIS_MSP_PORT \

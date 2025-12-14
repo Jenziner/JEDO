@@ -1,0 +1,249 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "JEDO CA Service API",
+    "description": "Certificate Authority Service for Hyperledger Fabric",
+    "version": "1.0.0",
+    "contact": {
+      "name": "JEDO Development Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://ca.via.alps.ea.jedo.dev:53911",
+      "description": "CA Service (HTTPS)"
+    },
+    {
+      "url": "https://localhost:53911",
+      "description": "Local Development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Service health checks"
+    },
+    {
+      "name": "CA",
+      "description": "Certificate Authority information"
+    },
+    {
+      "name": "Certificates",
+      "description": "Certificate registration and enrollment"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health Check",
+        "description": "Check if the service is running",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "status": { "type": "string", "example": "healthy" },
+                    "service": { "type": "string", "example": "ca-service" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Readiness Check",
+        "responses": {
+          "200": { "description": "Service is ready" }
+        }
+      }
+    },
+    "/health/live": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Liveness Check",
+        "responses": {
+          "200": { "description": "Service is alive" }
+        }
+      }
+    },
+    "/ca/info": {
+      "get": {
+        "tags": ["CA"],
+        "summary": "Get CA Information",
+        "description": "Retrieve Certificate Authority information",
+        "responses": {
+          "200": {
+            "description": "CA information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "caName": { "type": "string", "example": "msp.alps.ea.jedo.dev" },
+                        "caUrl": { "type": "string", "example": "https://msp.alps.ea.jedo.dev:53041" },
+                        "mspId": { "type": "string", "example": "alps" },
+                        "tlsEnabled": { "type": "boolean", "example": true },
+                        "status": { "type": "string", "example": "connected" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/certificates/register": {
+      "post": {
+        "tags": ["Certificates"],
+        "summary": "Register User",
+        "description": "Register a new user with Fabric CA",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "secret", "role", "affiliation"],
+                "properties": {
+                  "username": { "type": "string", "example": "test-gens-123" },
+                  "secret": { "type": "string", "example": "TestPass123!" },
+                  "role": { 
+                    "type": "string", 
+                    "enum": ["gens", "human"],
+                    "example": "gens" 
+                  },
+                  "affiliation": { "type": "string", "example": "jedo.ea.alps" },
+                  "attrs": {
+                    "type": "object",
+                    "example": {
+                      "role": "gens",
+                      "hf.Registrar.Roles": "client"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "secret": { "type": "string", "example": "TestPass123!" }
+                      }
+                    },
+                    "message": { "type": "string", "example": "User registered successfully" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/certificates/enroll": {
+      "post": {
+        "tags": ["Certificates"],
+        "summary": "Enroll User",
+        "description": "Enroll a user and issue certificate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "secret"],
+                "properties": {
+                  "username": { "type": "string", "example": "test-gens-123" },
+                  "secret": { "type": "string", "example": "TestPass123!" },
+                  "enrollmentType": {
+                    "type": "string",
+                    "enum": ["x509", "idemix"],
+                    "default": "x509",
+                    "example": "x509"
+                  },
+                  "csr": {
+                    "type": "object",
+                    "properties": {
+                      "cn": { "type": "string", "example": "test-gens-123.alps.ea.jedo.dev" },
+                      "names": { "type": "string", "example": "C=jd,ST=dev,L=ea,O=alps" },
+                      "hosts": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "example": ["msp.alps.ea.jedo.dev", "*.jedo.dev"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User enrolled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "certificate": { "type": "string", "description": "PEM-encoded certificate" },
+                        "rootCertificate": { "type": "string", "description": "PEM-encoded root cert" },
+                        "caChain": { "type": "string", "description": "PEM-encoded CA chain" }
+                      }
+                    },
+                    "message": { "type": "string", "example": "User enrolled successfully" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "tags": ["Documentation"],
+        "summary": "Get OpenAPI Specification",
+        "responses": {
+          "200": {
+            "description": "OpenAPI specification",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

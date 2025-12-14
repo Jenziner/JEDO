@@ -1,4 +1,4 @@
-const fabricCAService = require('../services/fabric-ca.service');
+const certificateService = require('../services/certificate.service');
 const { logger } = require('../config/logger');
 
 class HealthController {
@@ -21,9 +21,34 @@ class HealthController {
    */
   async readinessCheck(req, res) {
     try {
-      const caHealth = await fabricCAService.healthCheck();
+      // Check if certificate service is initialized
+      const caConnected = !!certificateService.caClient;
+      const registrarLoaded = !!certificateService.adminIdentity;
+      
+      let caReachable = false;
+      let caInfo = null;
+      
+      // Test CA connection
+      if (caConnected) {
+        try {
+          caInfo = await certificateService.caClient.getCaInfo();
+          caReachable = true;
+        } catch (err) {
+          logger.warn('CA not reachable', { error: err.message });
+        }
+      }
+      
+      const healthy = caConnected && registrarLoaded && caReachable;
+      
+      const caHealth = {
+        healthy,
+        connected: caConnected,
+        registrarLoaded,
+        reachable: caReachable,
+        caName: caInfo?.CAName || null
+      };
 
-      if (caHealth.healthy) {
+      if (healthy) {
         res.status(200).json({
           status: 'ready',
           service: 'ca-service',
@@ -40,7 +65,7 @@ class HealthController {
       }
 
     } catch (error) {
-      logger.error({ err: error }, 'Readiness check failed');
+      logger.error('Readiness check failed', { error: error.message });
       res.status(503).json({
         status: 'not ready',
         service: 'ca-service',

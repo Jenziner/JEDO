@@ -194,6 +194,62 @@ for AGER in $AGERS; do
 done
 
 ###############################################################
+# Register and entroll Gateway TLS certs
+###############################################################
+for AGER in $AGERS; do
+    # Params for gateway
+    AGER_GATEWAY_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.Name" "$CONFIG_FILE")
+    AGER_GATEWAY_PASS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.Pass" "$CONFIG_FILE")
+    REGNUM=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Administration.Parent" "$CONFIG_FILE")
+    AFFILIATION=$ORBIS.$REGNUM.$AGER
+
+
+    # Register Gateway identity
+    log_debug "Gateway Name:" "$AGER_GATEWAY_NAME"
+    log_debug "MSP Affiliation" "$AFFILIATION"
+    echo_info "Gateway $AGER_GATEWAY_NAME TLS registering and enrolling..."
+    docker exec -it $ORBIS_TLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TLS_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --mspdir "$ORBIS_TLS_INFRA/$ORBIS/$ORBIS_TLS_NAME/tls" \
+        --id.name $AGER_GATEWAY_NAME --id.secret $AGER_GATEWAY_PASS --id.type client --id.affiliation $AFFILIATION
+    docker exec -it $ORBIS_TLS_NAME fabric-ca-client enroll -u https://$AGER_GATEWAY_NAME:$AGER_GATEWAY_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+        --home $ORBIS_TLS_DIR \
+        --tls.certfiles "$ORBIS_TLS_CERT" \
+        --enrollment.profile tls \
+        --mspdir $ORBIS_TLS_INFRA/$ORBIS/$REGNUM/$AGER/$AGER_GATEWAY_NAME/tls \
+        --csr.hosts ${AGER_GATEWAY_NAME},*.$ORBIS.$ORBIS_ENV
+
+
+    ###############################################################
+    # Register and entroll Service TLS certs
+    ###############################################################
+    SERVICES=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.Services[].Name" $CONFIG_FILE)
+    for SERVICE in $SERVICES; do
+        # Params for service
+        SERVICE_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.Services[] | select(.Name == \"$SERVICE\") | .Name" $CONFIG_FILE)
+        SERVICE_PASS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Gateway.Services[] | select(.Name == \"$SERVICE\") | .Pass" $CONFIG_FILE)
+
+
+        # Register Microservice identity
+        log_debug "Gateway Name:" "$SERVICE_NAME"
+        log_debug "MSP Affiliation" "$AFFILIATION"
+        echo_info "Service $SERVICE_NAME TLS registering and enrolling..."
+        docker exec -it $ORBIS_TLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+            --home $ORBIS_TLS_DIR \
+            --tls.certfiles "$ORBIS_TLS_CERT" \
+            --mspdir "$ORBIS_TLS_INFRA/$ORBIS/$ORBIS_TLS_NAME/tls" \
+            --id.name $SERVICE_NAME --id.secret $SERVICE_PASS --id.type client --id.affiliation $AFFILIATION
+        docker exec -it $ORBIS_TLS_NAME fabric-ca-client enroll -u https://$SERVICE_NAME:$SERVICE_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
+            --home $ORBIS_TLS_DIR \
+            --tls.certfiles "$ORBIS_TLS_CERT" \
+            --enrollment.profile tls \
+            --mspdir $ORBIS_TLS_INFRA/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/tls \
+            --csr.hosts ${SERVICE_NAME},*.$ORBIS.$ORBIS_ENV
+    done
+done
+
+###############################################################
 # Last Tasks
 ###############################################################
 chmod -R 750 infrastructure

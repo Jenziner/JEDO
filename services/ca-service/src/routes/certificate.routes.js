@@ -1,60 +1,35 @@
 const express = require('express');
-const certificateController = require('../controllers/certificate.controller');
-const { validate } = require('../middleware/validation.middleware');
-const {
-  registerUserSchema,
-  enrollUserSchema,
-  revokeUserSchema,
-} = require('../validators/certificate.validator');
-
 const router = express.Router();
+const certificateController = require('../controllers/certificate.controller');
+const { requireAuthentication, requireRole } = require('../middleware/auth.middleware');
+const { validateRegistration, validateEnrollment } = require('../middleware/validation.middleware');
+
 
 /**
  * POST /certificates/register
- * Register a new user (Gens or Human)
+ * Register new user
+ * 
+ * Auth: Certificate in Body
+ * Authorization: ager → gens, gens → human
  */
-router.post(
-  '/register',
-  validate(registerUserSchema),
-  certificateController.register.bind(certificateController)
+router.post('/register',
+  requireAuthentication,
+  requireRole('ager', 'gens', 'admin'),
+  validateRegistration,
+  certificateController.registerCertificate
 );
+
 
 /**
  * POST /certificates/enroll
- * Enroll a user (obtain certificate)
+ * Enroll user and issue certificate
+ * 
+ * Auth: None (uses username + secret)
  */
-router.post(
-  '/enroll',
-  validate(enrollUserSchema),
-  certificateController.enroll.bind(certificateController)
+router.post('/enroll',
+  validateEnrollment,
+  certificateController.enrollCertificate
 );
 
-/**
- * POST /certificates/reenroll
- * Re-enroll an existing user
- */
-router.post(
-  '/reenroll',
-  certificateController.reenroll.bind(certificateController)
-);
-
-/**
- * POST /certificates/revoke
- * Revoke a user certificate
- */
-router.post(
-  '/revoke',
-  validate(revokeUserSchema),
-  certificateController.revoke.bind(certificateController)
-);
-
-/**
- * GET /certificates/:username
- * Get certificate information
- */
-router.get(
-  '/:username',
-  certificateController.getCertificate.bind(certificateController)
-);
 
 module.exports = router;

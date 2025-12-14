@@ -25,7 +25,6 @@ coverage/
 
 # Documentation
 README.md
-docs/
 
 # Build artifacts
 dist/

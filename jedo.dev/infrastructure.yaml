@@ -140,16 +140,19 @@ Ager:
                 Port: 53231
       Gateway: #API-Gateway
           Name: via.alps.ea.jedo.dev
+          Pass: Test1
           Version: 1.0
           IP: 172.16.3.90
           Port: 53901
           Services:
             - Name: ca.via.alps.ea.jedo.dev
+              Pass: Test1
               Source: services/ca-service
               Version: 1.0
               IP: 172.16.3.91
               Port: 53911
             - Name: ledger.via.alps.ea.jedo.dev #porta.via.alps...?
+              Pass: Test1
               Source: services/ledger-service
               Version: 1.0
               IP: 172.16.3.92

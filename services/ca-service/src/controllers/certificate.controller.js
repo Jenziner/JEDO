@@ -1,128 +1,96 @@
+// src/controllers/certificate.controller.js
+
 const certificateService = require('../services/certificate.service');
 const { logger } = require('../config/logger');
 
+// Fixed attributes that are set automatically by Fabric CA
+const FIXED_ATTRIBUTES = [
+  'hf.EnrollmentID',
+  'hf.Type', 
+  'hf.Affiliation'
+];
+
 class CertificateController {
-  
-  /**
-   * POST /certificates/register
-   * Register a new user (Gens or Human)
-   */
-  async register(req, res, next) {
+  async registerCertificate(req, res, next) {
     try {
-      const { username, secret, role, affiliation, attrs } = req.body;
+      const { username, secret, role, affiliation, attrs = {} } = req.body;
       
-      // Extract requester certificate from mTLS (if enabled)
-      const requesterCert = req.client?.certificate || null;
-
-      const result = await certificateService.registerUser(
-        { username, secret, role, affiliation, attrs },
-        requesterCert
-      );
-
-      logger.info({ username, role }, 'User registered via API');
-
-      res.status(201).json({
-        success: true,
-        data: result,
+      logger.debug('Registration validation passed');
+      
+      // Filter out fixed hf.* attributes (set automatically by Fabric CA)
+      const cleanAttrs = Object.entries(attrs)
+        .filter(([key]) => !FIXED_ATTRIBUTES.includes(key))
+        .reduce((obj, [key, value]) => {
+          obj[key] = value;
+          return obj;
+        }, {});
+      
+      logger.info('Registering with filtered attributes', {
+        username,
+        role,
+        originalAttrs: Object.keys(attrs),
+        filteredAttrs: Object.keys(cleanAttrs)
       });
-
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * POST /certificates/enroll
-   * Enroll a user (obtain certificate)
-   */
-  async enroll(req, res, next) {
-    try {
-      const { username, secret, role, csrOptions } = req.body;
-
-      const result = await certificateService.enrollUser({
+      
+      const result = await certificateService.registerUser(
         username,
         secret,
         role,
-        csrOptions,
-      });
-
-      logger.info({ username, role }, 'User enrolled via API');
-
-      res.status(200).json({
-        success: true,
-        data: result,
-      });
-
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * POST /certificates/reenroll
-   * Re-enroll an existing user
-   */
-  async reenroll(req, res, next) {
-    try {
-      const { username } = req.body;
-
-      const result = await certificateService.reenrollUser(username);
-
-      logger.info({ username }, 'User re-enrolled via API');
-
-      res.status(200).json({
-        success: true,
-        data: result,
-      });
-
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * POST /certificates/revoke
-   * Revoke a user certificate
-   */
-  async revoke(req, res, next) {
-    try {
-      const { username, reason } = req.body;
-      
-      const requesterCert = req.client?.certificate || null;
-
-      const result = await certificateService.revokeUser(
-        username,
-        reason,
-        requesterCert
+        affiliation,
+        cleanAttrs
       );
-
-      logger.info({ username, reason }, 'User revoked via API');
-
+      
       res.status(200).json({
         success: true,
-        data: result,
+        message: 'User registered successfully',
+        data: result
       });
+    } catch (error) {
+      logger.error('Registration request failed', { 
+        error: error.message 
+      });
+      next(error);
+    }
+  }
 
+  async enrollCertificate(req, res, next) {
+    try {
+      logger.debug('Enrollment validation passed');
+      
+      const result = await certificateService.enrollUser(req.body);
+      
+      res.status(200).json({
+        success: true,
+        message: 'User enrolled successfully',
+        data: result
+      });
+    } catch (error) {
+      logger.error('Enrollment request failed', { 
+        error: error.message 
+      });
+      next(error);
+    }
+  }
+
+  async revokeCertificate(req, res, next) {
+    try {
+      // TODO: Implement certificate revocation
+      res.status(501).json({
+        success: false,
+        message: 'Certificate revocation not implemented yet'
+      });
     } catch (error) {
       next(error);
     }
   }
 
-  /**
-   * GET /certificates/:username
-   * Get certificate information
-   */
-  async getCertificate(req, res, next) {
+  async getCertificateInfo(req, res, next) {
     try {
-      const { username } = req.params;
-
-      const result = await certificateService.getCertificateInfo(username);
-
-      res.status(200).json({
-        success: true,
-        data: result,
+      // TODO: Implement certificate info retrieval
+      res.status(501).json({
+        success: false,
+        message: 'Certificate info retrieval not implemented yet'
       });
-
     } catch (error) {
       next(error);
     }

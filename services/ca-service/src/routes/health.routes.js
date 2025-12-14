@@ -7,18 +7,18 @@ const router = express.Router();
  * GET /health
  * Basic health check
  */
-router.get('/health', healthController.healthCheck.bind(healthController));
+router.get('/', healthController.healthCheck.bind(healthController));  // ← GEÄNDERT!
 
 /**
  * GET /health/ready
  * Readiness probe
  */
-router.get('/health/ready', healthController.readinessCheck.bind(healthController));
+router.get('/ready', healthController.readinessCheck.bind(healthController));
 
 /**
  * GET /health/live
  * Liveness probe
  */
-router.get('/health/live', healthController.livenessCheck.bind(healthController));
+router.get('/live', healthController.livenessCheck.bind(healthController));
 
 module.exports = router;

@@ -1,7 +1,47 @@
+const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const { createApp } = require('./src/app');
-const fabricCAService = require('./src/services/fabric-ca.service');
+const certificateService = require('./src/services/certificate.service');
 const env = require('./src/config/environment');
 const { logger } = require('./src/config/logger');
+
+/**
+ * Create HTTP or HTTPS Server based on TLS configuration
+ */
+function createServer(app) {
+  // TLS disabled → HTTP
+  if (!env.tls.enabled) {
+    logger.warn('TLS is disabled - creating HTTP server');
+    return http.createServer(app);
+  }
+
+  // TLS enabled → HTTPS
+  try {
+    logger.info('Loading TLS certificates...');
+    
+    const tlsOptions = {
+      cert: fs.readFileSync(env.tls.certPath),
+      key: fs.readFileSync(env.tls.keyPath),
+      ca: fs.readFileSync(env.tls.caPath),
+      requestCert: env.requireClientCert,
+      rejectUnauthorized: false, 
+    };
+
+    logger.info({
+      certPath: env.tls.certPath,
+      keyPath: env.tls.keyPath,
+      caPath: env.tls.caPath,
+      requireClientCert: env.security.requireClientCert
+    }, '✅ TLS certificates loaded successfully');
+
+    return https.createServer(tlsOptions, app);
+
+  } catch (error) {
+    logger.error({ err: error }, '❌ Failed to load TLS certificates');
+    throw error;
+  }
+}
 
 /**
  * Start CA Service
@@ -10,24 +50,32 @@ async function startServer() {
   try {
     logger.info('Starting CA Service...');
 
-    // Initialize Fabric CA Client
-    logger.info('Initializing Fabric CA Client...');
-    await fabricCAService.initialize();
+    // Initialize certificate service
+    await certificateService.initialize();
+    logger.info('Certificate service initialized');
 
     // Create Express App
     const app = createApp();
 
-    // Start HTTP Server
-    const server = app.listen(env.port, env.host, () => {
+    // Create Server (HTTP or HTTPS)
+    const server = createServer(app);
+
+    // Start Server
+    server.listen(env.port, env.host, () => {
+      const protocol = env.tls.enabled ? 'https' : 'http';
+      
       logger.info({
+        protocol,
         port: env.port,
         host: env.host,
+        url: `${protocol}://${env.serviceName}:${env.port}`,
         nodeEnv: env.nodeEnv,
         serviceName: env.serviceName,
         caUrl: env.fabricCa.caUrl,
         caName: env.fabricCa.caName,
         mspId: env.fabricCa.mspId,
-      }, '✅ CA Service started successfully');
+        tlsEnabled: env.tls.enabled
+      }, `✅ CA Service started successfully on ${protocol.toUpperCase()}`);
     });
 
     // Graceful Shutdown Handler
@@ -35,7 +83,7 @@ async function startServer() {
       logger.info({ signal }, 'Received shutdown signal, closing server...');
       
       server.close(() => {
-        logger.info('HTTP server closed');
+        logger.info('Server closed');
         process.exit(0);
       });
 

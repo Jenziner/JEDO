@@ -10,7 +10,11 @@ Read comment in JEDO/jedo.me/RootCA/ca.cnf
 1. cd ~/Entwicklung/JEDO/jedo.dev
 2. ./jedo.sh -a go
 
-## Test Service Health
+## Test CA-Service Health
+1. cd ~/Entwicklung/JEDO/services/ca-service/test
+2. ./test-service-health.sh
+
+## Test Ledgar-Service Health
 1. cd ~/Entwicklung/JEDO/services/ledger-service/test
 2. ./test-service-health.sh
 

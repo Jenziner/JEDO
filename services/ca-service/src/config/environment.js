@@ -60,30 +60,34 @@ module.exports = {
   logPretty: getEnvBoolean('LOG_PRETTY', true),
 
   // Security
-  requireClientCert: getEnvBoolean('REQUIRE_CLIENT_CERT', false),
-  rateLimitWindowMs: getEnvNumber('RATE_LIMIT_WINDOW_MS', 900000), // 15 min
-  rateLimitMaxRequests: getEnvNumber('RATE_LIMIT_MAX_REQUESTS', 100),
+  security: {
+    requireClientCert: getEnvBoolean('REQUIRE_CLIENT_CERT', false),
+    rateLimitWindowMs: getEnvNumber('RATE_LIMIT_WINDOW_MS', 900000),
+    rateLimitMaxRequests: getEnvNumber('RATE_LIMIT_MAX_REQUESTS', 100),
+    maxRequestSize: getEnvWithDefault('MAX_REQUEST_SIZE', '10mb'),
+  },
 
   // CORS
   corsOrigin: getEnvWithDefault('CORS_ORIGIN', '*'),
 
+  // TLS Configuration (SERVER)
+  tls: {
+    enabled: getEnvBoolean('TLS_ENABLED', false),
+    certPath: getEnvWithDefault('TLS_CERT_PATH', ''),
+    keyPath: getEnvWithDefault('TLS_KEY_PATH', ''),
+    caPath: getEnvWithDefault('TLS_CA_PATH', ''),
+  },
+
   // Hyperledger Fabric CA
   fabricCa: {
-    // Ager CA Configuration
     caName: getEnv('FABRIC_CA_NAME'),
     caUrl: getEnv('FABRIC_CA_URL'),
     caAdminUser: getEnv('FABRIC_CA_ADMIN_USER'),
     caAdminPass: getEnv('FABRIC_CA_ADMIN_PASS'),
     mspId: getEnv('FABRIC_MSP_ID'),
-    
-    // TLS Configuration
     tlsCertPath: getEnv('FABRIC_CA_TLS_CERT_PATH'),
     tlsVerify: getEnvBoolean('FABRIC_CA_TLS_VERIFY', true),
-    
-    // Idemix Configuration
     idemixCurve: getEnvWithDefault('FABRIC_CA_IDEMIX_CURVE', 'gurvy.Bn254'),
-    
-    // Certificate Hierarchy
     orbisName: getEnv('FABRIC_ORBIS_NAME'),
     regnumName: getEnv('FABRIC_REGNUM_NAME'),
     agerName: getEnv('FABRIC_AGER_NAME'),

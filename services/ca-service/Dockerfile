@@ -5,10 +5,8 @@ FROM node:20-alpine AS dependencies
 
 WORKDIR /build
 
-# Copy package files
 COPY package*.json ./
 
-# Use npm install (monorepo-friendly, no lock file needed)
 RUN npm install --only=production --ignore-scripts
 
 # ========================================
@@ -16,32 +14,51 @@ RUN npm install --only=production --ignore-scripts
 # ========================================
 FROM node:20-alpine
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install glibc for fabric-ca-client (binary is compiled for glibc, not musl)
+ENV GLIBC_VERSION=2.34-r0
 
-# Create app directory with correct permissions
-RUN mkdir -p /app && chown -R node:node /app
+RUN apk add --no-cache \
+    dumb-init \
+    curl \
+    wget \
+    tar \
+    ca-certificates && \
+    wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
+    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/glibc-${GLIBC_VERSION}.apk && \
+    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/glibc-bin-${GLIBC_VERSION}.apk && \
+    apk add --no-cache --force-overwrite \
+      glibc-${GLIBC_VERSION}.apk \
+      glibc-bin-${GLIBC_VERSION}.apk && \
+    rm -f glibc-${GLIBC_VERSION}.apk glibc-bin-${GLIBC_VERSION}.apk
+
+# Download and install fabric-ca-client
+RUN cd /tmp && \
+    wget https://github.com/hyperledger/fabric-ca/releases/download/v1.5.7/hyperledger-fabric-ca-linux-amd64-1.5.7.tar.gz && \
+    tar -xzf hyperledger-fabric-ca-linux-amd64-1.5.7.tar.gz && \
+    mv bin/fabric-ca-client /usr/local/bin/fabric-ca-client && \
+    chmod +x /usr/local/bin/fabric-ca-client && \
+    rm -rf /tmp/bin /tmp/config /tmp/hyperledger-fabric-ca-linux-amd64-1.5.7.tar.gz
+
+# Create app directory
+RUN mkdir -p /app /app/crypto /app/tls
 
 WORKDIR /app
 
-# Switch to non-root user
-USER node
-
-# Copy dependencies from dependencies stage
-COPY --from=dependencies --chown=node:node /build/node_modules ./node_modules
+# Copy dependencies
+COPY --from=dependencies /build/node_modules ./node_modules
 
 # Copy application source
-COPY --chown=node:node . .
+COPY . .
 
 # Expose port
 EXPOSE 3001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD if [ "$TLS_ENABLED" = "true" ]; then \
+        curl -k -f https://localhost:3001/health || exit 1; \
+      else \
+        node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"; \
+      fi
 
-# Use dumb-init to handle signals properly
-ENTRYPOINT ["dumb-init", "--"]
-
-# Start application
 CMD ["node", "server.js"]

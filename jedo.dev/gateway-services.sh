@@ -119,7 +119,9 @@ writeenf_ca-service() {
     local CA_IP=$5
     local CA_PORT=$6
     local CA_PASS=$7
-#    local CA_MSP=${10}
+    local TLS_CERT=$8
+    local TLS_KEY=$9
+    local TLS_CA=${10}
     local LOCAL_INFRA_DIR=${PWD}/infrastructure
     local LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME
 
@@ -136,7 +138,7 @@ HOST=0.0.0.0
 SERVICE_NAME=$SERVICE_NAME
 
 # Logging
-LOG_LEVEL=info
+LOG_LEVEL=debug
 LOG_PRETTY=true
 
 # Security
@@ -147,7 +149,15 @@ MAX_REQUEST_SIZE=10mb
 CORS_ORIGIN=http://$SERVICE_IP:$SERVICE_PORT
 
 # ========================================
-# HYPERLEDGER FABRIC CA
+# SERVER TLS (HTTPS Server für API)
+# ========================================
+TLS_ENABLED=true
+TLS_CERT_PATH=$TLS_CERT
+TLS_KEY_PATH=$TLS_KEY
+TLS_CA_PATH=$TLS_CA
+
+# ========================================
+# FABRIC CA CLIENT CONFIG
 # ========================================
 # CA Configuration
 FABRIC_CA_NAME=$CA_NAME
@@ -156,21 +166,26 @@ FABRIC_CA_ADMIN_USER=$CA_NAME
 FABRIC_CA_ADMIN_PASS=$CA_PASS
 FABRIC_MSP_ID=$AGER
 
-# TLS Configuration
-FABRIC_CA_TLS_CERT_PATH=/app/infrastructure/$ORBIS/tls.$ORBIS.$ORBIS_ENV/ca-cert.pem
-FABRIC_CA_TLS_VERIFY=true
-
 # Idemix Configuration
 FABRIC_CA_IDEMIX_CURVE=gurvy.Bn254
 
-# Certificate Hierarchy
+# ========================================
+# FABRIC CA TLS (Client → Fabric CA)
+# ========================================
+FABRIC_CA_TLS_CERT_PATH=/app/infrastructure/$ORBIS/tls.$ORBIS.$ORBIS_ENV/ca-cert.pem
+FABRIC_CA_TLS_VERIFY=true
+
+# ========================================
+# HIERARCHY
+# ========================================
 FABRIC_ORBIS_NAME=$ORBIS
 FABRIC_REGNUM_NAME=$REGNUM
 FABRIC_AGER_NAME=$AGER
 
-# Paths
+# ========================================
+# CRYPTO PATH
+# ========================================
 CRYPTO_PATH=/app/infrastructure
-
 EOF
 }
 
@@ -267,12 +282,24 @@ for REGNUM in $REGNUMS; do
                 PEER_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[0].Port1" $CONFIG_FILE)
 
                 # Crypto Material
-                TLS_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/signcerts"/*.pem 2>/dev/null | head -1)
+                TLS_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/tls/signcerts"/*.pem 2>/dev/null | head -1)
                 TLS_CERT_FILE=$(basename "$TLS_CERT_FULL")
-                TLS_CERT_DOCKER=/app/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/signcerts/$TLS_CERT_FILE
-                TLS_ROOT_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/tlscacerts"/*.pem 2>/dev/null | head -1)
-                TLS_ROOT_CERT_FILE=$(basename "$TLS_ROOT_CERT_FULL")
-                TLS_ROOT_CERT_DOCKER=/app/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/tlscacerts/$TLS_ROOT_CERT_FILE
+                TLS_CERT_DOCKER=/app/infrastructure/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/tls/signcerts/$TLS_CERT_FILE
+                TLS_KEY_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/tls/keystore"/*_sk 2>/dev/null | head -1)
+                TLS_KEY_FILE=$(basename "$TLS_KEY_FULL")
+                TLS_KEY_DOCKER=/app/infrastructure/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/tls/keystore/$TLS_KEY_FILE
+                TLS_CA_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/tls/tlscacerts"/*.pem 2>/dev/null | head -1)
+                TLS_CA_FILE=$(basename "$TLS_CA_FULL")
+                TLS_CA_DOCKER=/app/infrastructure/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/tls/tlscacerts/$TLS_CA_FILE
+
+
+
+                TLS_PEER_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/signcerts"/*.pem 2>/dev/null | head -1)
+                TLS_PEER_CERT_FILE=$(basename "$TLS_PEER_CERT_FULL")
+                TLS_PEER_CERT_DOCKER=/app/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/signcerts/$TLS_PEER_CERT_FILE
+                TLS_ROOT_PEER_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/tlscacerts"/*.pem 2>/dev/null | head -1)
+                TLS_ROOT_PEER_CERT_FILE=$(basename "$TLS_ROOT_PEER_CERT_FULL")
+                TLS_ROOT_PEER_CERT_DOCKER=/app/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/tlscacerts/$TLS_ROOT_PEER_CERT_FILE
                 ADMIN_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/admin.$AGER.$REGNUM.$ORBIS.$ORBIS_ENV/msp/signcerts"/*.pem 2>/dev/null | head -1)
                 ADMIN_CERT_FILE=$(basename "$ADMIN_CERT_FULL")
                 ADMIN_CERT_DOCKER=/app/infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp/signcerts/$ADMIN_CERT_FILE
@@ -301,21 +328,23 @@ for REGNUM in $REGNUMS; do
 
                 build_microservice $SERVICE_NAME $SERVICE_VERSION $SERVICE_SOURCE
 
-                if [[ $SERVICE_NAME == "ca.via.alps.ea.jedo.dev" ]]; then
+                if [[ $SERVICE_SOURCE == "services/ca-service" ]]; then
                     log_debug "- MSP-CA:" "${AGER_MSP_NAME} (${AGER_MSP_IP}:${AGER_MSP_PORT})"
+                    log_debug "- TLS Cert:" "$TLS_PEER_CERT_DOCKER"
                     writeenf_ca-service $SERVICE_NAME $SERVICE_IP $SERVICE_PORT \
-                        $AGER_MSP_NAME $AGER_MSP_IP $AGER_MSP_PORT $AGER_MSP_PASS
+                        $AGER_MSP_NAME $AGER_MSP_IP $AGER_MSP_PORT $AGER_MSP_PASS \
+                        $TLS_CERT_DOCKER $TLS_KEY_DOCKER $TLS_CA_DOCKER
                 fi
 
-                if [[ $SERVICE_NAME == "ledger.via.alps.ea.jedo.dev" ]]; then
+                if [[ $SERVICE_SOURCE == "services/ledger-service" ]]; then
                     log_debug "- Peer:" "${PEER_NAME} (${PEER_IP}:${PEER_PORT})"
-                    log_debug "- TLS Cert:" "$TLS_CERT_FILE"
-                    log_debug "- TLS Root:" "$TLS_ROOT_CERT_FILE"
-                    log_debug "- Admin Cert:" "$ADMIN_CERT_FILE"
-                    log_debug "- Admin Key:" "$ADMIN_KEY_FILE"
+                    log_debug "- TLS Cert:" "$TLS_PEER_CERT_DOCKER"
+                    log_debug "- TLS Root:" "$TLS_ROOT_PEER_CERT_DOCKER"
+                    log_debug "- Admin Cert:" "$ADMIN_CERT_DOCKER"
+                    log_debug "- Admin Key:" "$ADMIN_KEY_DOCKER"
                     writeenf_ledger-service $SERVICE_NAME $SERVICE_IP $SERVICE_PORT $CC_NAME \
                         $PEER_NAME $PEER_IP $PEER_PORT \
-                        $TLS_CERT_DOCKER $TLS_ROOT_CERT_DOCKER $ADMIN_CERT_DOCKER $ADMIN_KEY_DOCKER
+                        $TLS_PEER_CERT_DOCKER $TLS_ROOT_PEER_CERT_DOCKER $ADMIN_CERT_DOCKER $ADMIN_KEY_DOCKER
                 fi
 
                 start_microservice $SERVICE_NAME $SERVICE_VERSION $SERVICE_IP $SERVICE_PORT
