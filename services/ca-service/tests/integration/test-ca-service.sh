@@ -458,11 +458,11 @@ main() {
     echo "========================================"
     echo ""
     
-    # test_health || exit 1
-    # echo ""
+    test_health || exit 1
+    echo ""
     
-    # test_info || exit 1
-    # echo ""
+    test_info || exit 1
+    echo ""
     
     register_gens || exit 1
     echo ""
