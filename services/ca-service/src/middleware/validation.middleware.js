@@ -60,32 +60,40 @@ function validateRegistration(req, res, next) {
  * Validate Enrollment Request
  */
 function validateEnrollment(req, res, next) {
-  const { username, secret } = req.body;
+  const { username, secret, enrollmentType, role  } = req.body;
   
-  // Required fields
-  if (!username || !secret) {
+  if (!username || typeof username !== 'string') {
     return res.status(400).json({
       success: false,
-      error: 'Validation failed',
-      message: 'Required fields: username, secret'
+      error: 'Username is required and must be a string'
     });
   }
   
-  // Validate username
-  if (username.length < 3 || username.length > 255) {
+  if (!secret || typeof secret !== 'string') {
     return res.status(400).json({
       success: false,
-      error: 'Validation failed',
-      message: 'Username must be between 3 and 255 characters'
+      error: 'Secret is required and must be a string'
     });
   }
   
-  // Validate secret
-  if (secret.length < 8) {
+  if (!role || typeof role !== 'string') {
     return res.status(400).json({
       success: false,
-      error: 'Validation failed',
-      message: 'Secret must be at least 8 characters'
+      error: 'Role is required and must be a string'
+    });
+  }
+  
+  if (!['gens', 'human', 'ager'].includes(role)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Role must be one of: gens, human, ager'
+    });
+  }
+  
+  if (enrollmentType && !['x509', 'idemix'].includes(enrollmentType)) {
+    return res.status(400).json({
+      success: false,
+      error: 'EnrollmentType must be either x509 or idemix'
     });
   }
   

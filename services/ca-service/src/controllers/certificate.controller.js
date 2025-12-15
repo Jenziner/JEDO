@@ -55,18 +55,53 @@ class CertificateController {
 
   async enrollCertificate(req, res, next) {
     try {
-      logger.debug('Enrollment validation passed');
+      const { 
+        username, 
+        secret, 
+        enrollmentType = 'x509', 
+        idemixCurve = 'gurvy.Bn254',
+        role,
+        gensName
+      } = req.body;
       
-      const result = await certificateService.enrollUser(req.body);
+      logger.info('Enrollment request', { username, enrollmentType, role, gensName });
+      
+      if (role === 'human' && !gensName) {
+        logger.error('Human enrollment requires gensName parameter', { username });
+        return res.status(400).json({
+          success: false,
+          error: 'Human enrollment requires "gensName" parameter'
+        });
+      }
+        
+      const enrollmentData = {
+        username,
+        secret,
+        enrollmentType,
+        idemixCurve,
+        gensName,
+        role
+      };
+      
+      logger.info('Enrollment data prepared', { 
+        username, 
+        enrollmentType, 
+        gensName, 
+        role 
+      });
+      
+      const result = await certificateService.enrollUser(enrollmentData);
       
       res.status(200).json({
         success: true,
         message: 'User enrolled successfully',
         data: result
       });
+      
     } catch (error) {
       logger.error('Enrollment request failed', { 
-        error: error.message 
+        error: error.message,
+        stack: error.stack 
       });
       next(error);
     }

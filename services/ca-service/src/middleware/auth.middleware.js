@@ -119,22 +119,7 @@ function requireRole(...allowedRoles) {
   };
 }
 
-/**
- * Optional: Dev Mode Bypass
- */
-function bypassAuthInDev(req, res, next) {
-  if (process.env.NODE_ENV === 'dev' && !req.clientCert) {
-    logger.warn('Dev mode: Bypassing authorization');
-    req.clientCert = {
-      role: 'admin',
-      subject: { CN: 'dev-admin' }
-    };
-  }
-  next();
-}
-
 module.exports = {
   requireAuthentication,
   requireRole,
-  bypassAuthInDev
 };

@@ -76,6 +76,8 @@ start_microservice() {
 
     echo ""
     echo_info "Docker $SERVICE_NAME starting..."
+    mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/production
+    chmod -R 750 $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/production
     docker run -d \
         --user $(id -u):$(id -g) \
         --name $SERVICE_NAME \
@@ -92,6 +94,7 @@ start_microservice() {
         -p $SERVICE_PORT:$SERVICE_PORT \
         -v $LOCAL_SRV_DIR/.env:/app/.env \
         -v $LOCAL_INFRA_DIR:/app/infrastructure:ro \
+        -v $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/production:/app/production \
         $SERVICE_IMAGE
 
     CheckContainer "$SERVICE_NAME" "$DOCKER_CONTAINER_WAIT"
@@ -185,7 +188,7 @@ FABRIC_AGER_NAME=$AGER
 # ========================================
 # CRYPTO PATH
 # ========================================
-CRYPTO_PATH=/app/infrastructure
+CRYPTO_PATH=/app/production
 EOF
 }
 
