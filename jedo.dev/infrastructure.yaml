@@ -75,12 +75,6 @@ Regnum:
           Pass: Test1
           Mail: nik@jedo.me
           Phone: +41791234567
-      TLS: 
-          Name: tls.ea.jedo.dev
-          Pass: Test1
-          IP: 172.16.2.3
-          Port: 52031
-          OpPort: 52039
       MSP: 
           Name: msp.ea.jedo.dev
           Pass: Test1
@@ -94,12 +88,6 @@ Ager:
           Contact: Nik
           Mail: nik@jedo.me
           Phone: +41791234567
-      TLS: 
-          Name: tls.alps.ea.jedo.dev
-          Pass: Test1
-          IP: 172.16.3.3
-          Port: 53031
-          OpPort: 53039
       MSP: 
           Name: msp.alps.ea.jedo.dev
           Pass: Test1
