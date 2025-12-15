@@ -4,16 +4,10 @@ import cors from 'cors';
 import { env } from './config/environment';
 import { requestLogger } from './middlewares/requestLogger';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
-import healthRoutes from './routes/healthRoutes';
 import { globalRateLimiter } from './middlewares/rateLimiter';
-
-// Service Proxies
-import { 
-  caServiceProxy, 
-  ledgerServiceProxy, 
-  recoveryServiceProxy, 
-  votingServiceProxy 
-} from './middlewares/proxyRouter';
+import healthRoutes from './routes/healthRoutes';
+import caProxyRoutes from './routes/caProxyRoutes';
+import ledgerProxyRoutes from './routes/ledgerProxyRoutes';
 
 export const createApp = (): Application => {
   const app: Application = express();
@@ -39,10 +33,10 @@ export const createApp = (): Application => {
 
   // ===== ROUTES (ORDER MATTERS!) =====
   // Service Proxies (to backend microservices)
-  app.use('/api/v1/ca', caServiceProxy);
-  app.use('/api/v1/ledger', ledgerServiceProxy);
-  app.use('/api/v1/recovery', recoveryServiceProxy);
-  app.use('/api/v1/voting', votingServiceProxy);
+  app.use('/api/v1/ca', caProxyRoutes);
+  app.use('/api/v1/ledger', ledgerProxyRoutes);
+//  app.use('/api/v1/recovery', recoveryProxyRoutes);
+//  app.use('/api/v1/voting', votingProxyRoutes);
 
   // Health Routes (less specific, after API routes)
   app.use(healthRoutes);

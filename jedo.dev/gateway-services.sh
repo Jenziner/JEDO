@@ -141,7 +141,7 @@ HOST=0.0.0.0
 SERVICE_NAME=$SERVICE_NAME
 
 # Logging
-LOG_LEVEL=debug
+LOG_LEVEL=info
 LOG_PRETTY=true
 
 # Security

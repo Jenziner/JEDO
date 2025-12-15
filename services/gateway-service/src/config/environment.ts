@@ -38,15 +38,21 @@ interface Environment {
     peerTlsCert: string;
     peerTlsRootCert: string;
   };
-  caApi: {
+  caService: {
     url: string;
   };
-  ledgerApi: {
+  ledgerService: {
     url: string;
   };
   audit: {
     logPath: string;
     logLevel: string;
+  };
+  tls: {
+    enabled: boolean;
+    certPath: string;
+    keyPath: string;
+    caPath: string;
   };
 }
 
@@ -121,20 +127,26 @@ export const env: Environment = {
     peerTlsRootCert: getEnv('FABRIC_PEER_TLS_ROOT_CERT'),
   },
 
-  // CA-API
-  caApi: {
-    url: getEnv('CA_API_URL'),
+  // CA-Service
+  caService: {
+    url: getEnv('CA_SERVICE_URL'),
   },
 
-  // Ledger-API (NEW!)
-  ledgerApi: {
-    url: getEnv('LEDGER_API_URL'),
+  // Ledger-Service
+  ledgerService: {
+    url: getEnv('LEDGER_SERVICE_URL'),
   },
 
   // Audit Logging
   audit: {
     logPath: getEnvWithDefault('AUDIT_LOG_PATH', './logs/audit.log'),
     logLevel: getEnvWithDefault('AUDIT_LOG_LEVEL', 'info'),
+  },
+  tls: {
+    enabled: getEnvBoolean('TLS_ENABLED'),
+    certPath: getEnv('TLS_CERT_PATH'),
+    keyPath: getEnv('TLS_KEY_PATH'),
+    caPath: getEnv('TLS_CA_PATH'),
   },
 };
 

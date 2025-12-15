@@ -182,20 +182,20 @@ fi
 
 
 ###############################################################
-# API Gateway
-###############################################################
-if [[ "$opt_r" == "gateway" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    $SCRIPT_DIR/gateway.sh
-    cool_down $opt_a "API Gateway deployed."
-fi
-
-
-###############################################################
-# Gateway Services
+# Micro Services
 ###############################################################
 if [[ "$opt_r" == "services" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     $SCRIPT_DIR/gateway-services.sh
     cool_down $opt_a "Gateway services deployed."
+fi
+
+
+###############################################################
+# Gateway Service
+###############################################################
+if [[ "$opt_r" == "gateway" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    $SCRIPT_DIR/gateway.sh
+    cool_down $opt_a "API Gateway deployed."
 fi
 
 

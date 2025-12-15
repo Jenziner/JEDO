@@ -18,7 +18,7 @@ get_hosts
 # Build Gateway Image
 ###############################################################
 GATEWAY_IMAGE="jedo-gateway:1.0"
-GATEWAY_SRC_DIR="${PWD}/../gateway"
+GATEWAY_SRC_DIR="${PWD}/../services/gateway-service"
 LOCAL_INFRA_DIR=${PWD}/infrastructure
 
 
@@ -101,26 +101,40 @@ for REGNUM in $REGNUMS; do
             # Resolve file paths with wildcards
             ###############################################################
             # TLS Cert
-            TLS_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/signcerts"/*.pem 2>/dev/null | head -1)
-            if [ -z "$TLS_CERT_FULL" ]; then
-                echo_error "TLS cert not found for $PEER_NAME"
-                exit 1
-            fi
-            TLS_CERT_FILE=$(basename "$TLS_CERT_FULL")
-            if [[ $DEBUG == true ]]; then
-                echo_value_debug "- TLS Cert:" "$TLS_CERT_FILE"
-            fi
+            # TLS_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/signcerts"/*.pem 2>/dev/null | head -1)
+            # if [ -z "$TLS_CERT_FULL" ]; then
+            #     echo_error "TLS cert not found for $PEER_NAME"
+            #     exit 1
+            # fi
+            # TLS_CERT_FILE=$(basename "$TLS_CERT_FULL")
+            # if [[ $DEBUG == true ]]; then
+            #     echo_value_debug "- TLS Cert:" "$TLS_CERT_FILE"
+            # fi
             
-            # TLS Root Cert
-            TLS_ROOT_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/tlscacerts"/*.pem 2>/dev/null | head -1)
-            if [ -z "$TLS_ROOT_CERT_FULL" ]; then
-                echo_error "TLS root cert not found for $PEER_NAME"
-                exit 1
-            fi
-            TLS_ROOT_CERT_FILE=$(basename "$TLS_ROOT_CERT_FULL")
-            if [[ $DEBUG == true ]]; then
-                echo_value_debug "- TLS Root:" "$TLS_ROOT_CERT_FILE"
-            fi
+            # # TLS Root Cert
+            # TLS_ROOT_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/tlscacerts"/*.pem 2>/dev/null | head -1)
+            # if [ -z "$TLS_ROOT_CERT_FULL" ]; then
+            #     echo_error "TLS root cert not found for $PEER_NAME"
+            #     exit 1
+            # fi
+            # TLS_ROOT_CERT_FILE=$(basename "$TLS_ROOT_CERT_FULL")
+            # if [[ $DEBUG == true ]]; then
+            #     echo_value_debug "- TLS Root:" "$TLS_ROOT_CERT_FILE"
+            # fi
+
+
+            ###############################################################
+            # TLS Server Crypto material
+            ###############################################################
+            TLS_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$GATEWAY_NAME/tls/signcerts"/*.pem 2>/dev/null | head -1)
+            TLS_CERT_FILE=$(basename "$TLS_CERT_FULL")
+            TLS_CERT_DOCKER=/app/infrastructure/$ORBIS/$REGNUM/$AGER/$GATEWAY_NAME/tls/signcerts/$TLS_CERT_FILE
+            TLS_KEY_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$GATEWAY_NAME/tls/keystore"/*_sk 2>/dev/null | head -1)
+            TLS_KEY_FILE=$(basename "$TLS_KEY_FULL")
+            TLS_KEY_DOCKER=/app/infrastructure/$ORBIS/$REGNUM/$AGER/$GATEWAY_NAME/tls/keystore/$TLS_KEY_FILE
+            TLS_CA_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$GATEWAY_NAME/tls/tlscacerts"/*.pem 2>/dev/null | head -1)
+            TLS_CA_FILE=$(basename "$TLS_CA_FULL")
+            TLS_CA_DOCKER=/app/infrastructure/$ORBIS/$REGNUM/$AGER/$GATEWAY_NAME/tls/tlscacerts/$TLS_CA_FILE
 
 
             ###############################################################
@@ -140,8 +154,8 @@ for REGNUM in $REGNUMS; do
                     # Extract Service-Typ from Name (ledger.via... -> LEDGER)
                     SVC_TYPE=$(echo "$SVC_NAME" | cut -d'.' -f1 | tr '[:lower:]' '[:upper:]')
                     
-                    SERVICE_URLS["${SVC_TYPE}_API_URL"]="http://${SVC_IP}:${SVC_PORT}"
-                    log_debug "${SVC_TYPE}_API_URL" "http://${SVC_IP}:${SVC_PORT}"
+                    SERVICE_URLS["${SVC_TYPE}_SERVICE_URL"]="https://${SVC_IP}:${SVC_PORT}"
+                    log_debug "${SVC_TYPE}_SERVICE_URL" "https://${SVC_IP}:${SVC_PORT}"
                 fi
             done < <(echo "$SERVICES" | jq -c '.')
 
@@ -152,6 +166,9 @@ for REGNUM in $REGNUMS; do
             echo ""
             echo_info "Environment for $GATEWAY_NAME writing..."
 cat <<EOF > $LOCAL_SRV_DIR/.env
+# ========================================
+# CA-SERVICE CONFIGURATION
+# ========================================
 # Server Configuration
 NODE_ENV=$ORBIS_ENV
 PORT=$GATEWAY_PORT
@@ -164,27 +181,42 @@ LOG_PRETTY=true
 
 # Security
 REQUIRE_CLIENT_CERT=true
-RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=100
 MAX_REQUEST_SIZE=1mb
+CORS_ORIGIN=http://$GATEWAY_IP:$GATEWAY_PORT
 
-# CORS - Needs to be changed in PROD
-CORS_ORIGIN=*
+# Audit Logging
+AUDIT_LOG_PATH=./logs/audit.log
+AUDIT_LOG_LEVEL=info
 
+# ========================================
+# SERVER TLS (HTTPS Server für API)
+# ========================================
+TLS_ENABLED=true
+TLS_CERT_PATH=$TLS_CERT_DOCKER
+TLS_KEY_PATH=$TLS_KEY_DOCKER
+TLS_CA_PATH=$TLS_CA_DOCKER
+
+# ========================================
+# FABRIC CONFIG
+# ========================================
 # Hyperledger Fabric
 FABRIC_MSP_ID=$AGER
 
 # Fabric Peer Connection
-FABRIC_PEER_ENDPOINT=$PEER_NAME:$PEER_PORT
-FABRIC_PEER_HOST_ALIAS=$PEER_NAME
-FABRIC_PEER_TLS_CERT=./infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/signcerts/$TLS_CERT_FILE
-FABRIC_PEER_TLS_ROOT_CERT=./infrastructure/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/tlscacerts/$TLS_ROOT_CERT_FILE
+FABRIC_PEER_ENDPOINT=DEPRICATED
+FABRIC_PEER_HOST_ALIAS=DEPRICATED
+FABRIC_PEER_TLS_CERT=DEPRICATED
+FABRIC_PEER_TLS_ROOT_CERT=DEPRICATED
 
 # Fabric Peer Connection
-FABRIC_AGER_MSP_CA_CERTS_PATH=./infrastructure/$ORBIS/$REGNUM/$AGER/msp/cacerts
-FABRIC_AGER_MSP_INTERMEDIATE_CERTS_PATH=./infrastructure/$ORBIS/$REGNUM/$AGER/msp/intermediatecerts
+FABRIC_AGER_MSP_CA_CERTS_PATH=DEPRICATED
+FABRIC_AGER_MSP_INTERMEDIATE_CERTS_PATH=DEPRICATED
 
+# ========================================
 # Microservices (dynamically generated)
+# ========================================
 EOF
 
 for key in "${!SERVICE_URLS[@]}"; do
@@ -193,13 +225,6 @@ done
 
 cat <<EOF >> $LOCAL_SRV_DIR/.env
 
-# CA-API für Certificate Management
-#CA_API_URL=https://$CAAPI_NAME:$CAAPI_PORT
-#CA_API_TLS_CERT=./infrastructure/$ORBIS/$REGNUM/$AGER/$CAAPI_NAME/tls/signcerts/cert.pem --> Gibts noch nicht
-
-# Audit Logging
-AUDIT_LOG_PATH=./logs/audit.log
-AUDIT_LOG_LEVEL=info
 EOF
 
 
@@ -227,7 +252,7 @@ EOF
                 jedo-gateway:1.0
 
             CheckContainer "$GATEWAY_NAME" "$DOCKER_CONTAINER_WAIT"
-            CheckContainerLog "$GATEWAY_NAME" "JEDO Gateway Server started successfully" "$DOCKER_CONTAINER_WAIT"
+            CheckContainerLog "$GATEWAY_NAME" "Gateway Service started successfully on HTTPS" "$DOCKER_CONTAINER_WAIT"
 
             echo ""
             echo_info "Gateway $GATEWAY_NAME started."

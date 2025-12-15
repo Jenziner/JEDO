@@ -17,12 +17,22 @@ Stateless REST API Gateway for Hyperledger Fabric 3.0 JEDO-Ecosystem blockchain 
 - ✅ Health Check Endpoints
 - ✅ Strukturierte Error Handling
 
+## Installation:
+cd /JEDO/jedo-dev
+./jedo.sh --debug -a go
+
+## Test:
+cd /JEDO/services/gateway-service
+./tests/integration/test-gateway-service.sh
+
+
 ## Architecture
 
 ┌─────────────┐ HTTPS + Headers             ┌──────────────────┐ gRPC/TLS           ┌─────────────┐
 │ Mobile App  │ ───────────────────────────>│ Gateway Server   │ ──────────────────>│ Fabric Peer │
 │ (React)     │ X-Fabric-Cert (Base64 PEM)  │ (Node.js/TS)     │ Client Identity    │ (Go)        │
 └─────────────┘ X-Fabric-Key (Base64 PEM)   └──────────────────┘ via Gateway SDK    └─────────────┘
+
 
 
 ┌─────────────────────────────────────────────┐
@@ -43,6 +53,7 @@ Stateless REST API Gateway for Hyperledger Fabric 3.0 JEDO-Ecosystem blockchain 
 │  - fabric-gateway│  │  - fabric-ca-client  │
 │  - grpc          │  │  - fabric-network    │
 └──────────────────┘  └──────────────────────┘
+
 
 
 ┌─────────────────────────────────────────┐
@@ -70,6 +81,26 @@ Stateless REST API Gateway for Hyperledger Fabric 3.0 JEDO-Ecosystem blockchain 
     │  Chaincode: jedo-wallet  │
     └──────────────────────────┘
 
+
+
+┌─────────────────────────────────────┐
+│  Client (Mobile App / Test Script)  │
+└──────────────┬──────────────────────┘
+               │ HTTPS
+               ▼
+┌─────────────────────────────────────┐
+│  Gateway (via.alps.ea.jedo.dev)     │
+│  Port: 53901 (HTTPS)                │
+│  - Health Checks                    │
+│  - Proxy Routes                     │
+└──────────┬──────────────────────────┘
+           │
+           ├──HTTPS──> CA-Service (53911)      ✅
+           │           - Register/Enroll        ✅
+           │           - X.509 & Idemix         ✅
+           │
+           └──HTTP───> Ledger-Service (53921)  ✅
+                       - Fabric Gateway SDK     ✅
 
 
 **Key Concept**: Client sends their own X.509 certificate and private key in HTTP headers. Gateway builds Fabric identity dynamically per request and submits transactions **as that client**.## Features

@@ -1,8 +1,20 @@
+import https from 'https';
+import fs from 'fs';
+import { env } from '../config/environment';
 import { Router, Request, Response } from 'express';
 import { serviceConfig } from '../config/services';
 import logger from '../config/logger';
 
 const router = Router();
+
+// TLS Agent for service-to-service communication
+// TODO: Use CA cert verification in production
+const serviceAgent = new https.Agent({
+  ca: env.tls.enabled && env.tls.caPath 
+    ? fs.readFileSync(env.tls.caPath) 
+    : undefined,
+  rejectUnauthorized: process.env.NODE_ENV === 'production'  // ✅ Strict in prod
+});
 
 interface HealthResponse {
   success: boolean;
@@ -59,13 +71,13 @@ router.get('/ready', async (_req: Request, res: Response) => {
   try {
     // Check backend services
     const serviceChecks = await Promise.allSettled([
-      checkServiceHealth('ledgerService'),
       checkServiceHealth('caService'),
+      checkServiceHealth('ledgerService'),
     ]);
 
     const results = [
+      { name: 'ca', status: serviceChecks[0].status === 'fulfilled' && serviceChecks[0].value ? 'up' : 'down' },
       { name: 'ledger', status: serviceChecks[0].status === 'fulfilled' && serviceChecks[0].value ? 'up' : 'down' },
-      { name: 'ca', status: serviceChecks[1].status === 'fulfilled' && serviceChecks[1].value ? 'up' : 'down' },
     ];
 
     const allReady = results.every((r) => r.status === 'up');
@@ -136,22 +148,34 @@ async function checkServiceHealth(
   const config = serviceConfig[serviceName];
   const healthUrl = `${config.url}${config.healthPath}`;
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+  logger.info({ service: serviceName, url: healthUrl }, '🔍 Checking service health...');
 
-    const response = await fetch(healthUrl, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: { 'User-Agent': 'jedo-gateway-health' },
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      logger.warn({ service: serviceName }, 'Health check timeout');
+      resolve(false);
+    }, 5000);
+
+    https.get(healthUrl, { agent: serviceAgent }, (res) => {  // ✅ serviceAgent
+      clearTimeout(timeout);
+      
+      logger.info({ 
+        service: serviceName, 
+        status: res.statusCode 
+      }, '✅ Service health response');
+      
+      resolve(res.statusCode === 200);
+    }).on('error', (error) => {
+      clearTimeout(timeout);
+      
+      logger.error({ 
+        service: serviceName, 
+        error: error.message 
+      }, '❌ Service health check failed');
+      
+      resolve(false);
     });
-
-    clearTimeout(timeoutId);
-    return response.ok;
-  } catch (error) {
-    logger.debug({ service: serviceName, error }, 'Service health check failed');
-    return false;
-  }
+  });
 }
 
 export default router;
