@@ -18,7 +18,7 @@ get_hosts
 # Build Gateway Image
 ###############################################################
 GATEWAY_IMAGE="jedo-gateway:1.0"
-GATEWAY_SRC_DIR="${PWD}/../services/gateway-service"
+GATEWAY_SRC_DIR="${PWD}/../../services/gateway-service"
 LOCAL_INFRA_DIR=${PWD}/infrastructure
 
 

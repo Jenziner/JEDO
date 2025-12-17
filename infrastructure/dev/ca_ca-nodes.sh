@@ -39,7 +39,7 @@ echo ""
 echo_info "CA nodes starting..."
 
 
-cp -r ../$ORBIS.$ROOT_ENV/RootCA/$ORBIS.$ORBIS_ENV/$ORBIS_MSP_NAME/. $LOCAL_SRV_DIR
+cp -r ../prod/RootCA/$ORBIS.$ORBIS_ENV/$ORBIS_MSP_NAME/. $LOCAL_SRV_DIR
 
 # Start Orbis-CA
 if [[ $DEBUG == true ]]; then

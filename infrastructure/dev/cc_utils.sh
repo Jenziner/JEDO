@@ -48,11 +48,11 @@ METADATA-EOF
     if [[ $DEBUG == true ]]; then
       echo "" >&2
       echo_debug "Packaging chaincode with the following" >&2
-      echo_value_debug "- Peer:" "$PEER" >&2
-      echo_value_debug "- CC Name:" "$CC_NAME" >&2
-      echo_value_debug "- CC Version:" "$CC_VERSION" >&2
-      echo_value_debug "- CCAAS Server:" "$address" >&2
-      echo_value_debug "- CC Filename:" "${CC_NAME}.tar.gz" >&2
+      log_debug "- Peer:" "$PEER" >&2
+      log_debug "- CC Name:" "$CC_NAME" >&2
+      log_debug "- CC Version:" "$CC_VERSION" >&2
+      log_debug "- CCAAS Server:" "$address" >&2
+      log_debug "- CC Filename:" "${LOCAL_INFRA_DIR}/${CC_NAME}.tar.gz" >&2
     fi
 
     export PACKAGE_ID

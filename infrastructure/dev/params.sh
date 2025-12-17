@@ -10,7 +10,7 @@ DOCKER_CONTAINER_WAIT=$(yq eval '.Docker.Container.Wait' $CONFIG_FILE)
 DOCKER_CONTAINER_FABRICTOOLS=$(yq eval '.Docker.Container.FabricTools' $CONFIG_FILE)
 
 export PATH=$PATH:$FABRIC_PATH/bin:$FABRIC_PATH/config
-export FABRIC_CFG_PATH=${PWD}/../../fabric-samples/config
+export FABRIC_CFG_PATH=${PWD}/../../../fabric-samples/config
 
 ROOT_ENV=$(yq eval ".Root.Env" "$CONFIG_FILE")
 ORBIS=$(yq eval '.Orbis.Name' "$CONFIG_FILE")

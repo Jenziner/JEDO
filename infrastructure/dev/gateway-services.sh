@@ -23,7 +23,7 @@ build_microservice() {
     local SERVICE_SRC_DIR=$3
     local SERVICE_IMAGE="$SERVICE_NAME:$SERVICE_VERSION"
 
-    SERVICE_SRC_DIR="../$SERVICE_SRC_DIR"
+    SERVICE_SRC_DIR="../../$SERVICE_SRC_DIR"
 
     echo_debug "Checking Image..."
 

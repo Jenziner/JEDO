@@ -85,6 +85,7 @@ done
 # Checks
 ###############################################################
 if [[ "$opt_r" == "prereq" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_section "Prerequisites checking..."
     $SCRIPT_DIR/prereq.sh
     cool_down $opt_a "Prerequisites checked."
 fi
@@ -94,6 +95,7 @@ fi
 # Delete previous installation
 ###############################################################
 if $opt_d || [[ "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_section "Previous installation deleting..."
     $SCRIPT_DIR/down.sh
     cool_down $opt_a "Previous installation deleted."
 fi
@@ -103,6 +105,7 @@ fi
 # Create Docker Network
 ###############################################################
 if [[ "$opt_r" == "net" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_section "Docker Network starting..."
     echo ""
     echo_warn "Docker Network starting..."
     if ! docker network ls --format '{{.Name}}' | grep -wq "$DOCKER_NETWORK_NAME"; then
@@ -127,6 +130,7 @@ fi
 # Run CA
 ###############################################################
 if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_section "CA starting..."
     $SCRIPT_DIR/ca_tls-node.sh
     $SCRIPT_DIR/ca_tls-certs.sh
     $SCRIPT_DIR/ca_ca-nodes.sh
@@ -139,9 +143,10 @@ fi
 # Run Orderer
 ###############################################################
 if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_section "Orderers starting..."
     $SCRIPT_DIR/orderer_cert.sh
     $SCRIPT_DIR/orderer_node.sh
-    cool_down $opt_a "Orderers running."
+    cool_down $opt_a "Orderers started."
 fi
 
 
@@ -149,8 +154,9 @@ fi
 # Run Peer
 ###############################################################
 if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_section "Peers starting..."
    $SCRIPT_DIR/peer.sh peer
-    cool_down $opt_a "Peers running."
+    cool_down $opt_a "Peers started."
 fi
 
 
@@ -158,6 +164,7 @@ fi
 # Generate genesis block and channel configuration
 ###############################################################
 if [[ "$opt_r" == "genesis" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_section "Genesis Block and Channel Configuration generating..."
     $SCRIPT_DIR/genesis-block.sh
     cool_down $opt_a "Genesis Block and Channel Configuration generated."
 fi
@@ -167,6 +174,7 @@ fi
 # Create Channel
 ###############################################################
 if [[ "$opt_r" == "channel" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_section "Channel creating..."
     $SCRIPT_DIR/channel.sh
     cool_down $opt_a "Channel created."
 fi
@@ -176,15 +184,17 @@ fi
 # Chaincode jedo-wallet Deployment
 ###############################################################
 if [[ "$opt_r" == "wallet" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_section "Chaincode deploying..."
     $SCRIPT_DIR/cc_jedo-wallet.sh
-    cool_down $opt_a "Chaincode jedo-wallet."
+    cool_down $opt_a "Chaincode deployed."
 fi
 
 
 ###############################################################
-# Micro Services
+# Gateway Services
 ###############################################################
 if [[ "$opt_r" == "services" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_section "Gateway services deploying..."
     $SCRIPT_DIR/gateway-services.sh
     cool_down $opt_a "Gateway services deployed."
 fi
@@ -194,6 +204,7 @@ fi
 # Gateway Service
 ###############################################################
 if [[ "$opt_r" == "gateway" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
+    echo_section "API Gateway deploying..."
     $SCRIPT_DIR/gateway.sh
     cool_down $opt_a "API Gateway deployed."
 fi

@@ -14,7 +14,7 @@ get_hosts
 
 
 LOCAL_INFRA_DIR=${PWD}/infrastructure
-LOCAL_CC_DIR=${PWD}/../chaincode
+LOCAL_CC_DIR=${PWD}/../../chaincode
 LOCAL_DOCKERFILE=$LOCAL_CC_DIR/Dockerfile
 mkdir -p $LOCAL_CC_DIR
 chmod -R 750 $LOCAL_CC_DIR
@@ -33,11 +33,10 @@ setupAdminEnv() {
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER_ROOTCERT
     
     if [[ $DEBUG == true ]]; then
-        echo_debug "Executing with the following:"
-        echo_value_debug "Admin environment set for:" "$AGER"
-        echo_value_debug "MSPID:" "$CORE_PEER_LOCALMSPID"
-        echo_value_debug "MSPConfigPath:" "$CORE_PEER_MSPCONFIGPATH"
-        echo_value_debug "Address:" "$CORE_PEER_ADDRESS"
+        log_debug "Admin environment set for:" "$AGER"
+        log_debug "MSPID:" "$CORE_PEER_LOCALMSPID"
+        log_debug "MSPConfigPath:" "$CORE_PEER_MSPCONFIGPATH"
+        log_debug "Address:" "$CORE_PEER_ADDRESS"
     fi
 }
 
@@ -51,10 +50,9 @@ buildDockerImages() {
     echo_info "This may take a minute..."
     
     if [[ $DEBUG == true ]]; then
-        echo_debug "Executing with the following:"
-        echo_value_debug "Dockerfile:" "$LOCAL_DOCKERFILE"
-        echo_value_debug "CC Name:" "$CC_NAME"
-        echo_value_debug "CC Version:" "$CC_VERSION"
+        log_debug "Dockerfile:" "$LOCAL_DOCKERFILE"
+        log_debug "CC Name:" "$CC_NAME"
+        log_debug "CC Version:" "$CC_VERSION"
     fi
 
     docker build \

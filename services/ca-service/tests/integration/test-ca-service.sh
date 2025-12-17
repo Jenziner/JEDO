@@ -71,9 +71,9 @@ mkdir -p "${TEMP_CERTS_DIR}"
 # Copy Ager certs
 ###############################################################
 echo_info "Copy Certs..."
-cp ~/Entwicklung/JEDO/jedo.dev/infrastructure/jedo/ea/alps/admin.alps.ea.jedo.dev/msp/keystore/*_sk \
+cp ~/Entwicklung/JEDO/infrastructure/dev/infrastructure/jedo/ea/alps/admin.alps.ea.jedo.dev/msp/keystore/*_sk \
     ~/Entwicklung/JEDO/services/ca-service/tests/certs/ager-admin-key.pem
-cp ~/Entwicklung/JEDO/jedo.dev/infrastructure/jedo/ea/alps/admin.alps.ea.jedo.dev/msp/signcerts/cert.pem \
+cp ~/Entwicklung/JEDO/infrastructure/dev/infrastructure/jedo/ea/alps/admin.alps.ea.jedo.dev/msp/signcerts/cert.pem \
     ~/Entwicklung/JEDO/services/ca-service/tests/certs/ager-admin-cert.pem
 openssl x509 -in tests/certs/ager-admin-cert.pem -noout -text > /dev/null && \
     echo "✅ Certificate valid" || \
