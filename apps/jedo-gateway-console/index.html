@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEDO - Gateway Console</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Gateway Konfiguration Header -->
+    <header class="gateway-config">
+        <div class="container">
+            <h1>JEDO - Gateway Console</h1>
+            <div class="gateway-input-group">
+                <label for="gateway-url">Gateway URL:</label>
+                <input 
+                    type="text" 
+                    id="gateway-url" 
+                    placeholder="https://localhost:53901"
+                    value="https://localhost:53901"
+                >
+                <button id="save-gateway-btn" class="btn-primary">SAVE</button>
+                <span id="save-feedback" class="save-feedback"></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Spalten Container -->
+    <main class="columns-container" id="columns-container">
+        <!-- Ager Spalte (fixe Spalte, nicht entfernbar) -->
+        <div class="column" id="ager-1" data-type="ager">
+            <div class="column-header">
+                <div class="column-title">
+                    <span class="type-badge badge-ager">Ager</span>
+                    <span class="column-id">ager-1</span>
+                </div>
+            </div>
+            
+            <div class="column-content">
+                <!-- Accordion Section 1 -->
+                <div class="accordion-section">
+                    <button class="accordion-header" aria-expanded="false">
+                        <span class="accordion-icon">▶</span>
+                        <span class="accordion-title">Preparation</span>
+                    </button>
+                    <div class="accordion-content">
+                        <p>Inhalt kommt in Feature 2</p>
+                    </div>
+                </div>
+
+                <!-- Accordion Section 2 -->
+                <div class="accordion-section">
+                    <button class="accordion-header" aria-expanded="false">
+                        <span class="accordion-icon">▶</span>
+                        <span class="accordion-title">Gens Registration</span>
+                    </button>
+                    <div class="accordion-content">
+                        <p>Inhalt kommt in Feature 3</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button id="add-gens-btn" class="btn-secondary">+ Add Gens</button>
+        <button id="add-human-btn" class="btn-secondary">+ Add Human</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
