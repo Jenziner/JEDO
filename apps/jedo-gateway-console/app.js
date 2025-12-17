@@ -1,5 +1,5 @@
 // ============================================================================
-// JEDO Test & Demo Plattform - Feature 1: Grundgerüst & Layout
+// JEDO Gateway Console - Feature 2: Ager-Verwaltung & Zertifikats-Upload
 // ============================================================================
 
 // === Gateway Configuration ===
@@ -281,6 +281,234 @@ function debugState() {
 
 window.debugState = debugState;
 
+// === Ager Certificate Management ===
+
+/**
+ * Parsed CN-String in Username und Affiliation
+ * @param {string} cn - Common Name (z.B. "alps.ea.jedo.dev")
+ * @returns {Object} {username, affiliation}
+ */
+function parseCnToUserAndAffiliation(cn) {
+    if (!cn || typeof cn !== 'string') {
+        return { username: null, affiliation: null };
+    }
+
+    const firstDotIndex = cn.indexOf('.');
+    
+    if (firstDotIndex === -1) {
+        return { username: cn, affiliation: null };
+    }
+
+    const username = cn.substring(0, firstDotIndex);
+    const affiliation = cn.substring(firstDotIndex + 1);
+
+    return { username, affiliation };
+}
+
+/**
+ * Extrahiert CN aus PEM-Zertifikat mittels jsrsasign
+ * @param {string} pemString - PEM-formatiertes Zertifikat
+ * @returns {string|null} CN oder null bei Fehler
+ */
+function extractCnFromCert(pemString) {
+    try {
+        const x509 = new X509();
+        x509.readCertPEM(pemString);
+        
+        const subjectString = x509.getSubjectString();
+        
+        const cnMatch = subjectString.match(/\/CN=([^\/]+)/);
+        
+        if (cnMatch && cnMatch[1]) {
+            return cnMatch[1];
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error parsing certificate:', error);
+        return null;
+    }
+}
+
+/**
+ * Handler für Ager-Cert-Upload
+ * @param {Event} event - File Input Change Event
+ */
+function handleAgerCertUpload(event) {
+    const file = event.target.files[0];
+    
+    if (!file) {
+        return;
+    }
+
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        const pemContent = e.target.result;
+        
+        const cn = extractCnFromCert(pemContent);
+        
+        if (!cn) {
+            showFeedback('❌ Could not extract CN from certificate', false);
+            return;
+        }
+
+        const { username, affiliation } = parseCnToUserAndAffiliation(cn);
+
+        updateColumnData('ager-1', {
+            certPem: pemContent,
+            cn: cn,
+            username: username,
+            affiliation: affiliation
+        });
+
+        document.getElementById('ager-cert-status').textContent = `✓ ${file.name}`;
+        document.getElementById('ager-cert-status').classList.add('success');
+        document.getElementById('ager-cn-display').textContent = cn;
+        document.getElementById('ager-username-display').textContent = username || '–';
+        document.getElementById('ager-affiliation-display').textContent = affiliation || '–';
+
+        document.getElementById('ager-validate-btn').disabled = false;
+
+        checkAgerLoadedState();
+
+        console.log('✅ Ager certificate uploaded:', { cn, username, affiliation });
+    };
+
+    reader.onerror = function() {
+        showFeedback('❌ Error reading certificate file', false);
+    };
+
+    reader.readAsText(file);
+}
+
+/**
+ * Handler für Ager-Key-Upload
+ * @param {Event} event - File Input Change Event
+ */
+function handleAgerKeyUpload(event) {
+    const file = event.target.files[0];
+    
+    if (!file) {
+        return;
+    }
+
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        const keyContent = e.target.result;
+        
+        if (!keyContent.includes('BEGIN') || !keyContent.includes('PRIVATE KEY')) {
+            showFeedback('❌ Invalid private key format (PEM expected)', false);
+            return;
+        }
+
+        updateColumnData('ager-1', {
+            keyPem: keyContent
+        });
+
+        document.getElementById('ager-key-status').textContent = `✓ ${file.name}`;
+        document.getElementById('ager-key-status').classList.add('success');
+
+        checkAgerLoadedState();
+
+        console.log('✅ Ager private key uploaded');
+    };
+
+    reader.onerror = function() {
+        showFeedback('❌ Error reading key file', false);
+    };
+
+    reader.readAsText(file);
+}
+
+/**
+ * Prüft ob Cert + Key vorhanden sind und setzt State auf LOADED
+ */
+function checkAgerLoadedState() {
+    const agerData = getColumnData('ager-1');
+    
+    if (agerData.certPem && agerData.keyPem) {
+        setColumnState('ager-1', 'LOADED');
+        
+        document.getElementById('ager-loaded-badge').style.display = 'block';
+        
+        console.log('✅ Ager fully loaded (Cert + Key present)');
+    }
+}
+
+/**
+ * Validiert das Ager-Zertifikat
+ */
+function validateAgerCert() {
+    const agerData = getColumnData('ager-1');
+    const validationResult = document.getElementById('ager-validation-result');
+    const validationBadge = document.getElementById('ager-validation-badge');
+    const validateBtn = document.getElementById('ager-validate-btn');
+
+    if (!agerData || !agerData.certPem) {
+        updateColumnData('ager-1', { isValid: false, validUntil: null });
+        validationBadge.style.display = 'none';
+        return;
+    }
+
+    try {
+        const x509 = new X509();
+        x509.readCertPEM(agerData.certPem);
+
+        const subject = x509.getSubjectString();
+        const issuer = x509.getIssuerString();
+        const notBefore = x509.getNotBefore();
+        const notAfter = x509.getNotAfter();
+
+        const now = new Date();
+        const isExpired = now > new Date(notAfter);
+
+        if (isExpired) {
+            updateColumnData('ager-1', { isValid: false, validUntil: notAfter });
+            validateBtn.title = 'Certificate expired';
+            
+            validationBadge.textContent = `⚠️ Certificate expired on ${notAfter}`;
+            validationBadge.className = 'status-badge badge-warning';
+            validationBadge.style.display = 'block';
+            return;
+        }
+
+        if (!agerData.cn) {
+            updateColumnData('ager-1', { isValid: false, validUntil: null });
+            
+            validationBadge.textContent = '❌ No CN found in certificate';
+            validationBadge.className = 'status-badge badge-error';
+            validationBadge.style.display = 'block';
+            return;
+        }
+
+        updateColumnData('ager-1', { isValid: true, validUntil: notAfter });
+        validateBtn.title = 'Certificate valid';
+
+        validationBadge.textContent = `✅ Ager validated until ${notAfter}`;
+        validationBadge.className = 'status-badge badge-success';
+        validationBadge.style.display = 'block';
+
+        console.log('✅ Certificate validated successfully', {
+            subject,
+            issuer,
+            notBefore,
+            notAfter,
+            cn: agerData.cn
+        });
+
+    } catch (error) {
+        updateColumnData('ager-1', { isValid: false, validUntil: null });
+        
+        validationBadge.textContent = `❌ Validation failed: ${error.message}`;
+        validationBadge.className = 'status-badge badge-error';
+        validationBadge.style.display = 'block';
+        
+        console.error('Certificate validation failed:', error);
+    }
+}
+
 // === Column Management Functions ===
 
 /**
@@ -388,14 +616,14 @@ function createColumnElement(columnData) {
 function getSectionsForType(type) {
     const sections = {
         gens: [
-            { title: 'Loading', placeholder: 'Inhalt kommt in Feature 4' },
-            { title: 'Registration', placeholder: 'Inhalt kommt in Feature 2' },
-            { title: 'Activation', placeholder: 'Inhalt kommt in Feature 3' }
+            { title: 'Loading', placeholder: 'Content coming in Feature 4' },
+            { title: 'Registration', placeholder: 'Content coming in Feature 2' },
+            { title: 'Activation', placeholder: 'Content coming in Feature 3' }
         ],
         human: [
-            { title: 'Loading', placeholder: 'Inhalt kommt in Feature 4' },
-            { title: 'Registration', placeholder: 'Inhalt kommt in Feature 2' },
-            { title: 'Activation', placeholder: 'Inhalt kommt in Feature 3' }
+            { title: 'Loading', placeholder: 'Content coming in Feature 4' },
+            { title: 'Registration', placeholder: 'Content coming in Feature 2' },
+            { title: 'Activation', placeholder: 'Content coming in Feature 3' }
         ]
     };
 
@@ -463,6 +691,13 @@ document.addEventListener('DOMContentLoaded', () => {
         data: {}
     });
 
+    // Ager Certificate & Key Upload
+    document.getElementById('ager-cert-upload').addEventListener('change', handleAgerCertUpload);
+    document.getElementById('ager-key-upload').addEventListener('change', handleAgerKeyUpload);
+
+    // Ager Certificate Validation
+    document.getElementById('ager-validate-btn').addEventListener('click', validateAgerCert);
+
     // Initialisiere Accordions
     initializeAccordions();
 
@@ -476,5 +711,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     console.log('✅ JEDO App initialized. Initial state:', appState);
-    console.log('💡 Tipp: Nutze window.debugState() in der Konsole für State-Debugging');
+    console.log('💡 Tip: Use window.debugState() in console for state debugging');
 });

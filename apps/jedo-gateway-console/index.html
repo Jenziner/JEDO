@@ -37,25 +37,104 @@
             </div>
             
             <div class="column-content">
-                <!-- Accordion Section 1 -->
+                <!-- Section 1: Preparation -->
                 <div class="accordion-section">
                     <button class="accordion-header" aria-expanded="false">
                         <span class="accordion-icon">▶</span>
                         <span class="accordion-title">Preparation</span>
                     </button>
                     <div class="accordion-content">
-                        <p>Inhalt kommt in Feature 2</p>
+                        <div class="upload-group">
+                            <label class="upload-label">Admin Certificate (PEM)</label>
+                            <input 
+                                type="file" 
+                                id="ager-cert-upload" 
+                                accept=".pem,.crt,.cer"
+                                style="display: none;"
+                            >
+                            <button class="btn-upload" onclick="document.getElementById('ager-cert-upload').click()">
+                                📄 Upload Ager Cert
+                            </button>
+                            <span id="ager-cert-status" class="upload-status">–</span>
+                        </div>
+
+                        <div class="upload-group">
+                            <label class="upload-label">Private Key (PEM)</label>
+                            <input 
+                                type="file" 
+                                id="ager-key-upload" 
+                                accept=".pem,.key"
+                                style="display: none;"
+                            >
+                            <button class="btn-upload" onclick="document.getElementById('ager-key-upload').click()">
+                                🔑 Upload Key
+                            </button>
+                            <span id="ager-key-status" class="upload-status">–</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Accordion Section 2 -->
+                <!-- Section 2: Status of Certificate -->
+                <div class="accordion-section">
+                    <button class="accordion-header" aria-expanded="false">
+                        <span class="accordion-icon">▶</span>
+                        <span class="accordion-title">Status of Certificate</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="cert-info">
+                            <div class="info-row">
+                                <span class="info-label">CN:</span>
+                                <span id="ager-cn-display" class="info-value">–</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Username:</span>
+                                <span id="ager-username-display" class="info-value">–</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Affiliation:</span>
+                                <span id="ager-affiliation-display" class="info-value">–</span>
+                            </div>
+                            
+                            <div class="validate-group">
+                                <button 
+                                    id="ager-validate-btn" 
+                                    class="btn-validate" 
+                                    title="Validate Certificate"
+                                    disabled
+                                >
+                                    🔍 Validate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Gens Registration -->
                 <div class="accordion-section">
                     <button class="accordion-header" aria-expanded="false">
                         <span class="accordion-icon">▶</span>
                         <span class="accordion-title">Gens Registration</span>
                     </button>
                     <div class="accordion-content">
-                        <p>Inhalt kommt in Feature 3</p>
+                        <p>Content coming in Feature 3</p>
+                    </div>
+                </div>
+
+                <!-- Section 4: Badges (immer als letzte Section) -->
+                <div class="accordion-section">
+                    <button class="accordion-header" aria-expanded="true">
+                        <span class="accordion-icon">▶</span>
+                        <span class="accordion-title">Badges</span>
+                    </button>
+                    <div class="accordion-content expanded">
+                        <div class="badges-container">
+                            <div id="ager-loaded-badge" class="status-badge badge-success" style="display: none;">
+                                ✅ Ager Loaded
+                            </div>
+                            <div id="ager-validation-badge" class="status-badge" style="display: none;">
+                                <!-- Wird dynamisch gefüllt -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -68,6 +147,7 @@
         <button id="add-human-btn" class="btn-secondary">+ Add Human</button>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/11.1.0/jsrsasign-all-min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
