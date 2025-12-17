@@ -6,6 +6,18 @@ import logger from '../config/logger';
 const router = Router();
 
 /**
+ * ✅ CORS Preflight Handler - MUSS vor router.all() kommen!
+ */
+router.options('*', (req: Request, res: Response) => {
+  logger.debug({
+    path: req.path,
+    origin: req.headers.origin
+  }, 'CORS Preflight for Ledger-Service');
+  
+  res.sendStatus(204); // CORS-Header bereits von app.ts gesetzt
+});
+
+/**
  * Proxy all /api/v1/ledger/* requests to Ledger-Service
  */
 router.all('*', async (req: Request, res: Response) => {
@@ -29,6 +41,7 @@ router.all('*', async (req: Request, res: Response) => {
     delete headers['connection'];
     delete headers['keep-alive'];
     delete headers['transfer-encoding'];
+    delete headers['host'];
     
     const options: http.RequestOptions = {
       hostname: url.hostname,
@@ -46,10 +59,14 @@ router.all('*', async (req: Request, res: Response) => {
       // Forward status code
       res.status(proxyRes.statusCode || 500);
 
-      // Forward headers
+      // Forward headers ABER filtern CORS-Header raus!
       Object.keys(proxyRes.headers).forEach(key => {
         const value = proxyRes.headers[key];
-        if (value) {
+        const lowerKey = key.toLowerCase();
+        
+        // WICHTIG: CORS-Header vom Ledger-Service ignorieren!
+        // Der Gateway hat bereits die korrekten CORS-Header gesetzt
+        if (value && !lowerKey.startsWith('access-control-')) {
           res.setHeader(key, value);
         }
       });

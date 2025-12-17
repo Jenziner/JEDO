@@ -116,7 +116,22 @@
                         <span class="accordion-title">Gens Registration</span>
                     </button>
                     <div class="accordion-content">
-                        <p>Content coming in Feature 3</p>
+                        <label class="upload-label">Paste QR Code Data (JSON)</label>
+                        <textarea 
+                            id="ager-qr-input" 
+                            class="input-field"
+                            rows="3"
+                            placeholder='{"username": "perplexity.ea.jedo.dev", "password": "..."}'
+                        ></textarea>
+                        <button id="ager-register-gens-btn" class="btn-secondary" style="width: 100%;">
+                            Register Gens
+                        </button>
+
+                        <div id="ager-register-success" style="display: none; margin-top: var(--spacing-md);">
+                            <p style="color: var(--color-success); font-weight: 600;">✅ Gens registered successfully!</p>
+                        </div>
+
+                        <div id="ager-register-error" class="error-display" style="display: none;"></div>
                     </div>
                 </div>
 
@@ -148,6 +163,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/11.1.0/jsrsasign-all-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

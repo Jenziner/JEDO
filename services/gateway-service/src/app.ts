@@ -12,12 +12,40 @@ import ledgerProxyRoutes from './routes/ledgerProxyRoutes';
 export const createApp = (): Application => {
   const app: Application = express();
 
-  // Security Middleware
-  app.use(helmet());
+  // ===== SECURITY MIDDLEWARE =====
+  
+  // Helmet mit angepasster CSP für CORS-Kompatibilität
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }));
+
+  // CORS Configuration mit Dynamic Origin Reflection
   app.use(
     cors({
-      origin: env.corsOrigin,
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, Postman)
+        if (!origin) return callback(null, true);
+        
+        // Development: Erlaube alle Origins (reflektiere die Origin zurück)
+        if (env.nodeEnv === 'development' || env.corsOrigin === '*') {
+          return callback(null, origin);
+        }
+        
+        // Production: Whitelist prüfen
+        const allowedOrigins = env.corsOrigin.split(',').map(o => o.trim());
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, origin);
+        }
+        
+        // Origin nicht erlaubt
+        callback(new Error('Not allowed by CORS'));
+      },
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
       credentials: true,
+      maxAge: 86400,
+      preflightContinue: false,
+      optionsSuccessStatus: 204
     })
   );
 

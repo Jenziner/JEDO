@@ -12,6 +12,18 @@ const caAgent = new https.Agent({
 });
 
 /**
+ * CORS Preflight Handler - MUSS vor router.all() kommen!
+ */
+router.options('*', (req: Request, res: Response) => {
+  logger.debug({
+    path: req.path,
+    origin: req.headers.origin
+  }, 'CORS Preflight for CA-Service');
+  
+  res.sendStatus(204); // CORS-Header bereits von app.ts gesetzt
+});
+
+/**
  * Proxy all /api/v1/ca/* requests to CA-Service
  */
 router.all('*', async (req: Request, res: Response) => {
@@ -56,7 +68,8 @@ router.all('*', async (req: Request, res: Response) => {
       // Forward headers
       Object.keys(proxyRes.headers).forEach(key => {
         const value = proxyRes.headers[key];
-        if (value) {
+        const lowerKey = key.toLowerCase();
+        if (value && !lowerKey.startsWith('access-control-')) {
           res.setHeader(key, value);
         }
       });

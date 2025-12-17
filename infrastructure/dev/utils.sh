@@ -92,6 +92,11 @@ function echo_value_debug() {
 function echo_value_test() {
     echo -e "${TURQUOISEB}$1 ${TURQUOISE}$2${NC}"
 }
+function log_info() {
+    if [[ $LOGLEVEL == "INFO" ]]; then
+        echo -e "${BLUEB}[INFO] $1 ${BLUE}$2${NC}"
+    fi
+}
 function log_debug() {
     if [[ $LOGLEVEL == "DEBUG" ]]; then
         echo -e "${PURPLEB}[DEBUG] $1 ${PURPLE}$2${NC}"

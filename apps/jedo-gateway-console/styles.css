@@ -412,6 +412,105 @@ body {
     cursor: not-allowed;
 }
 
+/* === Input Fields === */
+.input-field {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 14px;
+    margin-bottom: var(--spacing-sm);
+    transition: border-color var(--transition-speed);
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+textarea.input-field {
+    resize: vertical;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
+
+/* === QR Code Display === */
+.qr-display {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: var(--color-white);
+    border: 2px solid var(--color-border);
+    border-radius: 4px;
+    text-align: center;
+}
+
+.qr-container {
+    display: inline-block;
+    margin: var(--spacing-md) auto;
+    padding: var(--spacing-sm);
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border);
+}
+
+.qr-text {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-sm);
+    background-color: #f8f9fa;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    word-break: break-all;
+    color: var(--color-text);
+    max-height: 80px;
+    overflow-y: auto;
+}
+
+/* === Download Buttons === */
+.download-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+}
+
+.btn-download {
+    padding: 8px 12px;
+    background-color: var(--color-human);
+    border: none;
+    border-radius: 4px;
+    color: var(--color-white);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    text-align: left;
+}
+
+.btn-download:hover {
+    background-color: #2980b9;
+    transform: translateY(-1px);
+}
+
+/* === Error Display === */
+.error-display {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-sm);
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    color: #721c24;
+    font-size: 13px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.error-display pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
 /* === Status Badge === */
 .badges-container {
     display: flex;
