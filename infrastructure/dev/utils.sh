@@ -93,13 +93,25 @@ function echo_value_test() {
     echo -e "${TURQUOISEB}$1 ${TURQUOISE}$2${NC}"
 }
 function log_info() {
-    if [[ $LOGLEVEL == "INFO" ]]; then
-        echo -e "${BLUEB}[INFO] $1 ${BLUE}$2${NC}"
+    if [[ $LOGLEVEL == "INFO" || $LOGLEVEL == "DEBUG" ]]; then
+        local msg1=$1
+        local msg2=${2:-}   # leer, falls nicht gesetzt
+        if [[ -n "$msg2" ]]; then
+            echo -e "${BLUEB}[INFO] $msg1 ${BLUE}$msg2${NC}"
+        else
+            echo -e "${BLUEB}[INFO] $msg1${NC}"
+        fi
     fi
 }
 function log_debug() {
     if [[ $LOGLEVEL == "DEBUG" ]]; then
-        echo -e "${PURPLEB}[DEBUG] $1 ${PURPLE}$2${NC}"
+        local msg1=$1
+        local msg2=${2:-}   # leer, falls nicht gesetzt
+        if [[ -n "$msg2" ]]; then
+            echo -e "${PURPLEB}[DEBUG] $msg1 ${PURPLE}$msg2${NC}"
+        else
+            echo -e "${PURPLEB}[DEBUG] $msg1${NC}"
+        fi
     fi
 }
 

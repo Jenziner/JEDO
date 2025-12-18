@@ -11,48 +11,114 @@ const FIXED_ATTRIBUTES = [
 ];
 
 class CertificateController {
-  async registerCertificate(req, res, next) {
+  /**
+   * Register Gens identity
+   * POST /certificates/register/gens
+   */
+  async registerGens(req, res, next) {
     try {
-      const { username, secret, role, affiliation, attrs = {} } = req.body;
+      const { username, secret, affiliation, role = 'gens' } = req.body;
       
-      logger.debug('Registration validation passed');
+      // Validation
+      if (!username || !secret || !affiliation) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: username, secret, affiliation'
+        });
+      }
       
-      // Filter out fixed hf.* attributes (set automatically by Fabric CA)
-      const cleanAttrs = Object.entries(attrs)
-        .filter(([key]) => !FIXED_ATTRIBUTES.includes(key))
-        .reduce((obj, [key, value]) => {
-          obj[key] = value;
-          return obj;
-        }, {});
-      
-      logger.info('Registering with filtered attributes', {
-        username,
-        role,
-        originalAttrs: Object.keys(attrs),
-        filteredAttrs: Object.keys(cleanAttrs)
+      logger.info('Gens registration request', { 
+        username, 
+        affiliation,
+        requestedBy: req.user?.subject || 'unknown'
       });
       
-      const result = await certificateService.registerUser(
+      const result = await certificateService.registerGens({
         username,
         secret,
-        role,
         affiliation,
-        cleanAttrs
-      );
+        role
+      });
       
       res.status(200).json({
         success: true,
-        message: 'User registered successfully',
-        data: result
+        message: 'Gens registered successfully',
+        data: {
+          username: result.username,
+          affiliation
+        }
       });
+      
     } catch (error) {
-      logger.error('Registration request failed', { 
-        error: error.message 
+      logger.error('Gens registration failed', { 
+        error: error.message,
+        stack: error.stack 
       });
       next(error);
     }
   }
 
+  /**
+   * Register Human identity
+   * POST /certificates/register/human
+   */
+  async registerHuman(req, res, next) {
+    try {
+      const { 
+        username, 
+        secret, 
+        affiliation, 
+        gensUsername, 
+        gensPassword,
+        role = 'human' 
+      } = req.body;
+      
+      // Validation
+      if (!username || !secret || !affiliation || !gensUsername || !gensPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: username, secret, affiliation, gensUsername, gensPassword'
+        });
+      }
+      
+      logger.info('Human registration request', { 
+        username, 
+        affiliation,
+        registrar: gensUsername,
+        requestedBy: req.user?.subject || 'unknown'
+      });
+      
+      const result = await certificateService.registerHuman({
+        username,
+        secret,
+        affiliation,
+        gensUsername,
+        gensPassword,
+        role
+      });
+      
+      res.status(200).json({
+        success: true,
+        message: 'Human registered successfully',
+        data: {
+          username: result.username,
+          affiliation
+        }
+      });
+      
+    } catch (error) {
+      logger.error('Human registration failed', { 
+        error: error.message,
+        stack: error.stack 
+      });
+      next(error);
+    }
+  }
+
+  /**
+   * Enroll user and issue certificate
+   * POST /certificates/enroll
+   */
   async enrollCertificate(req, res, next) {
     try {
       const { 

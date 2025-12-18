@@ -39,6 +39,7 @@ class CertificateService {
       logger.info('Fabric CA Client created');
 
       await this.enrollBootstrapAdmin();
+      await this._enrollBootstrapAdminCLI();
 
       this.idemixIssuerKeys = await this._loadIdemixIssuerKeys()
       
@@ -155,64 +156,407 @@ class CertificateService {
     }
   }
 
-  async registerUser(username, secret, role, affiliation, attrs = {}) {
+  /**
+   * Enroll bootstrap admin via CLI to create msp-bootstrap directory
+   * This is needed for affiliation management and other admin operations
+   * @private
+   */
+  async _enrollBootstrapAdminCLI() {
     try {
-      logger.info('Registering new user', { username, role, affiliation });
+      const adminUsername = process.env.FABRIC_CA_ADMIN_USER;
+      const adminPass = process.env.FABRIC_CA_ADMIN_PASS;
+      const caUrl = process.env.FABRIC_CA_URL.replace('https://', '');
+      const caName = process.env.FABRIC_CA_NAME;
+      const tlsCertPath = process.env.FABRIC_CA_TLS_CERT_PATH;
       
-      if (!this.adminUser) {
-        throw new Error('Registrar User not loaded');
-      }
-
-      // Build attributes array
-      const attributes = [
-        { name: 'role', value: role, ecert: true }
-      ];
-      
-      // Add custom attributes
-      for (const [name, value] of Object.entries(attrs)) {
-        attributes.push({
-          name,
-          value: String(value),
-          ecert: true
-        });
-      }
-
-      const request = {
-        enrollmentID: username,
-        enrollmentSecret: secret,
-        role: 'client',
-        affiliation,
-        maxEnrollments: -1,
-        attrs: attributes
-      };
-
-      logger.info('Registration request', { 
-        username, 
-        role, 
-        attrs: attributes.map(a => a.name)
-      });
-
-      const registerResponse = await this.caClient.register(
-        request,
-        this.adminUser
+      // Build msp-bootstrap path
+      const caBasePath = path.join(
+        '/app/infrastructure',
+        process.env.FABRIC_ORBIS_NAME,
+        process.env.FABRIC_REGNUM_NAME,
+        process.env.FABRIC_AGER_NAME,
+        process.env.FABRIC_CA_NAME
       );
-
-      logger.info('User registered successfully', { 
-        username,
-        secret: registerResponse 
+      const mspBootstrapDir = path.join(caBasePath, 'msp-bootstrap');
+      
+      // Check if already enrolled
+      const signcertsDir = path.join(mspBootstrapDir, 'signcerts');
+      if (fs.existsSync(signcertsDir) && fs.readdirSync(signcertsDir).length > 0) {
+        logger.info('Bootstrap admin CLI credentials already exist', { mspBootstrapDir });
+        return;
+      }
+      
+      logger.info('Enrolling bootstrap admin via CLI for msp-bootstrap', { 
+        adminUsername,
+        mspBootstrapDir 
       });
-
-      return { username, secret: registerResponse };
+      
+      // Ensure directory exists
+      fs.mkdirSync(mspBootstrapDir, { recursive: true });
+      
+      const command = `fabric-ca-client enroll \
+        -u https://${adminUsername}:${adminPass}@${caUrl} \
+        --caname ${caName} \
+        --tls.certfiles ${tlsCertPath} \
+        --mspdir ${mspBootstrapDir}`;
+      
+      logger.debug('Executing bootstrap admin enroll CLI', { 
+        command: command.replace(adminPass, '***')
+      });
+      
+      execSync(command, { 
+        encoding: 'utf8', 
+        stdio: 'pipe',
+        env: {
+          ...process.env,
+          PATH: '/usr/local/bin:/usr/bin:/bin'
+        }
+      });
+      
+      logger.info('Bootstrap admin CLI enrollment successful', { mspBootstrapDir });
+      
+      // Verify enrollment
+      if (!fs.existsSync(signcertsDir) || fs.readdirSync(signcertsDir).length === 0) {
+        throw new Error('Bootstrap admin enrollment failed: no certificate generated');
+      }
       
     } catch (error) {
-      logger.error('User registration failed', { 
+      logger.error('Failed to enroll bootstrap admin via CLI', { 
         error: error.message,
-        stack: error.stack 
+        stderr: error.stderr?.toString()
+      });
+      throw new Error(`Bootstrap admin CLI enroll failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Register Gens identity with affiliation creation
+   * Uses Ager Admin (bootstrap) as registrar
+   */
+  async registerGens(gensData) {
+    const { username, secret, affiliation, attrs = {} } = gensData;
+    
+    try {
+      logger.info('Registering Gens', { username, affiliation });
+      
+      // Step 1: Add affiliation if not exists
+      await this._addAffiliationCLI(affiliation);
+      
+      // Step 2: Register Gens via CLI with Ager-Admin as Registrar
+      await this._registerViaCLI({
+        username,
+        secret,
+        affiliation,
+        registrarUser: process.env.FABRIC_CA_ADMIN_USER,
+        registrarPass: process.env.FABRIC_CA_ADMIN_PASS,
+        mspdir: null, // Use default bootstrap msp
+        attrs: [
+          'role=gens:ecert',
+          'hf.Registrar.Roles=client',
+          'hf.Registrar.Attributes=role',
+          'hf.Revoker=true'
+        ]
+      });
+      
+      logger.info('Gens registered successfully', { username, affiliation });
+      return { username, secret };
+      
+    } catch (error) {
+      logger.error('Gens registration failed', { 
+        error: error.message,
+        username,
+        affiliation 
       });
       throw error;
     }
   }
-  
+
+  /**
+   * Register Human identity under Gens affiliation
+   * Uses Gens as registrar (requires Gens credentials)
+   */
+  async registerHuman(humanData) {
+    const { 
+      username, 
+      secret, 
+      affiliation, 
+      gensUsername, 
+      gensPassword 
+    } = humanData;
+    
+    const tempMspDir = `/tmp/gens-admin-${Date.now()}`;
+    
+    try {
+      logger.info('Registering Human', { 
+        username, 
+        affiliation, 
+        registrar: gensUsername 
+      });
+      
+      // Step 1: Enroll Gens temporarily for admin operation
+      await this._enrollGensForAdmin(gensUsername, gensPassword, tempMspDir);
+      
+      // Step 2: Register Human via CLI with Gens as Registrar
+      await this._registerViaCLI({
+        username,
+        secret,
+        affiliation,
+        registrarUser: gensUsername,
+        registrarPass: gensPassword,
+        mspdir: tempMspDir,
+        attrs: [
+          'role=human:ecert'
+        ]
+      });
+      
+      logger.info('Human registered successfully', { 
+        username, 
+        affiliation,
+        registrar: gensUsername 
+      });
+      
+      return { username, secret };
+      
+    } catch (error) {
+      logger.error('Human registration failed', { 
+        error: error.message,
+        username,
+        registrar: gensUsername 
+      });
+      throw error;
+    } finally {
+      // Cleanup temp msp directory
+      try {
+        if (fs.existsSync(tempMspDir)) {
+          fs.rmSync(tempMspDir, { recursive: true, force: true });
+          logger.debug('Temp MSP directory cleaned up', { tempMspDir });
+        }
+      } catch (cleanupError) {
+        logger.warn('Failed to cleanup temp MSP directory', { 
+          error: cleanupError.message,
+          tempMspDir 
+        });
+      }
+    }
+  }
+
+  /**
+   * Add affiliation to CA via CLI
+   * Uses Ager Admin (bootstrap) credentials
+   * @private
+   */
+  async _addAffiliationCLI(affiliation) {
+    try {
+      logger.info('Adding affiliation to CA', { affiliation });
+      
+      const caUrl = process.env.FABRIC_CA_URL.replace('https://', '');
+      const adminUser = process.env.FABRIC_CA_ADMIN_USER;
+      const adminPass = process.env.FABRIC_CA_ADMIN_PASS;
+      const caName = process.env.FABRIC_CA_NAME;
+      const tlsCertPath = process.env.FABRIC_CA_TLS_CERT_PATH;
+      
+      // Build CA MSP directory path for bootstrap admin
+      const caBasePath = path.join(
+        '/app/infrastructure',
+        process.env.FABRIC_ORBIS_NAME,
+        process.env.FABRIC_REGNUM_NAME,
+        process.env.FABRIC_AGER_NAME,
+        process.env.FABRIC_CA_NAME
+      );
+      const mspBootstrapDir = path.join(caBasePath, 'msp-bootstrap');
+      
+      // VERIFY msp-bootstrap exists
+      if (!fs.existsSync(mspBootstrapDir)) {
+        throw new Error(`msp-bootstrap directory not found: ${mspBootstrapDir}. Run _enrollBootstrapAdminCLI() first.`);
+      }
+      
+      // Verify signcerts exist
+      const signcertsDir = path.join(mspBootstrapDir, 'signcerts');
+      if (!fs.existsSync(signcertsDir) || fs.readdirSync(signcertsDir).length === 0) {
+        throw new Error(`Bootstrap admin not enrolled: ${signcertsDir}. Run _enrollBootstrapAdminCLI() first.`);
+      }
+      
+      logger.debug('Using msp-bootstrap for affiliation add', { 
+        mspBootstrapDir,
+        signcertsExists: fs.existsSync(signcertsDir)
+      });
+    
+      const command = `fabric-ca-client affiliation add ${affiliation} \
+        -u https://${adminUser}:${adminPass}@${caUrl} \
+        --caname ${caName} \
+        --tls.certfiles ${tlsCertPath} \
+        --mspdir ${mspBootstrapDir}`;
+      
+      logger.debug('Executing affiliation add CLI', { 
+        affiliation,
+        command: command.replace(adminPass, '***') 
+      });
+      
+      execSync(command, { 
+        encoding: 'utf8', 
+        stdio: 'pipe',
+        env: {
+          ...process.env,
+          PATH: '/usr/local/bin:/usr/bin:/bin'
+        }
+      });
+      
+      logger.info('Affiliation added successfully', { affiliation });
+      
+    } catch (error) {
+      // Check if affiliation already exists (not an error)
+      if (error.message && error.message.includes('Affiliation already exists')) {
+        logger.warn('Affiliation already exists', { affiliation });
+        return;
+      }
+      
+      logger.error('Failed to add affiliation', { 
+        error: error.message,
+        stderr: error.stderr?.toString(),
+        affiliation 
+      });
+      throw new Error(`Affiliation add failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generic CLI-based registration
+   * @private
+   */
+  async _registerViaCLI(options) {
+    const { 
+      username, 
+      secret, 
+      affiliation, 
+      registrarUser, 
+      registrarPass,
+      mspdir,
+      attrs = [] 
+    } = options;
+    
+    try {
+      logger.debug('Registering user via CLI', { 
+        username, 
+        affiliation,
+        registrar: registrarUser 
+      });
+      
+      const caUrl = process.env.FABRIC_CA_URL.replace('https://', '');
+      const caName = process.env.FABRIC_CA_NAME;
+      const tlsCertPath = process.env.FABRIC_CA_TLS_CERT_PATH;
+      
+      // Determine MSP directory
+      let mspDirectory;
+      if (mspdir) {
+        // Use provided temp directory (for Human with Gens registrar)
+        mspDirectory = mspdir;
+      } else {
+        // Use bootstrap directory (for Gens with Ager registrar)
+        const caBasePath = path.join(
+          '/app/infrastructure',
+          process.env.FABRIC_ORBIS_NAME,
+          process.env.FABRIC_REGNUM_NAME,
+          process.env.FABRIC_AGER_NAME,
+          process.env.FABRIC_CA_NAME
+        );
+        mspDirectory = path.join(caBasePath, 'msp-bootstrap');
+      }
+      
+      // Build attributes string for CLI
+      const attrsString = attrs.map(attr => `"${attr}"`).join(',');
+      
+      const command = `fabric-ca-client register \
+        -u https://${registrarUser}:${registrarPass}@${caUrl} \
+        --caname ${caName} \
+        --tls.certfiles ${tlsCertPath} \
+        --mspdir ${mspDirectory} \
+        --id.name ${username} \
+        --id.secret ${secret} \
+        --id.type client \
+        --id.affiliation ${affiliation} \
+        ${attrsString ? `--id.attrs '${attrsString}'` : ''}`;
+      
+      logger.debug('Executing register CLI', { 
+        username,
+        command: command.replace(registrarPass, '***').replace(secret, '***')
+      });
+      
+      const output = execSync(command, { 
+        encoding: 'utf8', 
+        stdio: 'pipe',
+        env: {
+          ...process.env,
+          PATH: '/usr/local/bin:/usr/bin:/bin'
+        }
+      });
+      
+      logger.debug('Registration CLI completed', { username, output });
+      
+    } catch (error) {
+      logger.error('CLI registration failed', { 
+        error: error.message,
+        stderr: error.stderr?.toString(),
+        stdout: error.stdout?.toString(),
+        username 
+      });
+      throw new Error(`Registration failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Temporarily enroll Gens for admin operations (Human registration)
+   * Creates msp-bootstrap directory for Gens
+   * @private
+   */
+  async _enrollGensForAdmin(gensUsername, gensPassword, tempMspDir) {
+    try {
+      logger.debug('Enrolling Gens for admin operation', { 
+        gensUsername,
+        tempMspDir 
+      });
+      
+      const caUrl = process.env.FABRIC_CA_URL.replace('https://', '');
+      const caName = process.env.FABRIC_CA_NAME;
+      const tlsCertPath = process.env.FABRIC_CA_TLS_CERT_PATH;
+      
+      // Ensure temp directory exists
+      fs.mkdirSync(tempMspDir, { recursive: true });
+      
+      const command = `fabric-ca-client enroll \
+        -u https://${gensUsername}:${gensPassword}@${caUrl} \
+        --caname ${caName} \
+        --tls.certfiles ${tlsCertPath} \
+        --mspdir ${tempMspDir}`;
+      
+      logger.debug('Executing Gens admin enroll CLI', { 
+        gensUsername,
+        command: command.replace(gensPassword, '***')
+      });
+      
+      execSync(command, { 
+        encoding: 'utf8', 
+        stdio: 'pipe',
+        env: {
+          ...process.env,
+          PATH: '/usr/local/bin:/usr/bin:/bin'
+        }
+      });
+      
+      logger.debug('Gens admin enrollment successful', { 
+        gensUsername,
+        tempMspDir 
+      });
+      
+    } catch (error) {
+      logger.error('Gens admin enrollment failed', { 
+        error: error.message,
+        stderr: error.stderr?.toString(),
+        gensUsername 
+      });
+      throw new Error(`Gens admin enroll failed: ${error.message}`);
+    }
+  }
+
   async enrollUser(enrollmentData) {
     const { 
       username, 

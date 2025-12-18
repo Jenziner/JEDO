@@ -161,7 +161,7 @@ Ager:
             Type: admin
             Subject: "C=jd,ST=dev,L=ea,O=alps,CN=admin.alps.ea.jedo.dev"
       Gens:
-          - Name: WORB
+          - Name: worb
             Subject: "C=jd,ST=dev,L=ea,O=alps,CN=worb.alps.ea.jedo.dev"
             Pass: Test1
             Humans: 

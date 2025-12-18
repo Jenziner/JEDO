@@ -415,22 +415,25 @@ async function registerGensViaAger() {
         return;
     }
     const fullUsername = `${qrData.username}.${agerData.fqdn}`;
+    const gensAffiliation = `${agerData.affiliation}.${qrData.username}`;
+
     const payload = {
         certificate: agerData.certPem,
         privateKey: agerData.keyPem,
         username: fullUsername,
         secret: qrData.password,
         role: "gens",
-        affiliation: agerData.affiliation,
+        affiliation: gensAffiliation,
         attrs: [
-            { role: "gens" },
+            { role: "gens:ecert" },
             { "hf.Registrar.Roles": "client" },
-            { "hf.Registrar.Attributes": "*" },
-            { "hf.Revoker": "false" }
+            { "hf.Registrar.Attributes": "role" },
+            { "hf.Revoker": "true" }
         ]
     };
+
     const gatewayUrl = getGatewayUrl();
-    const endpoint = `${gatewayUrl}/api/v1/ca/certificates/register`;
+    const endpoint = `${gatewayUrl}/api/v1/ca/certificates/register/gens`;
     console.log('📤 Registering Gens:', fullUsername);
     try {
         const response = await fetch(endpoint, {
@@ -487,15 +490,6 @@ async function enrollGens(columnId) {
         secret: gensData.password,
         enrollmentType: "x509",
         role: "gens",
-        attrReqs: [
-            { name: 'hf.Affiliation', optional: false },
-            { name: 'hf.EnrollmentID', optional: false },
-            { name: 'hf.Type', optional: false },
-            { name: 'role', optional: false },
-            { name: 'hf.Registrar.Roles', optional: false },
-            { name: 'hf.Registrar.Attributes', optional: false },
-            { name: 'hf.Revoker', optional: false }
-        ]
     };
     console.log('📤 Enrolling Gens:', fullUsername);
     enrollBtn.disabled = true;
@@ -514,6 +508,7 @@ async function enrollGens(columnId) {
             const cn = extractCnFromCert(certificate);
             const { username: parsedUsername, fqdn: parsedFqdn, affiliation: parsedAffiliation } = parseCnToUserAndAffiliation(cn);
             updateColumnData(columnId, {
+                ...gensData,  // ← Spread existierende Daten ZUERST
                 certPem: certificate,
                 keyPem: privateKey,
                 caCertPem: rootCertificate,
@@ -522,12 +517,20 @@ async function enrollGens(columnId) {
                 affiliation: parsedAffiliation || gensData.affiliation
             });
             setColumnState(columnId, 'ENROLLED');
-            document.getElementById(`${columnId}-enrolled-cn`).textContent = cn || 'N/A';
-            document.getElementById(`${columnId}-enrolled-username`).textContent = gensData.username || 'N/A';
-            document.getElementById(`${columnId}-enrolled-fqdn`).textContent = parsedFqdn || gensData.fqdn || 'N/A';
-            document.getElementById(`${columnId}-enrolled-affiliation`).textContent = parsedAffiliation || gensData.affiliation || 'N/A';
-            resultDiv.style.display = 'block';
-            document.getElementById(`${columnId}-enrolled-badge`).style.display = 'block';
+            const enrolledCn = document.getElementById(`${columnId}-enrolled-cn`);
+            const enrolledUsername = document.getElementById(`${columnId}-enrolled-username`);
+            const enrolledFqdn = document.getElementById(`${columnId}-enrolled-fqdn`);
+            const enrolledAffiliation = document.getElementById(`${columnId}-enrolled-affiliation`);
+
+            if (enrolledCn) enrolledCn.textContent = cn || 'N/A';
+            if (enrolledUsername) enrolledUsername.textContent = gensData.username || 'N/A';
+            if (enrolledFqdn) enrolledFqdn.textContent = parsedFqdn || gensData.fqdn || 'N/A';
+            if (enrolledAffiliation) enrolledAffiliation.textContent = parsedAffiliation || gensData.affiliation || 'N/A';
+
+            if (resultDiv) resultDiv.style.display = 'block';
+
+            const enrolledBadge = document.getElementById(`${columnId}-enrolled-badge`);
+            if (enrolledBadge) enrolledBadge.style.display = 'block';
             setupGensDownloads(columnId);
             enrollBtn.textContent = '✅ Enrolled';
             console.log('✅ Gens enrolled successfully');
@@ -638,12 +641,19 @@ function checkGensLoadedState(columnId) {
         // ← NEU: Parse CN to get username and affiliation
         const { username, fqdn, affiliation } = parseCnToUserAndAffiliation(cn);
         
+        const passwordInput = document.getElementById(`${columnId}-password-input`);
+        const password = passwordInput ? passwordInput.value.trim() : null;
+        if (!password) {
+            console.warn(`⚠️ ${columnId}: No password entered - Human registration will not be possible`);
+        }
+
         // Update data with CN, username AND affiliation
         updateColumnData(columnId, { 
             cn: cn,
             username: username,
             fqdn: fqdn,
-            affiliation: affiliation
+            affiliation: affiliation,
+            password: password || undefined
         });
         
         // Update UI
@@ -651,18 +661,38 @@ function checkGensLoadedState(columnId) {
         document.getElementById(`${columnId}-username-display`).textContent = username || '–';
         document.getElementById(`${columnId}-fqdn-display`).textContent = fqdn || '–';
         document.getElementById(`${columnId}-affiliation-display`).textContent = affiliation || '–';
+
+        const passwordDisplay = document.getElementById(`${columnId}-password-display`);
+        if (passwordDisplay) {
+            if (password) {
+                passwordDisplay.textContent = '●●●●●●●●';
+                passwordDisplay.style.color = 'var(--color-success)';
+            } else {
+                passwordDisplay.textContent = 'Not set';
+                passwordDisplay.style.color = 'var(--color-error)';
+            }
+        }
+                
         document.getElementById(`${columnId}-loaded-info`).style.display = 'block';
         document.getElementById(`${columnId}-validate-btn`).disabled = false;
         
         // Set state to ENROLLED
         setColumnState(columnId, 'ENROLLED');
-        document.getElementById(`${columnId}-enrolled-badge`).style.display = 'block';
+        const enrolledBadge = document.getElementById(`${columnId}-enrolled-badge`);
+        if (enrolledBadge) {
+            if (password) {
+                enrolledBadge.textContent = 'Gens Enrolled';
+                enrolledBadge.className = 'status-badge badge-success';
+            } else {
+                enrolledBadge.textContent = 'Gens Loaded (⚠️ No password)';
+                enrolledBadge.className = 'status-badge badge-warning';
+            }
+            enrolledBadge.style.display = 'block';
+        }
         
         console.log(`✅ Gens ${columnId} fully loaded from files`, {
-            cn: cn,
-            username: username,
-            fqdn: fqdn,
-            affiliation: affiliation
+            cn, username, fqdn, affiliation,
+            hasPassword: !!password
         });
     }
 }
@@ -753,14 +783,17 @@ function generateHumanQrCode(columnId) {
     // Create QR data
     const qrData = JSON.stringify({ username, password });
     
+    const humanFqdn = `${username}.${gensData.username}.${gensData.fqdn}`;
+    const humanAffiliation = `${gensData.affiliation}.${gensData.username}`;
+
     // Update Human state
     updateColumnData(columnId, {
         username: username,
         password: password,
         qrCodeData: qrData,
         registeredByGensId: selectedGensId,
-        fqdn: gensData.fqdn,
-        affiliation: gensData.affiliation
+        fqdn: humanFqdn,
+        affiliation: humanAffiliation
     });
     
     // Display QR Code
@@ -841,32 +874,67 @@ async function registerHumanViaGens(gensId) {
         return;
     }
     
-    // Check Gens is enrolled
+    // Get Gens data
     const gensData = getColumnData(gensId);
     if (!gensData || !gensData.certPem || !gensData.keyPem) {
         showFeedback('❌ Gens must be enrolled first', false);
         return;
     }
     
-    const fullUsername = `${qrData.username}.${gensData.fqdn}`;
+    // Get Human data
+    const humanColumn = appState.columns.find(col => 
+        col.type === 'human' && col.data.username === qrData.username
+    );
+    
+    if (!humanColumn) {
+        errorDiv.textContent = '❌ Human column not found. Generate QR code first.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    const humanData = getColumnData(humanColumn.id);
+    
+    if (!humanData.fqdn || !humanData.affiliation) {
+        errorDiv.textContent = '❌ Human data incomplete. Please regenerate QR code.';
+        errorDiv.style.display = 'block';
+        console.error('❌ Missing humanData:', humanData);
+        return;
+    }
+    
+    // ✅ Build Gens username (FQDN)
+    const gensUsername = gensData.cn || `${gensData.username}.${gensData.fqdn}`;
+    
+    // ✅ Get Gens password (from stored data)
+    const gensPassword = gensData.password;
+    
+    if (!gensPassword) {
+        errorDiv.textContent = '❌ Gens password not found. Please re-generate Gens QR code and save the password.';
+        errorDiv.style.display = 'block';
+        console.error('❌ gensData.password is missing!', gensData);
+        return;
+    }
+    
+    const fullUsername = `${qrData.username}.${humanData.fqdn}`;
 
     const payload = {
         certificate: gensData.certPem,
         privateKey: gensData.keyPem,
-        username: fullUsername,
+        username: humanData.fqdn,
         secret: qrData.password,
-        role: "human",
-        affiliation: gensData.affiliation,
-        attrs: [
-            { role: "human" },
-            { "hf.EnrollmentID": fullUsername }
-        ]
+        role: 'human',
+        affiliation: humanData.affiliation,
+        gensUsername: gensData.username + '.' + gensData.fqdn,
+        gensPassword: gensData.password
     };
-    
+
     const gatewayUrl = getGatewayUrl();
-    const endpoint = `${gatewayUrl}/api/v1/ca/certificates/register`;
+    const endpoint = `${gatewayUrl}/api/v1/ca/certificates/register/human`;
     
-    console.log('📤 Registering Human:', fullUsername);
+    console.log('📤 Registering Human:', humanData.fqdn);
+    console.log('🔍 Gens credentials:', {
+        gensUsername: gensUsername,
+        hasPassword: !!gensPassword
+    });
     
     try {
         const response = await fetch(endpoint, {
@@ -881,22 +949,13 @@ async function registerHumanViaGens(gensId) {
         if (response.ok) {
             successDiv.style.display = 'block';
             
-            // Find Human column by username and update state
-            const humanColumn = appState.columns.find(col => 
-                col.type === 'human' && col.data.username === qrData.username
-            );
+            setColumnState(humanColumn.id, 'REGISTERED');
             
-            if (humanColumn) {
-                setColumnState(humanColumn.id, 'REGISTERED');
-                
-                // Show badge
-                const badge = document.getElementById(`${humanColumn.id}-registered-badge`);
-                if (badge) badge.style.display = 'block';
-                
-                // Enable enrollment button
-                const enrollBtn = document.getElementById(`${humanColumn.id}-enroll-btn`);
-                if (enrollBtn) enrollBtn.disabled = false;
-            }
+            const badge = document.getElementById(`${humanColumn.id}-registered-badge`);
+            if (badge) badge.style.display = 'block';
+            
+            const enrollBtn = document.getElementById(`${humanColumn.id}-enroll-btn`);
+            if (enrollBtn) enrollBtn.disabled = false;
             
             console.log('✅ Human registered successfully');
         } else {
@@ -906,10 +965,11 @@ async function registerHumanViaGens(gensId) {
         }
     } catch (error) {
         console.error('❌ Registration error:', error);
-        errorDiv.textContent = `❌ Network error: ${error.message}`;
+        errorDiv.textContent = `Network error: ${error.message}`;
         errorDiv.style.display = 'block';
     }
 }
+
 
 /**
  * Führt Idemix-Enrollment für Human durch
@@ -949,16 +1009,19 @@ async function enrollHuman(columnId) {
         errorDiv.style.display = 'block';
         return;
     }
-    
+
+    const fullUsername = `${humanData.username}.${gensData.username}.${gensData.fqdn}`;
+
     // Build Idemix payload
     const payload = {
-        username: humanData.username,
+        username: fullUsername,
         secret: humanData.password,
         enrollmentType: "idemix",
         idemixCurve: "gurvy.Bn254",
         role: "human",
-        gensName: gensData.username
-    };
+        gensName: gensData.username + '.' + gensData.fqdn,
+        gensPassword: gensData.password
+        };
     
     console.log('📤 Enrolling Human (Idemix):', humanData.username);
     enrollBtn.disabled = true;
@@ -989,6 +1052,7 @@ async function enrollHuman(columnId) {
             
             // Update state
             updateColumnData(columnId, {
+                ...humanData,  // ← Spread existierende Daten ZUERST
                 signerConfig: signerConfig,
                 issuerPublicKey: issuerPublicKey || null,
                 issuerRevocationPublicKey: issuerRevocationPublicKey || null,
@@ -998,9 +1062,13 @@ async function enrollHuman(columnId) {
             setColumnState(columnId, 'ENROLLED');
             
             // Update UI - show username as identification
-            document.getElementById(`${columnId}-enrolled-username`).textContent = humanData.username || 'N/A';
-            document.getElementById(`${columnId}-enrolled-affiliation`).textContent = humanData.affiliation || 'N/A';
-            resultDiv.style.display = 'block';
+            const enrolledUsername = document.getElementById(`${columnId}-enrolled-username`);
+            const enrolledAffiliation = document.getElementById(`${columnId}-enrolled-affiliation`);
+
+            if (enrolledUsername) enrolledUsername.textContent = humanData.username || 'N/A';
+            if (enrolledAffiliation) enrolledAffiliation.textContent = humanData.affiliation || 'N/A';
+
+            if (resultDiv) resultDiv.style.display = 'block';
             
             // Show badges
             document.getElementById(`${columnId}-enrolled-badge`).style.display = 'block';
@@ -1182,22 +1250,6 @@ function checkHumanLoadedState(columnId) {
     const humanData = getColumnData(columnId);
     
     if (humanData.signerConfig) {
-// TODO:
-        // // Try to extract username from signerConfig (if possible)
-        // // For now, we can't parse SignerConfig easily, so we just mark as loaded
-        
-        // // Set state to ENROLLED
-        // setColumnState(columnId, 'ENROLLED');
-        
-        // // Show loaded info
-        // document.getElementById(`${columnId}-loaded-info`).style.display = 'block';
-        // document.getElementById(`${columnId}-validate-btn`).disabled = false;
-        
-        // // Show badge
-        // document.getElementById(`${columnId}-enrolled-badge`).style.display = 'block';
-        
-        // console.log(`✅ Human ${columnId} loaded from files`);
-
         const username = humanData.username || 'N/A';
         const fqdn = humanData.fqdn || 'N/A';
         const affiliation = humanData.affiliation || 'N/A';
@@ -1265,6 +1317,24 @@ function attachGensEventListeners(columnId) {
     document.getElementById(`${columnId}-key-upload`).addEventListener('change', (e) => handleGensKeyUpload(columnId, e));
     document.getElementById(`${columnId}-ca-upload`).addEventListener('change', (e) => handleGensCaUpload(columnId, e));
     
+    setTimeout(() => {
+        const passwordInput = document.getElementById(`${columnId}-password-input`);
+        if (passwordInput) {
+            passwordInput.addEventListener('input', () => {
+                console.log(`🔄 Password field changed for ${columnId}`);
+                
+                // Re-check loaded state when password changes
+                const gensData = getColumnData(columnId);
+                if (gensData && gensData.certPem && gensData.keyPem && gensData.caCertPem) {
+                    checkGensLoadedState(columnId);
+                }
+            });
+            console.log(`✅ Password input listener attached for ${columnId}`);
+        } else {
+            console.warn(`⚠️ Password input not found for ${columnId}`);
+        }
+    }, 100);
+
     // Validate button
     document.getElementById(`${columnId}-validate-btn`).addEventListener('click', () => validateGensCert(columnId));
     
@@ -1385,6 +1455,18 @@ function createGensSections(columnId) {
                     <button class="btn-upload" onclick="document.getElementById('${columnId}-ca-upload').click()">📜 Upload CA Cert</button>
                     <span id="${columnId}-ca-status" class="upload-status">–</span>
                 </div>
+                <div class="upload-group" style="margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--color-border);">
+                    <label class="upload-label">Gens Password <span style="color: var(--color-error);">*</span></label>
+                    <input type="text" 
+                           id="${columnId}-password-input" 
+                           class="input-field" 
+                           placeholder="Enter password used during enrollment"
+                           style="margin-bottom: var(--spacing-xs);">
+                    <small style="display: block; color: var(--color-text-light); font-size: 12px; line-height: 1.4;">
+                        ⚠️ Required for registering Humans under this Gens later.<br>
+                        This is the password from the original enrollment.
+                    </small>
+                </div>
                 <div id="${columnId}-loaded-info" style="display: none; margin-top: var(--spacing-md);">
                     <div class="info-row">
                         <span class="info-label">CN:</span>
@@ -1401,6 +1483,10 @@ function createGensSections(columnId) {
                     <div class="info-row">
                         <span class="info-label">Affiliation:</span>
                         <span id="${columnId}-affiliation-display" class="info-value">–</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Password</span>
+                        <span id="${columnId}-password-display" class="info-value" style="color: var(--color-success);">●●●●●●●●</span>
                     </div>
                     <button id="${columnId}-validate-btn" class="btn-validate" title="Validate Certificate" style="margin-top: var(--spacing-sm);" disabled>🔍 Validate</button>
                 </div>
@@ -1544,11 +1630,11 @@ function createHumanSections(columnId) {
             </div>
         </div>
 
-        <!-- Section 2: Registration Preparation -->
+        <!-- Section 2: Registration -->
         <div class="accordion-section">
             <button class="accordion-header" aria-expanded="false">
                 <span class="accordion-icon">▶</span>
-                <span class="accordion-title">Registration Preparation</span>
+                <span class="accordion-title">Registration</span>
             </button>
             <div class="accordion-content">
                 <label class="upload-label">Select Gens to register with</label>
@@ -1580,6 +1666,10 @@ function createHumanSections(columnId) {
                     <div class="info-row">
                         <span class="info-label">User-FQDN:</span>
                         <span id="${columnId}-enrolled-fqdn" class="info-value">–</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Affiliation</span>
+                        <span id="${columnId}-enrolled-affiliation" class="info-value"></span>
                     </div>
                     <div class="download-group">
                         <button id="${columnId}-download-signer" class="btn-download" style="display: none;">💾 Download SignerConfig</button>
