@@ -20,6 +20,7 @@
                     value="https://localhost:53901"
                 >
                 <button id="save-gateway-btn" class="btn-primary">SAVE</button>
+                <button id="check-ready-btn" class="btn-secondary" style="margin-left: 8px;">🏥 Check Readyness</button>
                 <span id="save-feedback" class="save-feedback"></span>
             </div>
         </div>
@@ -71,42 +72,40 @@
                             </button>
                             <span id="ager-key-status" class="upload-status">–</span>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Section 2: Status of Certificate -->
-                <div class="accordion-section">
-                    <button class="accordion-header" aria-expanded="false">
-                        <span class="accordion-icon">▶</span>
-                        <span class="accordion-title">Status of Certificate</span>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="cert-info">
-                            <div class="info-row">
-                                <span class="info-label">CN:</span>
-                                <span id="ager-cn-display" class="info-value">–</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Username:</span>
-                                <span id="ager-username-display" class="info-value">–</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Affiliation:</span>
-                                <span id="ager-affiliation-display" class="info-value">–</span>
-                            </div>
-                            
-                            <div class="validate-group">
-                                <button 
-                                    id="ager-validate-btn" 
-                                    class="btn-validate" 
-                                    title="Validate Certificate"
-                                    disabled
-                                >
-                                    🔍 Validate
-                                </button>
+                        <!-- Certificate Info (NEU hier drin!) -->
+                        <div style="margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--color-border);">
+                            <div class="cert-info">
+                                <div class="info-row">
+                                    <span class="info-label">CN:</span>
+                                    <span id="ager-cn-display" class="info-value">–</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Username:</span>
+                                    <span id="ager-username-display" class="info-value">–</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">User-FQDN:</span>
+                                    <span id="ager-fqdn-display" class="info-value">–</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Affiliation:</span>
+                                    <span id="ager-affiliation-display" class="info-value">–</span>
+                                </div>
+                                
+                                <div class="validate-group">
+                                    <button 
+                                        id="ager-validate-btn" 
+                                        class="btn-validate" 
+                                        title="Validate Certificate"
+                                        disabled
+                                    >
+                                        🔍 Validate
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </div>    
                 </div>
 
                 <!-- Section 3: Gens Registration -->
@@ -135,7 +134,7 @@
                     </div>
                 </div>
 
-                <!-- Section 4: Badges (immer als letzte Section) -->
+                <!-- Section 4: Badges -->
                 <div class="accordion-section">
                     <button class="accordion-header" aria-expanded="true">
                         <span class="accordion-icon">▶</span>
@@ -147,7 +146,7 @@
                                 ✅ Ager Loaded
                             </div>
                             <div id="ager-validation-badge" class="status-badge" style="display: none;">
-                                <!-- Wird dynamisch gefüllt -->
+                                <!-- Dynamically filled -->
                             </div>
                         </div>
                     </div>
