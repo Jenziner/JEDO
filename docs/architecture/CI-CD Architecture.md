@@ -1,3 +1,5 @@
+# CI/CD
+## GIT Structure
 JEDO/
 ├── docker-compose.yml                # Master-File mit include
 ├── .env                              # Globale Umgebungsvariablen
@@ -43,3 +45,14 @@ JEDO/
     └── workflows/
         ├── build-chaincode.yml       # CI für Chaincode
         └── build-services.yml        # CI für Services
+
+## Harbor-Topologie
+harbor.jedo.me (Orbis)
+    ├─> Projekt: jedo-core
+    │   ├─> chaincode/jedo-wallet:1.0.0
+    │   ├─> services/ca-service:1.0.0
+    │   └─> services/ledger-service:1.0.0
+    │
+    └─> Replication Rules:
+        └─> harbor.$REGNUM.jedo.me (Regnum)
+            └─> harbor.$AGER.$REGNUM.jedo.me (Ager, falls eigener Harbor)
