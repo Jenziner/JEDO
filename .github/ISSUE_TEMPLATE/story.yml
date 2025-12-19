@@ -15,7 +15,8 @@ body:
     id: acceptance-criteria
     attributes:
       label: Acceptance criteria
-      description: Definiere die Akzeptanzkriterien mit []
+      description: Liste mit Akzeptanzkriterien
+      placeholder: "[] Criteria 1"
     validations:
       required: true
   - type: textarea
@@ -23,6 +24,7 @@ body:
     attributes:
       label: Definition of Done
       description: Definiere die Kriterien, wann die Story als erledigt gilt
+      placeholder: "[] Done 1"
     validations:
       required: true
   - type: textarea
