@@ -1,0 +1,68 @@
+name: Build & Push to Harbor
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-services:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [ca-service, gateway-service, ledger-service, recovery-service, voting-service]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: harbor.jedo.me
+          username: ${{ secrets.HARBOR_ROBOT_SERVICES }}
+          password: ${{ secrets.HARBOR_ROBOT_SECRET_SERVICES }}
+      
+      - name: Determine tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "suffix=" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "suffix=-dev" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/${{ matrix.service }}
+          push: true
+          tags: |
+            harbor.jedo.me/services/${{ matrix.service }}:${{ steps.tag.outputs.tag }}${{ steps.tag.outputs.suffix }}
+            harbor.jedo.me/services/${{ matrix.service }}:latest${{ steps.tag.outputs.suffix }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-chaincode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Login to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: harbor.jedo.me
+          username: ${{ secrets.HARBOR_ROBOT_CHAINCODE }}
+          password: ${{ secrets.HARBOR_ROBOT_SECRET_CHAINCODE }}
+      
+      - name: Build and push jedo-wallet
+        uses: docker/build-push-action@v5
+        with:
+          context: ./chaincode/jedo-wallet
+          push: true
+          tags: harbor.jedo.me/chaincode/jedo-wallet:${{ github.sha }}-dev
