@@ -34,12 +34,12 @@ DNS A-Record: harbor.jedo.me → 83.228.219.30
 sudo certbot certonly --standalone -d harbor.jedo.me
 6. Harbor Installation & Configuration (--with-trivy)
 7. Smoke Test from local terminal
-docker pull alpine:latest
-docker tag alpine:latest harbor.jedo.me/library/alpine:test
-docker login harbor.jedo.me
-docker push harbor.jedo.me/library/alpine:test
-docker rmi harbor.jedo.me/library/alpine:test
-docker pull harbor.jedo.me/library/alpine:test
+- docker pull alpine:latest
+- docker tag alpine:latest harbor.jedo.me/library/alpine:test
+- docker login harbor.jedo.me
+- docker push harbor.jedo.me/library/alpine:test
+- docker rmi harbor.jedo.me/library/alpine:test
+- docker pull harbor.jedo.me/library/alpine:test
 
 ## Troubleshooting Common Issues
 ### SSL Certificate Error in Browser
@@ -58,8 +58,8 @@ docker pull harbor.jedo.me/library/alpine:test
 **Solution**:
 1. Verify password (harbor.yml)
 2. Restart Harbor
-cd /opt/harbor/harbor
-sudo docker compose restart
+- cd /opt/harbor/harbor
+- sudo docker compose restart
 3. Try again
 docker login harbor.jedo.me
 
@@ -78,14 +78,14 @@ docker login harbor.jedo.me
 
 **Solution**:
 1. Clean up Docker
-docker system prune -a --volumes
+- docker system prune -a --volumes
 
 2. Rotate Harbor logs
-sudo find /var/log/harbor -name "*.log" -mtime +30 -delete
+- sudo find /var/log/harbor -name "*.log" -mtime +30 -delete
 
 3. Monitor disk space
-df -h
-du -sh /data
+- df -h
+- du -sh /data
 
 ### Let's Encrypt Renewal Fails
 
@@ -93,15 +93,15 @@ du -sh /data
 
 **Solution**:
 1. Renew manually
-sudo certbot renew --force-renewal
+- sudo certbot renew --force-renewal
 
 2. Copy certificates to Harbor
-sudo cp /etc/letsencrypt/live/harbor.jedo.me/fullchain.pem /opt/harbor/ssl/harbor.jedo.me.crt
-sudo cp /etc/letsencrypt/live/harbor.jedo.me/privkey.pem /opt/harbor/ssl/harbor.jedo.me.key
+- sudo cp /etc/letsencrypt/live/harbor.jedo.me/fullchain.pem /opt/harbor/ssl/harbor.jedo.me.crt
+- sudo cp /etc/letsencrypt/live/harbor.jedo.me/privkey.pem /opt/harbor/ssl/harbor.jedo.me.key
 
 3. Restart Harbor proxy
-cd /opt/harbor/harbor
-sudo docker compose restart proxy
+- cd /opt/harbor/harbor
+- sudo docker compose restart proxy
 
 ### Trivy Scanner Not Working
 
@@ -109,16 +109,16 @@ sudo docker compose restart proxy
 
 **Solution**:
 1. Check Trivy container status
-cd /opt/harbor/harbor
-sudo docker compose ps trivy-adapter
+- cd /opt/harbor/harbor
+- sudo docker compose ps trivy-adapter
 
 2. Check Trivy logs
-sudo docker compose logs trivy-adapter
+- sudo docker compose logs trivy-adapter
 
 3. If not installed: enable afterwards
-sudo docker compose down
-sudo ./prepare --with-trivy
-sudo docker compose up -d
+- sudo docker compose down
+- sudo ./prepare --with-trivy
+- sudo docker compose up -d
 
 ## Backup Strategy (not implemented)
 
@@ -130,17 +130,17 @@ sudo docker compose up -d
 
 ### Backup command:
 1. Stop Harbor
-cd /opt/harbor/harbor
-sudo docker compose stop
+- cd /opt/harbor/harbor
+- sudo docker compose stop
 
 2. Create backup
-sudo tar czf harbor-backup-$(date +%Y%m%d).tar.gz
-/opt/harbor/harbor/harbor.yml
-/opt/harbor/ssl/
-/data
+- sudo tar czf harbor-backup-$(date +%Y%m%d).tar.gz
+- /opt/harbor/harbor/harbor.yml
+- /opt/harbor/ssl/
+- /data
 
 3. Start Harbor
-sudo docker compose start
+- sudo docker compose start
 
 ## Maintenance & Updates
 
@@ -153,8 +153,8 @@ sudo docker compose start
 
 ### System Updates
 
-sudo apt update && sudo apt upgrade -y
-sudo reboot # If kernel update
+- sudo apt update && sudo apt upgrade -y
+- sudo reboot # If kernel update
 
 ## References
 
