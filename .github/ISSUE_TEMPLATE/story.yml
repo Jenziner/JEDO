@@ -1,0 +1,34 @@
+name: Story Template
+description: JEDO-Ecosystem - Story-Template
+title: "[STORY] "
+labels: ["STORY"]
+body:
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User Story
+      description: Beschreibe die Story im Format "**Als**... **möchte ich**... **damit**..."
+      placeholder: "**Als** [Nutzerrolle] **möchte ich** [Funktion], **damit** [Nutzen]"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: Definiere die Akzeptanzkriterien mit []
+    validations:
+      required: true
+  - type: textarea
+    id: definition-of-done
+    attributes:
+      label: Definition of Done
+      description: Definiere die Kriterien, wann die Story als erledigt gilt
+    validations:
+      required: true
+  - type: textarea
+    id: tech
+    attributes:
+      label: Tech notes
+      description: Technische Notizen
+    validations:
+      required: false
