@@ -30,7 +30,7 @@ Thumbs.db
 **/*.id
 **/crypto-config/
 **/organizations/
-infrastructure/
+/infrastructure/dev/infrastructure/
 
 # Secrets
 **/*.pem
