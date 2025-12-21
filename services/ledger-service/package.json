@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "test": "./tests/integration/health-check.sh",
+    "test": "npm run test:unit",
+    "test:smoke": "./tests/integration/health-check.sh",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:unit": "jest tests/unit",
