@@ -7,7 +7,7 @@ WORKDIR /build
 
 COPY package*.json ./
 
-RUN npm install --only=production --ignore-scripts
+RUN npm install --omit=dev --ignore-scripts
 
 # ========================================
 # STAGE 2: Production Runtime
@@ -50,7 +50,11 @@ WORKDIR /app
 COPY --from=dependencies /build/node_modules ./node_modules
 
 # Copy application source
-COPY . .
+COPY package*.json ./
+
+COPY src ./src
+
+COPY server.js .
 
 # Expose port
 EXPOSE 3001
