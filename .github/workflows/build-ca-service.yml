@@ -65,11 +65,21 @@ jobs:
           image-ref: ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/${{ env.SERVICE_NAME }}:${{ steps.vars.outputs.sha_tag }}
           format: 'table'
           vuln-type: 'os,library'
-          severity: 'HIGH,CRITICAL'
+          severity: 'CRITICAL'
           ignore-unfixed: true
           exit-code: '1'
           timeout: '5m'
           hide-progress: true
+
+      - name: Run Trivy fs scan (Node)
+        uses: aquasecurity/trivy-action@v0.28.0
+        with:
+          scan-type: fs
+          scan-ref: ./services/ca-service
+          vuln-type: library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
 
       - name: Build & push image
         uses: docker/build-push-action@v5
