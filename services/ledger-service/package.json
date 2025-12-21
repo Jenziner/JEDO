@@ -4,11 +4,15 @@
   "description": "Jedo Ledger Service - Fabric Gateway Client",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
     "start": "node dist/server.js",
-    "lint": "eslint src --ext .ts",
-    "test": "jest"
+    "dev": "tsx watch src/server.ts",
+    "test": "./tests/integration/health-check.sh",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "build": "tsc",
+    "lint": "eslint src --ext .ts"
   },
   "dependencies": {
     "@hyperledger/fabric-gateway": "^1.10.0",
