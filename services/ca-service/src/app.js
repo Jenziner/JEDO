@@ -77,39 +77,38 @@ const createApp = () => {
     res.redirect('/openapi.json');
   });
 
-  // ===== API DOCUMENTATION (Swagger UI) =====
-  if (env.nodeEnv !== 'production') {
-    try {
-      const swaggerUi = require('swagger-ui-express');
-      const YAML = require('yamljs');
-      const path = require('path');
-      const fs = require('fs');
-      
-      const openapiPath = path.join(__dirname, '../openapi/ca-service.yaml');
-      
-      if (fs.existsSync(openapiPath)) {
-        const swaggerDocument = YAML.load(openapiPath);
-        
-        app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
-          customSiteTitle: "JEDO CA Service API",
-          customCss: '.swagger-ui .topbar { display: none }',
-          swaggerOptions: {
-            persistAuthorization: true,
-            displayRequestDuration: true
-          }
-        }));
-        
-        logger.info('Swagger UI enabled at /api-docs');
-      } else {
-        logger.warn('OpenAPI spec not found', { path: openapiPath });
-      }
-    } catch (error) {
-      logger.warn('Swagger UI not available', { 
-        error: error.message,
-        stack: error.stack 
-      });
+// ===== API DOCUMENTATION (Swagger UI) =====
+if (env.nodeEnv !== 'production') {
+  try {
+    const swaggerUi = require('swagger-ui-express');
+    const yaml = require('js-yaml');
+    const openapiPath = path.join(__dirname, '../openapi/ca-service.yaml');
+
+    if (fs.existsSync(openapiPath)) {
+      const fileContents = fs.readFileSync(openapiPath, 'utf8');
+      const swaggerDocument = yaml.load(fileContents);
+
+      app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+        customSiteTitle: "JEDO CA Service API",
+        customCss: '.swagger-ui .topbar { display: none }',
+        swaggerOptions: {
+          persistAuthorization: true,
+          displayRequestDuration: true
+        }
+      }));
+
+      logger.info('Swagger UI enabled at /api-docs');
+    } else {
+      logger.warn('OpenAPI spec not found', { path: openapiPath });
     }
+  } catch (error) {
+    logger.warn('Swagger UI not available', {
+      error: error.message,
+      stack: error.stack
+    });
   }
+}
+
 
   // ===== ERROR HANDLERS (MUST BE LAST!) =====
   app.use(notFoundHandler);
