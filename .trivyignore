@@ -7,3 +7,7 @@ CVE-2024-34156  # Go stdlib encoding/gob – Deep nesting DoS [web:405][web:415]
 CVE-2025-47907  # Go stdlib database/sql – Race condition [web:416][web:422]
 CVE-2025-58183  # Go stdlib archive/tar – unbounded allocation [web:412][web:417]
 CVE-2025-61729  # Go stdlib crypto/x509 – HostnameError resource exhaustion [web:413][web:418]
+
+# Added in Harbor because of scanning in Dev-/Tooling
+# CVE-2024-21538
+# CVE-2025-64756
