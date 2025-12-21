@@ -78,11 +78,18 @@ jobs:
           hide-progress: true
           skip-setup-trivy: true
 
-      - name: Run Trivy fs scan (Node)
+      - name: Export container filesystem
+        run: |
+          CID=$(docker create ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/${{ env.SERVICE_NAME }}:${{ steps.vars.outputs.sha_tag }})
+          mkdir -p /tmp/ca-service-root
+          docker export "$CID" | tar -C /tmp/ca-service-root -x
+          docker rm "$CID"
+
+      - name: Run Trivy fs scan (runtime /app)
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
-          scan-ref: ./services/ca-service
+          scan-ref: /tmp/ca-service-root/app
           vuln-type: library
           severity: HIGH,CRITICAL
           ignore-unfixed: true
