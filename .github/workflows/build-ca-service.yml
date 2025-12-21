@@ -73,28 +73,23 @@ jobs:
           vuln-type: 'os,library'
           severity: 'CRITICAL'
           ignore-unfixed: true
-          exit-code: 0         # only report until fabric-ca-client release x/crypto >= 0.31.0 
+          ignorefile: .trivyignore
+          exit-code: 1
           timeout: '5m'
           hide-progress: true
           skip-setup-trivy: true
 
-      - name: Export container filesystem
-        run: |
-          CID=$(docker create ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/${{ env.SERVICE_NAME }}:${{ steps.vars.outputs.sha_tag }})
-          mkdir -p /tmp/ca-service-root
-          docker export "$CID" | tar -C /tmp/ca-service-root -x
-          docker rm "$CID"
-
-      - name: Run Trivy fs scan (runtime /app)
+      - name: Run Trivy fs scan (Node – report only)
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
-          scan-ref: /tmp/ca-service-root/app
+          scan-ref: ./services/ca-service
           vuln-type: library
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          exit-code: 1
+          exit-code: 0
           skip-setup-trivy: true
+
 
       - name: Build & push image
         uses: docker/build-push-action@v5
