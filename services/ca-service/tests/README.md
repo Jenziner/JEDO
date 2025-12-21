@@ -1,4 +1,6 @@
-# JEDO Backend - Test-Pyramide
+# JEDO CA-Service
+
+## Test-Pyramide
                     ┌──────────┐
                     │   E2E    │  ← 5% (End-to-End, langsam)
                     └──────────┘
@@ -10,7 +12,7 @@
               └────────────────────┘
 
 
-# Test Structure
+## Test Structure
 services/
 ├── ca-service/
 │   ├── src/
@@ -42,8 +44,8 @@ services/
         └── setup.js
 
 
-# Test-Kategorien nach Service
-## CA-Service Tests:
+## Test-Kategorien nach Service
+### CA-Service Tests:
 | Kategorie   | Was wird getestet?         | Anzahl | Tool          |
 | ----------- | -------------------------- | ------ | ------------- |
 | Unit        | Certificate Service Logic  | ~15    | Jest          |
@@ -53,7 +55,7 @@ services/
 | E2E         | Full Registration Flow     | ~2     | Supertest     |
 
 
-## Ledger-Service Tests:
+### Ledger-Service Tests:
 | Kategorie   | Was wird getestet?        | Anzahl | Tool          |
 | ----------- | ------------------------- | ------ | ------------- |
 | Unit        | Transaction Service Logic | ~15    | Jest          |
@@ -63,7 +65,7 @@ services/
 | E2E         | Full Transaction Flow     | ~2     | Supertest     |
 
 
-## Gateway Tests:
+### Gateway Tests:
 | Kategorie   | Was wird getestet? | Anzahl | Tool          |
 | ----------- | ------------------ | ------ | ------------- |
 | Unit        | Proxy Router Logic | ~10    | Jest          |
@@ -72,8 +74,8 @@ services/
 | E2E         | Multi-Service Flow | ~3     | Supertest     |
 
 
-# Test-Setup Requirements
-## 1. Test Dependencies:
+## Test-Setup Requirements
+### 1. Test Dependencies:
 {
   "devDependencies": {
     "@types/jest": "^29.5.0",
@@ -86,7 +88,7 @@ services/
 }
 
 
-## 2. Jest Config:
+### 2. Jest Config:
 // jest.config.js
 module.exports = {
   preset: 'ts-jest',
@@ -107,7 +109,7 @@ module.exports = {
 };
 
 
-# Environment
+## Environment
 orbis (jedo.dev)
   └── regnum (ea)
        └── ager (alps)
@@ -120,7 +122,7 @@ CAs (3-Tier Architecture!)
 3. Ager-CA:   msp.alps.ea.jedo.dev  (172.16.3.4:53041)
 
 
-# Test-Szenario:
+## Test-Szenario:
 ┌─────────────┐         ┌──────────────┐         ┌─────────────────┐
 │  Test Script│  HTTP   │  CA-Service  │  gRPC   │ Fabric CA       │
 │  (curl)     │────────>│  (Docker)    │────────>│ msp.alps.ea...  │
@@ -131,7 +133,7 @@ CAs (3-Tier Architecture!)
                         - Real Certificate
 
 
-# Kritische Funktionen:
+## Kritische Funktionen:
 1. Register User - Neue User registrieren (mit Rolle)
 2. Enroll User - Certificate ausstellen
 3. Authorization - Nur höhere Rollen dürfen niedrigere registrieren
@@ -139,7 +141,7 @@ CAs (3-Tier Architecture!)
 5. Re-Enroll - Certificate erneuern
 
 
-# Install Test Dependencies
+## Install Test Dependencies
 cd ~/Entwicklung/JEDO/services/ca-service
 npm install --save-dev \
   jest \
@@ -147,18 +149,18 @@ npm install --save-dev \
   @types/jest \
   @types/supertest
 
-# Run test
-## Unit Test
+## Run test
+### Unit Test
 cd ~/Entwicklung/JEDO/services/ca-service
 npm test tests/unit/services/certificate.service.test.js
 
-## Integration Test
+### Integration Test
 cd ~/Entwicklung/JEDO/services/ca-service
 chmod +x tests/integration/test-ca-service.sh
 ./tests/integration/test-ca-service.sh
 
 
-## Certificate Flow
+### Certificate Flow
 ┌─────────────────────────────────────────────────────────────┐
 │ AGER (Startup)                                              │
 │ ├─ Hat bereits: ager_cert.pem + ager_key.pem                │
