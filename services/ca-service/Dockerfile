@@ -31,13 +31,15 @@ RUN apk add --no-cache \
       glibc-bin-${GLIBC_VERSION}.apk && \
     rm -f glibc-${GLIBC_VERSION}.apk glibc-bin-${GLIBC_VERSION}.apk
 
-# Download and install fabric-ca-client
+# Download and install fabric-ca-client (v1.5.12)
+ENV FABRIC_CA_VERSION=1.5.12
+
 RUN cd /tmp && \
-    wget https://github.com/hyperledger/fabric-ca/releases/download/v1.5.7/hyperledger-fabric-ca-linux-amd64-1.5.7.tar.gz && \
-    tar -xzf hyperledger-fabric-ca-linux-amd64-1.5.7.tar.gz && \
+    wget https://github.com/hyperledger/fabric-ca/releases/download/v${FABRIC_CA_VERSION}/hyperledger-fabric-ca-linux-amd64-${FABRIC_CA_VERSION}.tar.gz && \
+    tar -xzf hyperledger-fabric-ca-linux-amd64-${FABRIC_CA_VERSION}.tar.gz && \
     mv bin/fabric-ca-client /usr/local/bin/fabric-ca-client && \
     chmod +x /usr/local/bin/fabric-ca-client && \
-    rm -rf /tmp/bin /tmp/config /tmp/hyperledger-fabric-ca-linux-amd64-1.5.7.tar.gz
+    rm -rf /tmp/bin /tmp/config /tmp/hyperledger-fabric-ca-linux-amd64-${FABRIC_CA_VERSION}.tar.gz
 
 # Create app directory
 RUN mkdir -p /app /app/crypto /app/tls
