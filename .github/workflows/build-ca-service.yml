@@ -51,6 +51,26 @@ jobs:
           SHA_SHORT=${GITHUB_SHA::7}
           echo "sha_tag=${SHA_SHORT}" >> $GITHUB_OUTPUT
 
+      - name: Build image (local only)
+        working-directory: services/ca-service
+        run: |
+          docker build \
+            -t ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/${{ env.SERVICE_NAME }}:${{ steps.vars.outputs.sha_tag }} \
+            .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/${{ env.SERVICE_NAME }}:${{ steps.vars.outputs.sha_tag }}
+          format: 'table'
+          vuln-type: 'os,library'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          exit-code: '1'
+          timeout: '5m'
+          hide-progress: true
+
       - name: Build & push image
         uses: docker/build-push-action@v5
         with:
