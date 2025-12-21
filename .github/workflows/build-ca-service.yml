@@ -58,8 +58,14 @@ jobs:
             -t ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/${{ env.SERVICE_NAME }}:${{ steps.vars.outputs.sha_tag }} \
             .
 
+      - name: Set up Trivy
+        uses: aquasecurity/setup-trivy@v0.2.0
+        with:
+          version: v0.56.1
+          cache: true
+
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@v0.32.0
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: image
           image-ref: ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/${{ env.SERVICE_NAME }}:${{ steps.vars.outputs.sha_tag }}
@@ -70,9 +76,10 @@ jobs:
           exit-code: '1'
           timeout: '5m'
           hide-progress: true
+          skip-setup-trivy: true
 
       - name: Run Trivy fs scan (Node)
-        uses: aquasecurity/trivy-action@v0.32.0
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
           scan-ref: ./services/ca-service
@@ -80,6 +87,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: 1
+          skip-setup-trivy: true
 
       - name: Build & push image
         uses: docker/build-push-action@v5
