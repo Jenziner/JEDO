@@ -27,14 +27,14 @@ Mobile App (User)
 ## CA-Service Maint
 
 ## Local Dev-Workflow
-cd ~/Entwicklung/JEDO/services/ca-service
+1. cd ~/Entwicklung/JEDO/services/ca-service
 
 **optional:**
-npm install
-npm test
+- rm -rf node_modules package-lock.json
+- npm install
+- npm test
 
-npm test
+2. docker build -t ca-service:local .
+3. docker run --rm -p 3001:3001 --env-file .env ca-service:local
 
-docker build -t ca-service:local .
-
-code commit in VSC
+4. code commit in VSC
