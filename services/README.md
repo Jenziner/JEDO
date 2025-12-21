@@ -21,3 +21,20 @@ Mobile App (User)
 │ msp.alps...     │    │ peer0.alps...        │
 │ (Fabric CA)     │    │ (Fabric Peer)        │
 └─────────────────┘    └──────────────────────┘
+
+
+# How-to-Dev
+## CA-Service Maint
+
+## Local Dev-Workflow
+cd ~/Entwicklung/JEDO/services/ca-service
+
+**optional:**
+npm install
+npm test
+
+npm test
+
+docker build -t ca-service:local .
+
+code commit in VSC
