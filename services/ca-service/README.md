@@ -5,4 +5,3 @@ cd /JEDO/jedo-dev
 # Test:
 cd /JEDO/services/ca-service
 ./tests/integration/test-ca-service.sh
-
