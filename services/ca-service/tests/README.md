@@ -1,4 +1,4 @@
-# JEDO CA-Service
+# JEDO Test-Konzept
 
 ## Test-Pyramide
                     ┌──────────┐
