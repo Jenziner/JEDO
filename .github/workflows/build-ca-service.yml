@@ -73,7 +73,7 @@ jobs:
           vuln-type: 'os,library'
           severity: 'CRITICAL'
           ignore-unfixed: true
-          exit-code: '1'
+          exit-code: '0'         # only report until fabric-ca-client release x/crypto >= 0.31.0
           timeout: '5m'
           hide-progress: true
           skip-setup-trivy: true
