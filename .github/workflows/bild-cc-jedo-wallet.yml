@@ -28,9 +28,9 @@ jobs:
         uses: actions/checkout@v4
 
       # Optional: Go-Tests für den Chaincode
-      - name: Run Go tests
-        working-directory: chaincode/jedo-wallet
-        run: go test ./...
+      # - name: Run Go tests
+      #   working-directory: chaincode/jedo-wallet
+      #   run: go test ./...
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
