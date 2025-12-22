@@ -171,25 +171,35 @@ Erläuterung:
 
 ***
 
-## Schritt 6: TLS‑Zertifikate für die MSP‑Hosts ausstellen
+### 6 Vault-CLI vorbereiten
+
+Auf dem Vault-Host (oder der Workstation mit Vault-CLI):
+
+```bash
+export VAULT_ADDR="https://vault.jedo.me:8200"
+export VAULT_CACERT="$PWD/config/vault-ca.pem"
+vault status # Verbindung testen
+```
+
+## Schritt 7: TLS‑Zertifikate für die MSP‑Hosts ausstellen
 
 Für jede Umgebung wird ein Zertifikat mit Vault ausgestellt, inkl. Private Key.
 
-### 6.1. Dev (msp.jedo.dev)
+### 7.1. Dev (msp.jedo.dev)
 
 ```bash
 vault write -format=json pki_orbis_tls_dev/issue/orbis-msp-dev \
   common_name="msp.jedo.dev" > msp.jedo.dev-tls.json
 ```
 
-### 6.2. Test (msp.jedo.cc)
+### 7.2. Test (msp.jedo.cc)
 
 ```bash
 vault write -format=json pki_orbis_tls_test/issue/orbis-msp-test \
   common_name="msp.jedo.cc" > msp.jedo.cc-tls.json
 ```
 
-### 6.3. Prod (msp.jedo.me)
+### 7.3. Prod (msp.jedo.me)
 
 ```bash
 vault write -format=json pki_orbis_tls_prod/issue/orbis-msp-prod \
@@ -205,7 +215,7 @@ Die JSON‑Antwort enthält:
 
 ***
 
-## Schritt 7: PEM‑Dateien aus JSON extrahieren
+## Schritt 8: PEM‑Dateien aus JSON extrahieren
 
 Auf dem Vault‑Host:
 
@@ -234,9 +244,9 @@ Ergebnis pro Umgebung:
 
 ***
 
-## Schritt 8: TLS‑Dateien herunterladen und in Fabric‑CA einbinden
+## Schritt 9: TLS‑Dateien herunterladen und in Fabric‑CA einbinden
 
-### 8.1. Dateien per `scp` auf die lokale Maschine holen
+### 9.1. Dateien per `scp` auf die lokale Maschine holen
 
 Auf deiner Workstation:
 
@@ -257,7 +267,7 @@ Allgemeines Muster:
 scp user@host:/remote/pfad/datei /lokaler/pfad/
 ```
 
-### 8.2. In die Orbis‑/Fabric‑CA‑Verzeichnisse kopieren
+### 9.2. In die Orbis‑/Fabric‑CA‑Verzeichnisse kopieren
 
 Beispiel (Dev‑MSP):
 
@@ -275,7 +285,7 @@ Damit verwendet jede Orbis‑MSP‑CA künftig ein TLS‑Zertifikat, das von der
 
 ***
 
-## Schritt 9. Einbindung in Fabric‑CA
+## Schritt 10. Einbindung in Fabric‑CA
 In jeder fabric-ca-server-config.yaml der Orbis‑MSP‑CAs werden die TLS‑Dateien aus Vault referenziert:
 
 ```bash
@@ -296,7 +306,7 @@ Begründung:
 
 ***
 
-## Schritt 10. Betrieb & Rotation (Hinweise)
+## Schritt 11. Betrieb & Rotation (Hinweise)
 - Zertifikatslaufzeit ist durch max_ttl in der Rolle begrenzt (aktuell 720h ≈ 30 Tage).
 - Rotation kann automatisiert werden, indem die vault write .../issue/...‑Schritte in ein Script gepackt und die PEM‑Dateien anschließend aktualisiert werden.
 ​- Die Intermediate‑CAs (in config/ca importiert) sollten seltener rotiert werden; das ist eine CA‑Lifecycle‑Entscheidung.
