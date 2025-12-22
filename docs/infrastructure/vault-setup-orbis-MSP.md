@@ -17,6 +17,33 @@
 
 ***
 
+## PKI-Ablage auf dem Vault-Server
+
+Die Orbis-PKI-Schlüssel und -Zertifikate werden NICHT im Git-Repository, sondern lokal auf dem Vault-Server unter `/srv/pki` abgelegt. Die Struktur ist:
+
+- `/srv/pki/intermediate/dev|test|prod`  
+  Intermediate-CAs wie `tls.jedo.dev.{cert,key}`, `tls.jedo.cc.{cert,key}`, `tls.jedo.me.{cert,key}`  
+- `/srv/pki/servers/dev|test|prod/<dienstname>`  
+  TLS-Server-Zertifikate und -Keys, z.B. `/srv/pki/servers/prod/msp.jedo.me/tls-{cert,key,ca}.pem`  
+
+Beispiel: Nach der Erstellung der Intermediate-CA werden die Dateien vom Arbeitsverzeichnis auf den Vault-Server kopiert und dort einsortiert:
+
+lokal: Intermediate erzeugen
+```bash
+openssl ecparam -name prime256v1 -genkey -noout -out tls.jedo.dev.key
+openssl req -new -sha256 -key tls.jedo.dev.key -out tls.jedo.dev.csr -config tls-orbis.cnf
+openssl ca -batch -config ca.cnf -extensions v3_intermediate_ca -days 365 -notext -md sha256 -in tls.jedo.dev.csr -out tls.jedo.dev.cert
+```
+
+auf Vault-Server kopieren und in PKI-Struktur verschieben
+```bash
+scp tls.jedo.dev.cert tls.jedo.dev.key jedo:/srv/pki/intermediate/dev/
+```
+
+**Wichtiger Hinweis:** Private Keys (`*.key`, `tls-*-key.pem`) werden niemals in Git committet, sondern nur in `/srv/pki/...` mit restriktiven Rechten (`chmod 700` Verzeichnisse, `chmod 600` Dateien) gespeichert.
+
+***
+
 ## Schritt 1: PKI‑Engines pro Umgebung einrichten
 
 Für jede Umgebung wurde ein eigener PKI‑Mount angelegt:
@@ -73,7 +100,7 @@ CN = tls.jedo.dev
 Beispiel Dev (analog für Test/Prod):
 
 ```bash
-scp tls.jedo.dev.cert tls.jedo.dev.key jedo:~/vault/
+scp tls.jedo.dev.cert tls.jedo.dev.key jedo:/srv/pki/intermediate/dev/
 ```
 
 Damit liegen CA‑Zertifikat und Private Key geschützt auf dem Vault‑Server, nicht auf einem zufälligen Client.
@@ -83,11 +110,14 @@ Damit liegen CA‑Zertifikat und Private Key geschützt auf dem Vault‑Server, 
 Auf dem Vault‑Host:
 
 ```bash
-cd ~/vault
+cd /srv/pki/intermediate/dev
 cat tls.jedo.dev.cert tls.jedo.dev.key > orbis-dev-intermediate-bundle.pem
+cp orbis-dev-intermediate-bundle.pem ~/vault/orbis-dev-intermediate-bundle.pem
 ```
 
 Reihenfolge: zuerst Zertifikat, danach Key; Vault erwartet dieses Format als „Bundle“.
+
+Das Bundle unter `~/vault/` wird anschließend in Vault importiert, die "Master"-Kopie der Intermediate-CA bleibt unter `/srv/pki/intermediate/dev/`.
 
 ### 3.3. Bundle in den PKI‑Mount importieren
 
@@ -242,6 +272,18 @@ Ergebnis pro Umgebung:
 - `tls-*-key.pem`   → Private Key  
 - `tls-*-ca.pem`    → CA‑Zertifikat (Intermediate)[10]
 
+Nach dem Extrahieren werden die TLS-Dateien zusätzlich in der PKI-Struktur abgelegt:
+
+Beispiel Dev
+```bash
+mkdir -p /srv/pki/servers/dev/msp.jedo.dev
+cp tls-dev-cert.pem /srv/pki/servers/dev/msp.jedo.dev/tls-cert.pem
+cp tls-dev-key.pem /srv/pki/servers/dev/msp.jedo.dev/tls-key.pem
+cp tls-dev-ca.pem /srv/pki/servers/dev/msp.jedo.dev/tls-ca.pem
+```
+
+Die Fabric-CA-Container/Services mounten diese Dateien (oder eine Kopie davon) als `tls/tls-{cert,key,ca}.pem` in das jeweilige MSP-Verzeichnis.
+
 ***
 
 ## Schritt 9: TLS‑Dateien herunterladen und in Fabric‑CA einbinden
@@ -311,6 +353,39 @@ Begründung:
 - Rotation kann automatisiert werden, indem die vault write .../issue/...‑Schritte in ein Script gepackt und die PEM‑Dateien anschließend aktualisiert werden.
 ​- Die Intermediate‑CAs (in config/ca importiert) sollten seltener rotiert werden; das ist eine CA‑Lifecycle‑Entscheidung.
 ​
+
+## Schritt 12: Aufräumen auf Vault-Host
+Nach erfolgreichem Import in Vault und Übernahme der TLS-Dateien in die Fabric-CAs werden nur folgende Dateien dauerhaft benötigt:
+
+- Vault-Konfiguration und TLS für Vault selbst unter `~/vault/config`
+- Vault-Daten unter `~/vault/data`
+- PKI-Material (CAs, Intermediates, Server-TLS) unter `/srv/pki/...`
+
+Temporäre Arbeitsdateien können gelöscht werden:
+```bash
+cd ~/vault
+```
+
+JSON-Antworten der letzten Zertifikatsausstellung
+```bash
+rm -f msp.jedo.*-tls.json
+```
+
+temporäre TLS-PEMs (wenn sie bereits unter /srv/pki/servers/... abgelegt sind)
+```bash
+rm -f tls-dev-.pem tls-test-.pem tls-prod-*.pem
+```
+
+Intermediate-Bundles im Arbeitsverzeichnis,
+sofern Master-Kopie unter /srv/pki/intermediate/... liegt
+```bash
+rm -f orbis-dev-intermediate-bundle.pem
+rm -f orbis-test-intermediate-bundle.pem
+rm -f orbis-prod-intermediate-bundle.pem
+```
+
+
+**Wichtig:** Die Master-Kopien aller CA- und TLS-Dateien liegen unter `/srv/pki/...` und werden dort mit restriktiven Rechten gesichert. Private Keys (`*.key`, `tls-*-key.pem`) werden niemals im Git-Repository abgelegt.
 
 ## Wichtige Entscheidungen und Gründe
 
