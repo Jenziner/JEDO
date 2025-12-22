@@ -32,11 +32,25 @@ Thumbs.db
 **/organizations/
 /infrastructure/dev/infrastructure/
 
+# CA / TLS private keys (niemals committen)
+**/*.key
+**/*_sk
+
 # Secrets
 **/*.pem
 **/*.crt
-**/*.key
-**/*_sk
+**/*.cert
+# Exception: PKI-Docu
+!infrastructure/pki/**/*.pem
+!infrastructure/pki/**/*.crt
+!infrastructure/pki/**/*.cert
+
+# OpenSSL CA DB / State
+**/index.txt
+**/index.txt.attr*
+**/serial
+**/crlnumber
+**/*.old
 
 # Testing
 **/coverage/

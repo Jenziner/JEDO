@@ -1,0 +1,10 @@
+[ req ]
+default_bits        = 256
+distinguished_name  = req_distinguished_name
+prompt              = no
+
+[ req_distinguished_name ]
+C  = jd
+ST = prod
+CN = tls.jedo.me
+

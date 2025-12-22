@@ -1,0 +1,51 @@
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+dir               = .
+certs             = $dir
+crl_dir           = $dir
+new_certs_dir     = $dir
+database          = $dir/index.txt
+serial            = $dir/serial
+RANDFILE          = $dir/.rand
+email_in_dn       = no
+rand_serial       = no
+default_md        = sha256
+policy            = policy_any
+private_key       = $dir/rca.key
+certificate       = $dir/rca.cert
+crl               = $dir/crl.pem
+default_days      = 365
+
+[ policy_any ]
+countryName             = supplied
+stateOrProvinceName     = supplied
+commonName              = supplied
+organizationName        = optional
+organizationalUnitName  = optional
+localityName            = optional
+
+[ req ]
+default_bits        = 256
+distinguished_name  = req_distinguished_name
+req_extensions      = req_ext
+prompt              = no
+
+[ req_distinguished_name ]
+C  = jd
+ST = prod
+CN = vault.jedo.me
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = vault.jedo.me
+
+[ v3_server ]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
