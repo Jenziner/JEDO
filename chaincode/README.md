@@ -28,6 +28,7 @@
 │
 └── [Infrastruktur: peer, orderer, ca]
 
+
 # Funktionen
 ## Wallet-Funktionen
 **CreateWallet(ctx, walletId, ownerId, initialBalance, metadataJson)**
