@@ -1,18 +1,18 @@
-name: Build chaincode image
+name: Build chaincode image (jedo-wallet)
 
 on:
   push:
     branches: [main, dev]
     paths:
-      - "chaincode/**"
-      - ".github/workflows/build-chaincode.yml"
+      - "chaincode/jedo-wallet/**"
+      - ".github/workflows/build-chaincode-jedo-wallet.yml"
   pull_request:
     branches: [main]
     paths:
-      - "chaincode/**"
+      - "chaincode/jedo-wallet/**"
 
 jobs:
-  build-chaincode:
+  build-chaincode-jedo-wallet:
     runs-on: ubuntu-latest
 
     steps:
@@ -41,6 +41,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./chaincode/jedo-wallet
+          # Dockerfile liegt im gleichen Ordner:
+          file: ./chaincode/jedo-wallet/Dockerfile
           push: true
           tags: |
             harbor.jedo.me/chaincode/jedo-wallet:${{ steps.tag.outputs.tag }}${{ steps.tag.outputs.suffix }}

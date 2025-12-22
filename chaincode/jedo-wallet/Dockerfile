@@ -7,10 +7,10 @@ RUN apk add --no-cache git make
 WORKDIR /app
 
 # Copy go.mod (go.sum optional)
-COPY jedo-wallet/go.mod ./
+COPY go.mod ./
 
 # Copy source code
-COPY jedo-wallet/*.go ./
+COPY *.go ./
 
 # Download dependencies (erstellt go.sum automatisch)
 RUN go mod download && go mod tidy
