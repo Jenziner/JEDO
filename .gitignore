@@ -41,7 +41,6 @@ Thumbs.db
 **/*.crt
 **/*.cert
 # Exception: PKI-Docu
-!infrastructure/pki/**/*.pem
 !infrastructure/pki/**/*.crt
 !infrastructure/pki/**/*.cert
 
