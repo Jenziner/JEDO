@@ -1,10 +1,12 @@
 name: Build & Push to Harbor
 
 on:
-  push:
-    branches: [main, dev]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:  # only manual
+  # disabled,cause dedicated workflows
+  # push:
+  #   branches: [main, dev]
+  # pull_request:
+  #   branches: [main]
 
 jobs:
   build-services:

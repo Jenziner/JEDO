@@ -1,0 +1,47 @@
+name: Build chaincode image
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "chaincode/**"
+      - ".github/workflows/build-chaincode.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "chaincode/**"
+
+jobs:
+  build-chaincode:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: harbor.jedo.me
+          username: ${{ secrets.HARBOR_ROBOT_CHAINCODE }}
+          password: ${{ secrets.HARBOR_ROBOT_SECRET_CHAINCODE }}
+
+      - name: Determine tag
+        id: tag
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            echo "tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            echo "suffix=" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            echo "suffix=-dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push jedo-wallet
+        uses: docker/build-push-action@v5
+        with:
+          context: ./chaincode/jedo-wallet
+          push: true
+          tags: |
+            harbor.jedo.me/chaincode/jedo-wallet:${{ steps.tag.outputs.tag }}${{ steps.tag.outputs.suffix }}
+            harbor.jedo.me/chaincode/jedo-wallet:latest${{ steps.tag.outputs.suffix }}
