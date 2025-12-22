@@ -7,7 +7,7 @@ on:
       - dev
     paths:
       - "chaincode/jedo-wallet/**"
-      - ".github/workflows/build-chaincode-jedo-wallet.yml"
+      - ".github/workflows/build-cc-jedo-wallet.yml"
   pull_request:
     branches:
       - main
