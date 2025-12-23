@@ -229,6 +229,9 @@ vault login
 
 # Check pki-root
 vault read -field=certificate pki-root/cert/ca | head
+
+# List current mounts
+vault secrets list
 ```
 
 ***
