@@ -15,7 +15,6 @@ get_hosts
 
 LOCAL_INFRA_DIR=${PWD}/infrastructure
 LOCAL_CC_DIR=${PWD}/../../chaincode
-LOCAL_DOCKERFILE=$LOCAL_CC_DIR/Dockerfile
 mkdir -p $LOCAL_CC_DIR
 chmod -R 750 $LOCAL_CC_DIR
 
@@ -28,7 +27,7 @@ setupAdminEnv() {
     
     export CORE_PEER_TLS_ENABLED=true
     export CORE_PEER_LOCALMSPID=$AGER
-    export CORE_PEER_MSPCONFIGPATH=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/admin.$AGER.$REGNUM.jedo.cc/msp
+    export CORE_PEER_MSPCONFIGPATH=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/admin.$AGER.$REGNUM.jedo.dev/msp
     export CORE_PEER_ADDRESS=$PEER_ADDRESS
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER_ROOTCERT
     
@@ -45,12 +44,12 @@ setupAdminEnv() {
 # Function buildDockerImages
 ###############################################################
 buildDockerImages() {
-    echo ""
-    echo_info "Building Chaincode-as-a-Service docker image '${CC_NAME}'"
-    echo_info "This may take a minute..."
+    log_info "Building Chaincode-as-a-Service docker image '${CC_NAME}'"
+    log_info "This may take a minute..."
     
     if [[ $DEBUG == true ]]; then
         log_debug "Dockerfile:" "$LOCAL_DOCKERFILE"
+        log_debug "CC Dir:" "$LOCAL_CC_DIR"
         log_debug "CC Name:" "$CC_NAME"
         log_debug "CC Version:" "$CC_VERSION"
     fi
@@ -58,14 +57,14 @@ buildDockerImages() {
     docker build \
         -t ${CC_NAME}_ccaas_image:${CC_VERSION} \
         -f "${LOCAL_DOCKERFILE}" \
-        "${LOCAL_CC_DIR}"
+        "${LOCAL_CC_DIR}/$CC_NAME"
     
     if [ $? -ne 0 ]; then
-        echo_error "Docker build failed"
+        log_error "Docker build failed"
         exit 1
     fi
     
-    echo_ok "Docker image built: ${NC}${CC_NAME}_ccaas_image:${CC_VERSION}"
+    log_info "Docker image built: ${NC}${CC_NAME}_ccaas_image:${CC_VERSION}"
 }
 
 
@@ -73,8 +72,7 @@ buildDockerImages() {
 # Deploy CCAAS
 ###############################################################
 for REGNUM in $REGNUMS; do
-    echo ""
-    echo_info "CCAAS for $REGNUM deploying..."
+    log_info "CCAAS for $REGNUM deploying..."
 
     PEER_ADDRESSES=()
     TLS_ROOT_CERT_FILES=()
@@ -94,6 +92,8 @@ for REGNUM in $REGNUMS; do
         DELAY="3"
         MAX_RETRY="5"
         VERBOSE="false"
+        LOCAL_DOCKERFILE=$LOCAL_CC_DIR/$CC_NAME/Dockerfile
+
 
         # Build the docker image 
         buildDockerImages
@@ -114,8 +114,7 @@ for REGNUM in $REGNUMS; do
                 ###############################################################
                 # Params
                 ###############################################################
-                echo ""
-                echo_info "Chaincode $CC_NAME on $PEER installing..."
+                log_info "Chaincode $CC_NAME on $PEER installing..."
                 PEER_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .IP" $CONFIG_FILE)
                 PEER_PORT1=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Port1" $CONFIG_FILE)
                 PEER_ADDRESS=$PEER_IP:$PEER_PORT1
@@ -135,13 +134,13 @@ for REGNUM in $REGNUMS; do
 
                     PACKAGE_ID=$(packageChaincode $PEER $CCAAS_NAME $CC_VERSION $CCAAS_SERVER $CCAAS_PORT)
                     if [[ $DEBUG == true ]]; then
-                    echo_value_debug "- PackageID:" "$PACKAGE_ID"
+                    log_debug "PackageID:" "$PACKAGE_ID"
                     fi
 
 
                     # install and approve the chaincode
                     installChaincode $CCAAS_NAME $ORBIS $REGNUM $AGER $PEER $PEER_ADDRESS $ORDERER_ADDRESS
-                    echo_ok "Chaincode on $PEER installed..."
+                    log_info "Chaincode on $PEER installed..."
 
                     # Start CCAAS Docker container
                     docker run -d \
@@ -160,7 +159,7 @@ for REGNUM in $REGNUMS; do
                         ${CC_NAME}_ccaas_image:${CC_VERSION}
 
                     CheckContainer "$CCAAS_SERVER" "$DOCKER_CONTAINER_WAIT"
-                    echo_ok "CCAAS $CCAAS_SERVER started."
+                    log_info "CCAAS $CCAAS_SERVER started."
                 done
             done
             
@@ -169,7 +168,7 @@ for REGNUM in $REGNUMS; do
             TLS_ROOT_CERT_FILES=(--tlsRootCertFiles "$PEER_ROOTCERT_CONTAINER")
 
             # Committing chaincode via docker exec
-            echo_info "Chaincode committing..."
+            log_info "Chaincode committing..."
             docker exec \
             -e CORE_PEER_TLS_ENABLED=true \
             -e CORE_PEER_LOCALMSPID=$AGER \
@@ -191,12 +190,12 @@ for REGNUM in $REGNUMS; do
                 ${CC_COLL_CONFIG}
 
             if [ $? -ne 0 ]; then
-                echo_error "Chaincode commit failed"
+                log_error "Chaincode commit failed"
                 exit 1
             fi
 
             # Query committed via docker exec
-            echo_info "Chaincode querycommitted..."
+            log_info "Chaincode querycommitted..."
             docker exec \
             -e CORE_PEER_TLS_ENABLED=true \
             -e CORE_PEER_LOCALMSPID=$AGER \
@@ -204,10 +203,10 @@ for REGNUM in $REGNUMS; do
             -e CORE_PEER_ADDRESS=$PEER_ADDRESS \
             $PEER peer lifecycle chaincode querycommitted --channelID $CHANNEL_NAME --name ${CC_NAME}
             
-            echo_ok "Chaincode committed"
+            log_ok "Chaincode committed"
 
             # Invoking chaincode via docker exec
-            echo_info "Chaincode invoking InitLedger..."
+            log_info "Chaincode invoking InitLedger..."
             rc=1
             COUNTER=1
             fcn_call='{"function":"'${CC_INIT_FCN}'","Args":[]}'
@@ -215,7 +214,7 @@ for REGNUM in $REGNUMS; do
 
             while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
                 sleep $DELAY
-                echo_warn "Chaincode invoking (attempt $COUNTER of $MAX_RETRY)..."
+                log_warn "Chaincode invoking (attempt $COUNTER of $MAX_RETRY)..."
                 
                 docker exec \
                 -e CORE_PEER_TLS_ENABLED=true \
@@ -239,12 +238,12 @@ for REGNUM in $REGNUMS; do
             done
 
             if [ $rc -eq 0 ]; then
-                echo_ok "Chaincode invoked successfully."
+                log_info "Chaincode invoked successfully."
             else
-                echo_error "Chaincode invoke failed after $MAX_RETRY attempts."
+                log_error "Chaincode invoke failed after $MAX_RETRY attempts."
                 exit 1
             fi
         done
     done
-    echo_ok "Chaincode deployment completed for $REGNUM!"
+    log_ok "Chaincode deployment completed for $REGNUM!"
 done

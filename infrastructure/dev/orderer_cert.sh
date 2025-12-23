@@ -67,18 +67,12 @@ for AGER in $AGERS; do
         ###############################################################
         # Enroll orderer @ orbis
         ###############################################################
-        echo ""
-        echo_info "Orderer $ORDERER starting..."
-        echo ""
-        if [[ $DEBUG == true ]]; then
-            echo_debug "Executing with the following:"
-            echo_value_debug "- TLS Cert:" "$ORBIS_TLS_CERT"
-            echo_value_debug "- Orbis MSP Name:" "$ORBIS_MSP_NAME"
-            echo_value_debug "***" "***"
-            echo_value_debug "- Orderer Name:" "$ORDERER_NAME"
-            echo_value_debug "- MSP Affiliation:" "$AFFILIATION"
-        fi
-        echo_info "$ORDERER_NAME registering and enrolling at Orbis-MSP..."
+        log_info "Orderer $ORDERER starting..."
+        log_debug "TLS Cert:" "$ORBIS_TLS_CERT"
+        log_debug "Orbis MSP Name:" "$ORBIS_MSP_NAME"
+        log_debug "Orderer Name:" "$ORDERER_NAME"
+        log_debug "MSP Affiliation:" "$AFFILIATION"
+        log_info "$ORDERER_NAME registering and enrolling at Orbis-MSP..."
         
         # Register and enroll MSP-ID
         docker exec -it $ORBIS_MSP_NAME fabric-ca-client register -u https://$ORBIS_MSP_NAME:$ORBIS_MSP_PASS@$ORBIS_MSP_NAME:$ORBIS_MSP_PORT \
@@ -109,8 +103,7 @@ for AGER in $AGERS; do
 
 
         # Generating NodeOUs-File
-        echo ""
-        echo_info "NodeOUs-File writing..."
+        log_info "NodeOUs-File writing..."
         CA_CERT_FILE=$(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/msp/intermediatecerts/*.pem)
         cat <<EOF > $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/msp/config.yaml
 NodeOUs:
@@ -132,8 +125,7 @@ EOF
         chmod -R 750 infrastructure
 
 
-        echo ""
-        echo_info "$ORDERER_NAME registered and enrolled."
+        log_ok "$ORDERER_NAME registered and enrolled."
     done
 done
 ###############################################################

@@ -22,38 +22,38 @@ GATEWAY_SRC_DIR="${PWD}/../../services/gateway-service"
 LOCAL_INFRA_DIR=${PWD}/infrastructure
 
 
-echo_info "Checking Gateway..."
+log_info "Checking Gateway..."
 
 # Simple check: Image exists?
 if ! docker images | grep -q "${GATEWAY_IMAGE}"; then
     REBUILD_REQUIRED=true
-    echo_info "Image not found - will build"
+    log_debug "Image not found - will build"
 else
     REBUILD_REQUIRED=false
-    echo_info "Image exists"
+    log_debug "Image exists"
     
 fi
 
 # Build if required
 if [ "$REBUILD_REQUIRED" = true ]; then
-    echo_info "Building ${GATEWAY_IMAGE}..."
+    log_debug "Building ${GATEWAY_IMAGE}..."
     
     # Install dependencies
-    echo_info "Installing dependencies..."
-    (cd "${GATEWAY_SRC_DIR}" && npm install) || { echo_error "npm install failed"; exit 1; }
+    log_debug "Installing dependencies..."
+    (cd "${GATEWAY_SRC_DIR}" && npm install) || { log_error "npm install failed"; exit 1; }
     
   
     # Clean and build
-    echo_info "Building TypeScript..."
-    (cd ${GATEWAY_SRC_DIR} && rm -rf dist/ && npm run build) || { echo_error "Build failed"; exit 1; }
+    log_debug "Building TypeScript..."
+    (cd ${GATEWAY_SRC_DIR} && rm -rf dist/ && npm run build) || { log_error "Build failed"; exit 1; }
     
     # Build Docker image
-    echo_info "Building Docker image..."
-    docker build -t ${GATEWAY_IMAGE} ${GATEWAY_SRC_DIR} || { echo_error "Docker build failed"; exit 1; }
+    log_debug "Building Docker image..."
+    docker build -t ${GATEWAY_IMAGE} ${GATEWAY_SRC_DIR} || { log_error "Docker build failed"; exit 1; }
 
-    echo_info "Image built"
+    log_debug "Image built"
 else
-    echo_info "Image up-to-date"
+    log_debug "Image up-to-date"
 fi
 
 
@@ -82,45 +82,15 @@ for REGNUM in $REGNUMS; do
             CAAPI_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.CAAPI.IP" $CONFIG_FILE)
             CAAPI_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .CA.CAAPI.Port1" $CONFIG_FILE)
 
-            echo ""
-            if [[ $DEBUG == true ]]; then
-                echo_debug "Executing with the following:"
-                echo_value_debug "- Regnum Name:" "$REGNUM"
-                echo_value_debug "- Chaincode:" "${CC_NAME}"
-                echo_value_debug "- Gateway:" "${GATEWAY_NAME} (${GATEWAY_IP}:${GATEWAY_PORT})"
-                echo_value_debug "- Peer:" "${PEER_NAME} (${PEER_IP}:${PEER_PORT})"
-            fi
-            echo_info "Docker $GATEWAY_NAME starting..."
+            log_debug "- Regnum Name:" "$REGNUM"
+            log_debug "- Chaincode:" "${CC_NAME}"
+            log_debug "- Gateway:" "${GATEWAY_NAME} (${GATEWAY_IP}:${GATEWAY_PORT})"
+            log_debug "- Peer:" "${PEER_NAME} (${PEER_IP}:${PEER_PORT})"
+            log_info "Docker $GATEWAY_NAME starting..."
 
             LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$GATEWAY_NAME
             mkdir -p $LOCAL_SRV_DIR
             chmod -R 750 $LOCAL_SRV_DIR
-
-
-            ###############################################################
-            # Resolve file paths with wildcards
-            ###############################################################
-            # TLS Cert
-            # TLS_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/signcerts"/*.pem 2>/dev/null | head -1)
-            # if [ -z "$TLS_CERT_FULL" ]; then
-            #     echo_error "TLS cert not found for $PEER_NAME"
-            #     exit 1
-            # fi
-            # TLS_CERT_FILE=$(basename "$TLS_CERT_FULL")
-            # if [[ $DEBUG == true ]]; then
-            #     echo_value_debug "- TLS Cert:" "$TLS_CERT_FILE"
-            # fi
-            
-            # # TLS Root Cert
-            # TLS_ROOT_CERT_FULL=$(ls "$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/tls/tlscacerts"/*.pem 2>/dev/null | head -1)
-            # if [ -z "$TLS_ROOT_CERT_FULL" ]; then
-            #     echo_error "TLS root cert not found for $PEER_NAME"
-            #     exit 1
-            # fi
-            # TLS_ROOT_CERT_FILE=$(basename "$TLS_ROOT_CERT_FULL")
-            # if [[ $DEBUG == true ]]; then
-            #     echo_value_debug "- TLS Root:" "$TLS_ROOT_CERT_FILE"
-            # fi
 
 
             ###############################################################
@@ -163,8 +133,7 @@ for REGNUM in $REGNUMS; do
             ###############################################################
             # Write .env
             ###############################################################
-            echo ""
-            echo_info "Environment for $GATEWAY_NAME writing..."
+            log_info "Environment for $GATEWAY_NAME writing..."
 cat <<EOF > $LOCAL_SRV_DIR/.env
 # ========================================
 # CA-SERVICE CONFIGURATION
@@ -232,8 +201,7 @@ EOF
             ###############################################################
             # GATEWAY
             ###############################################################
-            echo ""
-            echo_info "Docker $GATEWAY_NAME starting..."
+            log_info "Docker $GATEWAY_NAME starting..."
             docker run -d \
                 --user $(id -u):$(id -g) \
                 --name $GATEWAY_NAME \
@@ -256,7 +224,7 @@ EOF
             CheckContainerLog "$GATEWAY_NAME" "Gateway Service started successfully on HTTPS" "$DOCKER_CONTAINER_WAIT"
 
             echo ""
-            echo_info "Gateway $GATEWAY_NAME started."
+            log_ok "Gateway $GATEWAY_NAME started."
         done
     done
 done

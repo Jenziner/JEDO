@@ -40,14 +40,10 @@ function ca_start() {
 
 
     # Start Containter
-    echo ""
-    if [[ $DEBUG == true ]]; then
-        echo_debug "Executing with the following:"
-        echo_value_debug "- Docker Container" "$CONTAINER_NAME"
-        echo_value_debug "- Infra Dir:" "$LOCAL_INFRA_DIR"
-        echo_value_debug "- Local Dir:" "$LOCAL_SRV_DIR"
-    fi
-    echo_info "Docker Container $CONTAINER_NAME starting..."
+    log_debug "- Docker Container" "$CONTAINER_NAME"
+    log_debug "- Infra Dir:" "$LOCAL_INFRA_DIR"
+    log_debug "- Local Dir:" "$LOCAL_SRV_DIR"
+    log_info "Docker Container $CONTAINER_NAME starting..."
     docker run -d \
         --user $(id -u):$(id -g) \
         --name $CONTAINER_NAME \
@@ -108,14 +104,10 @@ function ca_writeCfg() {
     mkdir -p $LOCAL_SRV_DIR
 
     # Write SERVER config
-    echo ""
-    if [[ $DEBUG == true ]]; then
-        echo_debug "Executing with the following:"
-        echo_value_debug "- MSP:" "$MSP_ORG"
-        echo_value_debug "- CA:" "$MSP_NAME"
-        echo_value_debug "- Parent (optional):" "$PARENT_NAME"
-    fi
-    echo_info "Server-Config for $MSP_NAME writing..."
+    log_debug "- MSP:" "$MSP_ORG"
+    log_debug "- CA:" "$MSP_NAME"
+    log_debug "- Parent (optional):" "$PARENT_NAME"
+    log_info "Server-Config for $MSP_NAME writing..."
 cat <<EOF > $LOCAL_SRV_DIR/fabric-ca-server-config.yaml
 ---
 version: 0.0.1

@@ -25,39 +25,39 @@ build_microservice() {
 
     SERVICE_SRC_DIR="../../$SERVICE_SRC_DIR"
 
-    echo_debug "Checking Image..."
+    log_debug "Checking Image..."
 
     # Simple check: Image exists?
     if ! docker images | grep -q "${SERVICE_IMAGE}"; then
         REBUILD_REQUIRED=true
-        echo_debug "Image not found - will build"
+        log_debug "Image not found - will build"
     else
         REBUILD_REQUIRED=false
-        echo_debug "Image exists"
+        log_debug "Image exists"
         
     fi
 
     # Build if required
     if [ "$REBUILD_REQUIRED" = true ]; then
-        echo_debug "Building ${SERVICE_IMAGE}..."
+        log_debug "Building ${SERVICE_IMAGE}..."
         
         # Install dependencies
-        echo_debug "Installing dependencies..."
-        (cd "${SERVICE_SRC_DIR}" && npm install) || { echo_error "npm install failed"; exit 1; }
+        log_debug "Installing dependencies..."
+        (cd "${SERVICE_SRC_DIR}" && npm install) || { log_error "npm install failed"; exit 1; }
         
         # Check if TypeScript project (has tsconfig.json)
         if [ -f "${SERVICE_SRC_DIR}/tsconfig.json" ]; then
-            echo_debug "TypeScript project detected - building..."
-            (cd ${SERVICE_SRC_DIR} && rm -rf dist/ && npm run build) || { echo_error "TypeScript build failed"; exit 1; }
+            log_debug "TypeScript project detected - building..."
+            (cd ${SERVICE_SRC_DIR} && rm -rf dist/ && npm run build) || { log_error "TypeScript build failed"; exit 1; }
         fi
 
         # Build Docker image
-        echo_debug "Building Docker image..."
-        docker build -t ${SERVICE_IMAGE} ${SERVICE_SRC_DIR} || { echo_error "Docker build failed"; exit 1; }
+        log_debug "Building Docker image..."
+        docker build -t ${SERVICE_IMAGE} ${SERVICE_SRC_DIR} || { log_error "Docker build failed"; exit 1; }
 
-        echo_debug "Image built"
+        log_debug "Image built"
     else
-        echo_debug "Image up-to-date"
+        log_debug "Image up-to-date"
     fi
 }
 
@@ -74,8 +74,7 @@ start_microservice() {
     local LOCAL_INFRA_DIR=${PWD}/infrastructure
     local LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME
 
-    echo ""
-    echo_info "Docker $SERVICE_NAME starting..."
+    log_info "Docker $SERVICE_NAME starting..."
     mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/production
     chmod -R 750 $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME/production
     docker run -d \
@@ -106,8 +105,7 @@ start_microservice() {
         CheckContainerLog "$SERVICE_NAME" "GET /health completed" "$DOCKER_CONTAINER_WAIT"
     fi
 
-    echo ""
-    echo_info "Microservice $SERVICE_NAME started."
+    log_ok "Microservice $SERVICE_NAME started."
 }
 
 
@@ -128,8 +126,7 @@ writeenf_ca-service() {
     local LOCAL_INFRA_DIR=${PWD}/infrastructure
     local LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME
 
-    echo ""
-    echo_info "Environment for $SERVICE_NAME writing..."
+    log_info "Environment for $SERVICE_NAME writing..."
     cat <<EOF > $LOCAL_SRV_DIR/.env
 # ========================================
 # CA-SERVICE CONFIGURATION
@@ -211,8 +208,7 @@ writeenf_ledger-service() {
     local LOCAL_INFRA_DIR=${PWD}/infrastructure
     local LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME
 
-    echo ""
-    echo_info "Environment for $SERVICE_NAME writing..."
+    log_info "Environment for $SERVICE_NAME writing..."
     cat <<EOF > $LOCAL_SRV_DIR/.env
 # ========================================
 # LEDGER-SERVICE CONFIGURATION
@@ -316,14 +312,13 @@ for REGNUM in $REGNUMS; do
                 AGER_MSP_IP=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.IP" "$CONFIG_FILE")
                 AGER_MSP_PORT=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .MSP.Port" "$CONFIG_FILE")
 
-                echo ""
-                log_debug "- Regnum Name:" "${REGNUM}"
-                log_debug "- Ager Name:" "${AGER}"
-                log_debug "- Service:" "${SERVICE_NAME}"
-                log_debug "  - Source:" "${SERVICE_SOURCE}"
-                log_debug "  - IP:" "${SERVICE_IP}"
-                log_debug "  - Port:" "${SERVICE_PORT}"
-                echo_info "Docker $SERVICE_NAME starting..."
+                log_debug "Regnum Name:" "${REGNUM}"
+                log_debug "Ager Name:" "${AGER}"
+                log_debug "Service:" "${SERVICE_NAME}"
+                log_debug "- Source:" "${SERVICE_SOURCE}"
+                log_debug "- IP:" "${SERVICE_IP}"
+                log_debug "- Port:" "${SERVICE_PORT}"
+                log_info "Docker $SERVICE_NAME starting..."
 
                 LOCAL_SRV_DIR=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$SERVICE_NAME
                 mkdir -p $LOCAL_SRV_DIR

@@ -12,8 +12,7 @@ source "$SCRIPT_DIR/params.sh"
 
 export JEDO_INITIATED="yes"
 
-echo ""
-echo_warn "JEDO-Ecosystem $DOCKER_NETWORK_NAME starting..."
+log_section "JEDO-Ecosystem $DOCKER_NETWORK_NAME starting..."
 
 ###############################################################
 # Arguments
@@ -40,7 +39,7 @@ while getopts ":hpda:r:-:" opt; do
             ;;
         a )
             if [[ "$OPTARG" != "go" && "$OPTARG" != "pause" ]]; then
-                echo_error "invalid argument for -a: $OPTARG" >&2
+                log_error "invalid argument for -a: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
             fi
@@ -48,7 +47,7 @@ while getopts ":hpda:r:-:" opt; do
             ;;
         r )
             if [[ "$OPTARG" != "tools" && "$OPTARG" != "ldap" && "$OPTARG" != "ca" && "$OPTARG" != "node" && "$OPTARG" != "enroll" && "$OPTARG" != "channel" && "$OPTARG" != "genesis" && "$OPTARG" != "net" && "$OPTARG" != "orderer" && "$OPTARG" != "peer" && "$OPTARG" != "tokengen" && "$OPTARG" != "ccaas" && "$OPTARG" != "tokennode" && "$OPTARG" != "prereq" && "$OPTARG" != "root" && "$OPTARG" != "gateway" && "$OPTARG" != "wallet" && "$OPTARG" != "services" && "$OPTARG" != "intermediate" ]]; then
-                echo_error "invalid argument for -r: $OPTARG" >&2
+                log_error "invalid argument for -r: $OPTARG" >&2
                 echo "use -h for help" >&2
                 exit 3
             fi
@@ -61,20 +60,20 @@ while getopts ":hpda:r:-:" opt; do
                     export DEBUG=true
                     export FABRIC_LOGGING_SPEC="DEBUG"
                     export FABRIC_CA_SERVER_LOGLEVEL="debug"
-                    echo_info "Debug-Modus aktiviert" >&2
+                    log_info "Debug-Modus aktiviert" >&2
                     ;;
                 *)
-                    echo_error "invalid long option: --$OPTARG" >&2
+                    log_error "invalid long option: --$OPTARG" >&2
                     exit 2
                     ;;
             esac
             ;;
         \? )
-            echo_error "invalid option: -$OPTARG" >&2
+            log_error "invalid option: -$OPTARG" >&2
             exit 2
             ;;
         : )
-            echo_error "option -$OPTARG requires argument." >&2
+            log_error "option -$OPTARG requires argument." >&2
             exit 2
             ;;
     esac
@@ -85,7 +84,7 @@ done
 # Checks
 ###############################################################
 if [[ "$opt_r" == "prereq" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_section "Prerequisites checking..."
+    log_section "Prerequisites checking..."
     $SCRIPT_DIR/prereq.sh
     cool_down $opt_a "Prerequisites checked."
 fi
@@ -95,7 +94,7 @@ fi
 # Delete previous installation
 ###############################################################
 if $opt_d || [[ "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_section "Previous installation deleting..."
+    log_section "Previous installation deleting..."
     $SCRIPT_DIR/down.sh
     cool_down $opt_a "Previous installation deleted."
 fi
@@ -105,32 +104,21 @@ fi
 # Create Docker Network
 ###############################################################
 if [[ "$opt_r" == "net" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_section "Docker Network starting..."
-    echo ""
-    echo_warn "Docker Network starting..."
+    log_section "Docker Network starting..."
     if ! docker network ls --format '{{.Name}}' | grep -wq "$DOCKER_NETWORK_NAME"; then
         docker network create --subnet=$DOCKER_NETWORK_SUBNET --gateway=$DOCKER_NETWORK_GATEWAY "$DOCKER_NETWORK_NAME"
     fi
     docker network inspect "$DOCKER_NETWORK_NAME"
     cool_down $opt_a "Docker Network started."
-    echo_ok "Docker Network started."
+    log_ok "Docker Network started."
 fi
-
-
-###############################################################
-# Run LDAP
-###############################################################
-# if [[ "$opt_r" == "ldap" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-#     $SCRIPT_DIR/ldap.sh
-#     cool_down $opt_a "LDAP started."
-# fi
 
 
 ###############################################################
 # Run CA
 ###############################################################
 if [[ "$opt_r" == "ca" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_section "CA starting..."
+    log_section "CA starting..."
     $SCRIPT_DIR/ca_tls-node.sh
     $SCRIPT_DIR/ca_tls-certs.sh
     $SCRIPT_DIR/ca_ca-nodes.sh
@@ -143,7 +131,7 @@ fi
 # Run Orderer
 ###############################################################
 if [[ "$opt_r" == "orderer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_section "Orderers starting..."
+    log_section "Orderers starting..."
     $SCRIPT_DIR/orderer_cert.sh
     $SCRIPT_DIR/orderer_node.sh
     cool_down $opt_a "Orderers started."
@@ -154,7 +142,7 @@ fi
 # Run Peer
 ###############################################################
 if [[ "$opt_r" == "peer" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_section "Peers starting..."
+    log_section "Peers starting..."
    $SCRIPT_DIR/peer.sh peer
     cool_down $opt_a "Peers started."
 fi
@@ -164,7 +152,7 @@ fi
 # Generate genesis block and channel configuration
 ###############################################################
 if [[ "$opt_r" == "genesis" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_section "Genesis Block and Channel Configuration generating..."
+    log_section "Genesis Block and Channel Configuration generating..."
     $SCRIPT_DIR/genesis-block.sh
     cool_down $opt_a "Genesis Block and Channel Configuration generated."
 fi
@@ -174,7 +162,7 @@ fi
 # Create Channel
 ###############################################################
 if [[ "$opt_r" == "channel" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_section "Channel creating..."
+    log_section "Channel creating..."
     $SCRIPT_DIR/channel.sh
     cool_down $opt_a "Channel created."
 fi
@@ -184,7 +172,7 @@ fi
 # Chaincode jedo-wallet Deployment
 ###############################################################
 if [[ "$opt_r" == "wallet" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_section "Chaincode deploying..."
+    log_section "Chaincode deploying..."
     $SCRIPT_DIR/cc_jedo-wallet.sh
     cool_down $opt_a "Chaincode deployed."
 fi
@@ -194,25 +182,16 @@ fi
 # Gateway Services
 ###############################################################
 if [[ "$opt_r" == "services" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_section "Gateway services deploying..."
+    log_section "Gateway services deploying..."
     $SCRIPT_DIR/gateway-services.sh
-    cool_down $opt_a "Gateway services deployed."
-fi
-
-
-###############################################################
-# Gateway Service
-###############################################################
-if [[ "$opt_r" == "gateway" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
-    echo_section "API Gateway deploying..."
     $SCRIPT_DIR/gateway.sh
-    cool_down $opt_a "API Gateway deployed."
+    cool_down $opt_a "Gateway services deployed."
 fi
 
 
 ###############################################################
 # FINISH
 ###############################################################
-echo_ok "JEDO-Ecosystem $DOCKER_NETWORK_NAME started."
+log_section "JEDO-Ecosystem $DOCKER_NETWORK_NAME done!"
 exit 0
 

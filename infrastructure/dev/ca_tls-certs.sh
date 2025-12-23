@@ -23,8 +23,7 @@ source "$SCRIPT_DIR/params.sh"
 source "$SCRIPT_DIR/ca_utils.sh"
 check_script
 
-echo ""
-echo_info "TLS certs enrolling... (Defaults: https://hyperledger-fabric-ca.readthedocs.io/en/latest/serverconfig.html)"
+log_info "TLS certs enrolling... (Defaults: https://hyperledger-fabric-ca.readthedocs.io/en/latest/serverconfig.html)"
 
 
 ###############################################################
@@ -47,17 +46,12 @@ ORBIS_MSP_IP=$(yq eval ".Orbis.MSP.IP" "$CONFIG_FILE")
 AFFILIATION=$ORBIS
 
 
-echo ""
-if [[ $DEBUG == true ]]; then
-    echo_debug "Executing with the following:"
-    echo_value_debug "- TLS Name:" "$ORBIS_TLS_NAME"
-    echo_value_debug "- TLS Dir:" "$ORBIS_TLS_DIR"
-    echo_value_debug "- TLS Cert:" "$ORBIS_TLS_CERT"
-    echo_value_debug "***" "***"
-    echo_value_debug "- MSP Name:" "$ORBIS_MSP_NAME"
-    echo_value_debug "- MSP Affiliation:" "$AFFILIATION"
-fi
-echo_info "Orbis-CA $ORBIS_MSP_NAME TLS registering and enrolling..."
+log_debug "TLS Name:" "$ORBIS_TLS_NAME"
+log_debug "TLS Dir:" "$ORBIS_TLS_DIR"
+log_debug "TLS Cert:" "$ORBIS_TLS_CERT"
+log_debug "MSP Name:" "$ORBIS_MSP_NAME"
+log_debug "MSP Affiliation:" "$AFFILIATION"
+log_info "Orbis-CA $ORBIS_MSP_NAME TLS registering and enrolling..."
 docker exec -it "$ORBIS_TLS_NAME" fabric-ca-client register -u "https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT" \
     --home "$ORBIS_TLS_DIR" \
     --tls.certfiles "$ORBIS_TLS_CERT" \
@@ -83,13 +77,9 @@ for REGNUM in $REGNUMS; do
 
 
     # Register Regnum-MSP identity
-    echo ""
-    if [[ $DEBUG == true ]]; then
-        echo_debug "Executing with the following:"
-        echo_value_debug "- MSP Name:" "$REGNUM_MSP_NAME"
-        echo_value_debug "- MSP Affiliation:" "$AFFILIATION"
-    fi
-    echo_info "Regnum-MSP $REGNUM_MSP_NAME TLS registering and enrolling..."
+    log_debug "MSP Name:" "$REGNUM_MSP_NAME"
+    log_debug "MSP Affiliation:" "$AFFILIATION"
+    log_info "Regnum-MSP $REGNUM_MSP_NAME TLS registering and enrolling..."
     docker exec -it $ORBIS_TLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
         --home $ORBIS_TLS_DIR \
         --tls.certfiles "$ORBIS_TLS_CERT" \
@@ -104,7 +94,7 @@ for REGNUM in $REGNUMS; do
 
 
     #Copy files to Organization msp
-    echo_info "Organization msp creating (TLS)..."
+    log_info "Organization msp creating (TLS)..."
     mkdir -p ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/tlscacerts
     cp ${PWD}/infrastructure/$ORBIS/$REGNUM/$REGNUM_MSP_NAME/tls/tlscacerts/* ${PWD}/infrastructure/$ORBIS/$REGNUM/msp/tlscacerts
 
@@ -121,14 +111,10 @@ for REGNUM in $REGNUMS; do
 
 
     # Register Regnum-Admin identity
-    echo ""
-    if [[ $DEBUG == true ]]; then
-        echo_debug "Executing with the following:"
-        echo_value_debug "- MSP Name:" "$REGNUM_ADMIN_NAME"
-        echo_value_debug "- MSP Subject:" "$REGNUM_ADMIN_SUBJECT"
-        echo_value_debug "- MSP CSR" "$CSR_NAMES"
-    fi
-    echo_info "Regnum-Admin $REGNUM_ADMIN_NAME TLS registering and enrolling..."
+    log_debug "MSP Name:" "$REGNUM_ADMIN_NAME"
+    log_debug "MSP Subject:" "$REGNUM_ADMIN_SUBJECT"
+    log_debug "MSP CSR" "$CSR_NAMES"
+    log_info "Regnum-Admin $REGNUM_ADMIN_NAME TLS registering and enrolling..."
     docker exec -it $ORBIS_TLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
         --home $ORBIS_TLS_DIR \
         --tls.certfiles "$ORBIS_TLS_CERT" \
@@ -144,7 +130,7 @@ for REGNUM in $REGNUMS; do
 
 
     # copy Regnum-Admin-Client tlscacerts
-    echo_info "Admin Client tlscacerts copying..."
+    log_info "Admin Client tlscacerts copying..."
     mkdir -p ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts
     cp ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/$REGNUM_ADMIN_NAME/tls/tlscacerts/* ${PWD}/infrastructure/$ORBIS/$REGNUM/_Admin/tls/tlscacerts
 done
@@ -164,8 +150,7 @@ for AGER in $AGERS; do
 
     # Add affiliation to TLS-CA
     AFFILIATION=$ORBIS.$REGNUM.$AGER
-    echo ""
-    echo_info "Affiliation $AFFILIATION adding..."
+    log_info "Affiliation $AFFILIATION adding..."
     docker exec -it $ORBIS_TLS_NAME fabric-ca-client affiliation add $AFFILIATION  -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
         --home $ORBIS_TLS_DIR \
         --tls.certfiles "$ORBIS_TLS_CERT" \
@@ -173,13 +158,9 @@ for AGER in $AGERS; do
 
 
     # Register Ager-MSP identity
-    echo ""
-    if [[ $DEBUG == true ]]; then
-        echo_debug "Executing with the following:"
-        echo_value_debug "- MSP Name:" "$AGER_MSP_NAME"
-        echo_value_debug "- MSP Affiliation" "$AFFILIATION"
-    fi
-    echo_info "Ager-MSP $AGER_MSP_NAME TLS registering and enrolling..."
+    log_debug "MSP Name:" "$AGER_MSP_NAME"
+    log_debug "MSP Affiliation" "$AFFILIATION"
+    log_info "Ager-MSP $AGER_MSP_NAME TLS registering and enrolling..."
     docker exec -it $ORBIS_TLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
         --home $ORBIS_TLS_DIR \
         --tls.certfiles "$ORBIS_TLS_CERT" \
@@ -207,7 +188,7 @@ for AGER in $AGERS; do
     # Register Gateway identity
     log_debug "Gateway Name:" "$AGER_GATEWAY_NAME"
     log_debug "MSP Affiliation" "$AFFILIATION"
-    echo_info "Gateway $AGER_GATEWAY_NAME TLS registering and enrolling..."
+    log_info "Gateway $AGER_GATEWAY_NAME TLS registering and enrolling..."
     docker exec -it $ORBIS_TLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
         --home $ORBIS_TLS_DIR \
         --tls.certfiles "$ORBIS_TLS_CERT" \
@@ -234,7 +215,7 @@ for AGER in $AGERS; do
         # Register Microservice identity
         log_debug "Gateway Name:" "$SERVICE_NAME"
         log_debug "MSP Affiliation" "$AFFILIATION"
-        echo_info "Service $SERVICE_NAME TLS registering and enrolling..."
+        log_info "Service $SERVICE_NAME TLS registering and enrolling..."
         docker exec -it $ORBIS_TLS_NAME fabric-ca-client register -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
             --home $ORBIS_TLS_DIR \
             --tls.certfiles "$ORBIS_TLS_CERT" \
@@ -254,4 +235,4 @@ done
 ###############################################################
 chmod -R 750 infrastructure
 echo ""
-echo_info "TLS certs enrolled."
+log_ok "TLS certs enrolled."

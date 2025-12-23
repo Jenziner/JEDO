@@ -76,19 +76,12 @@ for AGER in $AGERS; do
         ###############################################################
         # Enroll peer @ ORBIS-CA
         ###############################################################
-        echo ""
-        echo_info "Peer $PEER starting..."
-        echo ""
-        if [[ $DEBUG == true ]]; then
-            echo_debug "Executing with the following:"
-            echo_value_debug "- TLS Cert:" "$ORBIS_TLS_CERT"
-            echo_value_debug "- Orbis MSP Name:" "$ORBIS_MSP_NAME"
-            echo_value_debug "***" "***"
-            echo_value_debug "- Peer Name:" "$PEER_NAME"
-            echo_value_debug "- MSP Affiliation:" "$AFFILIATION"
-        fi
-        echo ""
-        echo_info "$PEER_NAME registering and enrolling at Orbis-MSP..."
+        log_info "Peer $PEER starting..."
+        log_debug "TLS Cert:" "$ORBIS_TLS_CERT"
+        log_debug "Orbis MSP Name:" "$ORBIS_MSP_NAME"
+        log_debug "Peer Name:" "$PEER_NAME"
+        log_debug "MSP Affiliation:" "$AFFILIATION"
+        log_info "$PEER_NAME registering and enrolling at Orbis-MSP..."
 
         # Register and enroll MSP-ID
         docker exec -it $ORBIS_MSP_NAME fabric-ca-client register -u https://$ORBIS_MSP_NAME:$ORBIS_MSP_PASS@$ORBIS_MSP_NAME:$ORBIS_MSP_PORT \
@@ -119,8 +112,7 @@ for AGER in $AGERS; do
             --enrollment.profile tls
 
         # Generating NodeOUs-File
-        echo ""
-        echo_info "NodeOUs-File writing..."
+        log_info "NodeOUs-File writing..."
         CA_CERT_FILE=$(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp/intermediatecerts/*.pem)
         
         cat <<EOF > $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/msp/config.yaml
@@ -142,8 +134,7 @@ EOF
 
         chmod -R 750 infrastructure
 
-        echo ""
-        echo_info "$PEER_NAME registered and enrolled."
+        log_info "$PEER_NAME registered and enrolled."
 
 
         ###############################################################
@@ -164,13 +155,9 @@ EOF
                 caCertsFile: /etc/hyperledger/fabric/tls/tlscacerts/${TLS_TLSCACERT_FILE}"
         done
 
-        echo ""
-        if [[ $DEBUG == true ]]; then
-            echo_debug "Executing with the following:"
-            echo_value_debug "- Peer Name:" "$PEER_NAME"
-            echo_value_debug "- TLS Cert:" "$TLS_TLSCACERT_FILE"
-        fi
-        echo_info "Server-Config for $PEER_NAME writing..."
+        log_debug "Peer Name:" "$PEER_NAME"
+        log_debug "TLS Cert:" "$TLS_TLSCACERT_FILE"
+        log_info "Server-Config for $PEER_NAME writing..."
 cat <<EOF > $LOCAL_SRV_DIR/core.yaml
 ---
 peer:
@@ -436,8 +423,7 @@ EOF
         ###############################################################
         # CouchDB
         ###############################################################
-        echo ""
-        echo_info "CouchDB $PEER_DB_NAME starting..."
+        log_info "CouchDB $PEER_DB_NAME starting..."
         mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_DB_NAME
         chmod -R 750 $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_DB_NAME
         docker run -d \
@@ -465,8 +451,7 @@ EOF
         ###############################################################
         # Peer
         ###############################################################
-        echo ""
-        echo_info "Peer $PEER_NAME starting..."
+        log_info "Peer $PEER_NAME starting..."
         export FABRIC_CFG_PATH=/etc/hyperledger/fabric
         mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/production
         chmod -R 750 $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$PEER_NAME/production
@@ -505,8 +490,7 @@ EOF
         CheckContainer "$PEER_NAME" "$DOCKER_CONTAINER_WAIT"
         CheckContainerLog "$PEER_NAME" "Started peer with ID" "$DOCKER_CONTAINER_WAIT"
 
-        echo ""
-        echo_info "Peer $PEER started."
+        log_ok "Peer $PEER started."
     done
 done
 ###############################################################

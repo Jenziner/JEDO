@@ -4,7 +4,7 @@
 # verify Function from Hyperledger
 verifyResult() {
   if [ $1 -ne 0 ]; then
-    echo_error "$2"
+    log_error "$2"
   fi
 }
 
@@ -45,15 +45,12 @@ METADATA-EOF
     tar -C "$tempdir/pkg" -czf "$LOCAL_INFRA_DIR/$CC_NAME.tar.gz" metadata.json code.tar.gz
     rm -Rf "$tempdir"
 
-    if [[ $DEBUG == true ]]; then
-      echo "" >&2
-      echo_debug "Packaging chaincode with the following" >&2
-      log_debug "- Peer:" "$PEER" >&2
-      log_debug "- CC Name:" "$CC_NAME" >&2
-      log_debug "- CC Version:" "$CC_VERSION" >&2
-      log_debug "- CCAAS Server:" "$address" >&2
-      log_debug "- CC Filename:" "${LOCAL_INFRA_DIR}/${CC_NAME}.tar.gz" >&2
-    fi
+    log_debug "Packaging chaincode with the following" >&2
+    log_debug "- Peer:" "$PEER" >&2
+    log_debug "- CC Name:" "$CC_NAME" >&2
+    log_debug "- CC Version:" "$CC_VERSION" >&2
+    log_debug "- CCAAS Server:" "$address" >&2
+    log_debug "- CC Filename:" "${LOCAL_INFRA_DIR}/${CC_NAME}.tar.gz" >&2
 
     export PACKAGE_ID
     PACKAGE_ID=$(peer lifecycle chaincode calculatepackageid ${LOCAL_INFRA_DIR}/${CC_NAME}.tar.gz 2>/dev/null)
@@ -79,24 +76,24 @@ function installChaincode() {
   cp $LOCAL_INFRA_DIR/$CC_NAME.tar.gz $PEER_CHAINCODE_PATH/
   
   if [ $? -ne 0 ]; then
-    echo_error "Failed to copy ${CC_NAME}.tar.gz to $PEER_CHAINCODE_PATH"
+    log_error "Failed to copy ${CC_NAME}.tar.gz to $PEER_CHAINCODE_PATH"
     exit 1
   fi
   
-  echo_ok "Chaincode package copied to: ${NC}${PEER_CHAINCODE_PATH}/${CC_NAME}.tar.gz$" >&2
+  log_info "Chaincode package copied to: ${NC}${PEER_CHAINCODE_PATH}/${CC_NAME}.tar.gz$" >&2
 
   # Find TLS Cert Name in Container
   PEER_TLSCACERT_FILE=$(docker exec $PEER ls /etc/hyperledger/fabric/tls/tlscacerts/ 2>/dev/null | head -1)
 
   if [ -z "$PEER_TLSCACERT_FILE" ]; then
-    echo_error "Peer TLS CA cert not found in container!"
+    log_error "Peer TLS CA cert not found in container!"
     exit 1
   fi
   
   ORDERER_TLSCACERT_FILE=$(docker exec $PEER ls /var/hyperledger/orderer/tls/tlscacerts/ 2>/dev/null | head -1)
   
   if [ -z "$ORDERER_TLSCACERT_FILE" ]; then
-    echo_error "Orderer TLS CA cert not found in container!"
+    log_error "Orderer TLS CA cert not found in container!"
     exit 1
   fi
 
@@ -107,18 +104,15 @@ function installChaincode() {
   CC_PACKAGE_CONTAINER="/etc/hyperledger/fabric/${CC_NAME}.tar.gz"
 
   # Install chaincode
-  if [[ $DEBUG == true ]]; then
-    echo "" >&2
-    echo_debug "Installing chaincode with the following" >&2
-    echo_value_debug "- LocalMSPID:" "${AGER}" >&2
-    echo_value_debug "- Admin MSP:" "${ADMIN_MSP_CONTAINER_PATH}" >&2
-    echo_value_debug "- PEER:" "${PEER_ADDRESS}" >&2
-    echo_value_debug "- Peer TLS Cert:" "${PEER_TLSCACERT_CONTAINER}" >&2
-    echo_value_debug "- Orderer TLS Cert:" "${ORDERER_TLSCACERT_CONTAINER}" >&2
-    echo_value_debug "- PackageID:" "${PACKAGE_ID}" >&2
-    echo_value_debug "- Package File:" "${CC_PACKAGE_CONTAINER}" >&2
-  fi
-  echo_info "Installing chaincode ${PACKAGE_ID}..." >&2
+  log_debug "Installing chaincode with the following" >&2
+  log_debug "- LocalMSPID:" "${AGER}" >&2
+  log_debug "- Admin MSP:" "${ADMIN_MSP_CONTAINER_PATH}" >&2
+  log_debug "- PEER:" "${PEER_ADDRESS}" >&2
+  log_debug "- Peer TLS Cert:" "${PEER_TLSCACERT_CONTAINER}" >&2
+  log_debug "- Orderer TLS Cert:" "${ORDERER_TLSCACERT_CONTAINER}" >&2
+  log_debug "- PackageID:" "${PACKAGE_ID}" >&2
+  log_debug "- Package File:" "${CC_PACKAGE_CONTAINER}" >&2
+  log_info "Installing chaincode ${PACKAGE_ID}..." >&2
   docker exec \
     -e CORE_PEER_TLS_ENABLED=true \
     -e CORE_PEER_LOCALMSPID=$AGER \
@@ -129,17 +123,14 @@ function installChaincode() {
     
 
   # Approve chaincode
-  if [[ $DEBUG == true ]]; then
-    echo "" >&2
-    echo_debug "Approving chaincode with the following" >&2
-    echo_value_debug "- Channel:" "${CHANNEL_NAME}" >&2
-    echo_value_debug "- Orderer:" "${ORDERER_ADDRESS}" >&2
-    echo_value_debug "- CC Name:" "${CC_NAME}" >&2
-    echo_value_debug "- CC Version:" "${CC_VERSION}" >&2
-    echo_value_debug "- CC Sequence:" "${CC_SEQUENCE}" >&2
-    echo_value_debug "- Package ID:" "${PACKAGE_ID}" >&2
-  fi
-  echo_info "Approving chaincode ${PACKAGE_ID}..." >&2
+  log_debug "Approving chaincode with the following" >&2
+  log_debug "- Channel:" "${CHANNEL_NAME}" >&2
+  log_debug "- Orderer:" "${ORDERER_ADDRESS}" >&2
+  log_debug "- CC Name:" "${CC_NAME}" >&2
+  log_debug "- CC Version:" "${CC_VERSION}" >&2
+  log_debug "- CC Sequence:" "${CC_SEQUENCE}" >&2
+  log_debug "- Package ID:" "${PACKAGE_ID}" >&2
+  log_info "Approving chaincode ${PACKAGE_ID}..." >&2
   docker exec \
     -e CORE_PEER_TLS_ENABLED=true \
     -e CORE_PEER_LOCALMSPID=$AGER \
@@ -161,12 +152,12 @@ function installChaincode() {
 
 APPROVE_RC=$?
 if [ $APPROVE_RC -ne 0 ]; then
-  echo_error "approveformyorg failed for ${AGER} with exit code = ${APPROVE_RC}"
+  log_error "approveformyorg failed for ${AGER} with exit code = ${APPROVE_RC}"
   exit 1
 fi
 
 # Commit chaincode
-echo_info "Checking commit readiness..." >&2
+log_info "Checking commit readiness..." >&2
 docker exec \
   -e CORE_PEER_TLS_ENABLED=true \
   -e CORE_PEER_LOCALMSPID=$AGER \
@@ -186,11 +177,11 @@ docker exec \
 CCR_RC=$?
 
 if [ $CCR_RC -ne 0 ]; then
-  echo_error "checkcommitreadiness failed for ${AGER} with exit code = ${CCR_RC}"
+  log_error "checkcommitreadiness failed for ${AGER} with exit code = ${CCR_RC}"
   exit 1
 fi
     
-    echo_ok "Chaincode installes and approved for ${AGER} (approve rc=${APPROVE_RC}) with commitreadiness (readiness rc=${CCR_RC})" >&2
+    log_ok "Chaincode installes and approved for ${AGER} (approve rc=${APPROVE_RC}) with commitreadiness (readiness rc=${CCR_RC})" >&2
 }
 
 

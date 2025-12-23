@@ -48,13 +48,9 @@ for AGER in $AGERS; do
         TLS_TLSCACERT_FILE=$(basename $(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/tls/tlscacerts/*.pem))
         CLIENT_TLSCACERT_FILE=$(basename $(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/_Admin/tls/tlscacerts/*.pem))
 
-        echo ""
-        if [[ $DEBUG == true ]]; then
-            echo_debug "Executing with the following:"
-            echo_value_debug "- Orderer Name:" "$ORDERER_NAME"
-            echo_value_debug "- TLS Cert:" "$TLS_TLSCACERT_FILE"
-        fi
-        echo_info "Server-Config for $ORDERER_NAME writing..."
+        log_debug "Orderer Name:" "$ORDERER_NAME"
+        log_debug "TLS Cert:" "$TLS_TLSCACERT_FILE"
+        log_info "Server-Config for $ORDERER_NAME writing..."
 cat <<EOF > $LOCAL_SRV_DIR/orderer.yaml
 ---
 General:
@@ -148,8 +144,7 @@ EOF
         ###############################################################
         # ORDERER
         ###############################################################
-        echo ""
-        echo_info "Docker $ORDERER_NAME starting..."
+        log_info "Docker $ORDERER_NAME starting..."
         export FABRIC_CFG_PATH=/etc/hyperledger/fabric
         mkdir -p $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/production
         chmod -R 750 $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/$AGER/$ORDERER_NAME/production
@@ -190,8 +185,7 @@ EOF
         CheckContainer "$ORDERER_NAME" "$DOCKER_CONTAINER_WAIT"
         CheckContainerLog "$ORDERER_NAME" "Beginning to serve requests" "$DOCKER_CONTAINER_WAIT"
 
-        echo ""
-        echo_info "Orderer $ORDERER started."
+        log_ok "Orderer $ORDERER started."
     done
 done
 ###############################################################

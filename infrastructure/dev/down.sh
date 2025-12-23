@@ -14,13 +14,11 @@ check_script
 ###############################################################
 # Remove Docker-Stuff
 ###############################################################
-echo ""
-echo_warn "Old JEDO-Ecosystem $DOCKER_NETWORK_NAME removing..."
+log_info "Old JEDO-Ecosystem $DOCKER_NETWORK_NAME removing..."
 
 
 # Remove Docker Container
-echo ""
-echo_info "Docker Container removing..."
+log_warn "Docker Container removing..."
 if docker network inspect "$DOCKER_NETWORK_NAME" &>/dev/null; then
     CONTAINERS=$(docker ps -a --filter "network=$DOCKER_NETWORK_NAME" --format "{{.ID}}")
     if [ -n "$CONTAINERS" ]; then
@@ -32,14 +30,12 @@ fi
 
 
 # Remove Docker Network
-echo ""
-echo_info "Docker Network removing..."
+log_warn "Docker Network removing..."
 docker network rm  $DOCKER_NETWORK_NAME || true
 
 
 # Remove Folder
-echo ""
-echo_info "Folder removing..."
+log_warn "Folder removing..."
 rm -rf infrastructure
 # rm -rf configuration
 # rm -rf chaincode
@@ -47,9 +43,8 @@ rm -rf infrastructure
 
 
 # Remove Chaincode Packages
-echo ""
-echo_info "Chaincode packages removing..."
+log_warn "Chaincode packages removing..."
 rm -f *.tar.gz
 
 
-echo_ok "Old JEDO-Ecosystem $DOCKER_NETWORK_NAME removed."
+log_ok "Old JEDO-Ecosystem $DOCKER_NETWORK_NAME removed."

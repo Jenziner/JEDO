@@ -45,9 +45,9 @@ mkdir -p $LOCAL_SRV_DIR
 ###############################################################
 # Start Orbis-TLS
 ###############################################################
-echo ""
-echo_info "TLS-CA $ORBIS_TLS_NAME starting... (Defaults: https://hyperledger-fabric-ca.readthedocs.io/en/latest/serverconfig.html)"
-
+log_info "TLS-CA $ORBIS_TLS_NAME starting... (Defaults: https://hyperledger-fabric-ca.readthedocs.io/en/latest/serverconfig.html)"
+log_debug "Orbis:" "$ORBIS_TLS_NAME"
+log_debug "Dir:" "$LOCAL_SRV_DIR"
 
 # Write Orbis-TLS SERVER config
 cat <<EOF > $LOCAL_SRV_DIR/fabric-ca-server-config.yaml
@@ -135,8 +135,7 @@ EOF
 
 
 # Start Orbis-TLS Containter
-echo ""
-echo_info "Docker Container $ORBIS_TLS_NAME starting..."
+log_info "Docker Container $ORBIS_TLS_NAME starting..."
 docker run -d \
     --user $(id -u):$(id -g) \
     --name $ORBIS_TLS_NAME \
@@ -161,8 +160,7 @@ CheckContainerLog "$ORBIS_TLS_NAME" "Listening on https://0.0.0.0:$ORBIS_TLS_POR
 
 
 # Enroll TLS certs for Orbis-TLS
-echo ""
-echo_info "Certificate for $ORBIS_TLS_NAME enrolling..."
+log_info "Certificate for $ORBIS_TLS_NAME enrolling..."
 docker exec -it $ORBIS_TLS_NAME fabric-ca-client enroll -u https://$ORBIS_TLS_NAME:$ORBIS_TLS_PASS@$ORBIS_TLS_NAME:$ORBIS_TLS_PORT \
     --home "$ORBIS_TLS_SRV_DIR" \
     --tls.certfiles "$ORBIS_TLS_CERT" \
@@ -175,7 +173,7 @@ docker exec -it $ORBIS_TLS_NAME fabric-ca-client enroll -u https://$ORBIS_TLS_NA
 ###############################################################
 chmod -R 750 infrastructure
 echo ""
-echo_info "TLS-CA $ORBIS_TLS_NAME started."
+log_ok "TLS-CA $ORBIS_TLS_NAME started."
 
 
 

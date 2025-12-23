@@ -16,8 +16,7 @@ check_script
 ###############################################################
 LOCAL_INFRA_DIR=${PWD}/infrastructure
 for REGNUM in $REGNUMS; do
-    echo ""
-    echo_info "Joins to Channel $REGNUM started..."
+    log_info "Joins to Channel $REGNUM started..."
 
     ADMIN=$(yq eval ".Regnum[] | select(.Name == \"$REGNUM\") | .Administration.Contact" $CONFIG_FILE)
 
@@ -47,15 +46,11 @@ for REGNUM in $REGNUMS; do
             export ADMIN_TLS_PRIVATEKEY_FILE=$(basename $(ls $LOCAL_INFRA_DIR/$ORBIS/$REGNUM/_Admin/$ADMIN/tls/keystore/*_sk))
             export ADMIN_TLS_PRIVATEKEY=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/_Admin/$ADMIN/tls/keystore/$ADMIN_TLS_PRIVATEKEY_FILE
 
-            echo ""
-            echo_info "$ORDERER_NAME joins $REGNUM..."
-            if [[ $DEBUG == true ]]; then
-                echo_debug "Executing with the following:"
-                echo_value_debug "- Regnum Name:" "$REGNUM"
-                echo_value_debug "- Ager Name:" "$AGER"
-                echo_value_debug "- Orderer Name:" "$ORDERER"
-                echo_value_debug "- CA-File:" "$OSN_TLS_CA_ROOT_CERT"
-            fi
+            log_info "$ORDERER_NAME joins $REGNUM..."
+            log_debug "Regnum Name:" "$REGNUM"
+            log_debug "Ager Name:" "$AGER"
+            log_debug "Orderer Name:" "$ORDERER"
+            log_debug "CA-File:" "$OSN_TLS_CA_ROOT_CERT"
             osnadmin channel join \
                 --channelID $REGNUM --config-block $FABRIC_CFG_PATH/genesisblock \
                 -o $ORDERER_IP:$ORDERER_ADMINPORT \
@@ -70,22 +65,17 @@ for REGNUM in $REGNUMS; do
             ###############################################################
             PEER_NAME=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Peers[] | select(.Name == \"$PEER\") | .Name" $CONFIG_FILE)
 
-            echo ""
-            echo_info "$PEER_NAME joins $REGNUM..."
-            if [[ $DEBUG == true ]]; then
-                echo_debug "Executing with the following:"
-                echo_value_debug "- Regnum Name:" "$REGNUM"
-                echo_value_debug "- Ager Name:" "$AGER"
-                echo_value_debug "- Peer Name:" "$PEER"
-                echo_value_debug "- CA-File:" "$OSN_TLS_CA_ROOT_CERT"
-            fi
+            log_info "$PEER_NAME joins $REGNUM..."
+            log_debug "Regnum Name:" "$REGNUM"
+            log_debug "Ager Name:" "$AGER"
+            log_debug "Peer Name:" "$PEER"
+            log_debug "CA-File:" "$OSN_TLS_CA_ROOT_CERT"
             docker exec \
                 -e CORE_PEER_MSPCONFIGPATH=/var/hyperledger/infrastructure/$ORBIS/$REGNUM/$AGER/admin.$AGER.$REGNUM.$ORBIS.$ORBIS_ENV/msp \
                 $PEER_NAME peer channel join -b /var/hyperledger/configuration/genesisblock
         done
     done
-    echo ""
-    echo_info "Joins to Channel $REGNUM completed..."
+    log_ok "Joins to Channel $REGNUM completed..."
 done
 
 

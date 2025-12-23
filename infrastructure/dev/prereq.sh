@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
 check_script
 
-echo_info "Prerequisites checking..."
+log_info "Prerequisites checking..."
 
 ###############################################################
 # Help with prerequisits
@@ -58,12 +58,12 @@ inst_help_cryptogen() {
 check_command() {
     local command="$1"
     if ! command -v "$command" &> /dev/null; then
-        echo_error "$command is not installed"
+        log_error "$command is not installed"
         inst_help_${command//-/_}
         exit 1
     else
         echo ""
-        echo_ok "$command is installed:"
+        log_ok "$command is installed:"
         # try to print version
         if "$command" --version &> /dev/null; then
             "$command" --version
@@ -79,8 +79,6 @@ check_command() {
 
 # checks
 check_command yq
-#check_command libtool
-#check_command libltdl-dev
 check_command docker
 check_command git
 check_command go
@@ -90,4 +88,4 @@ check_command configtxgen
 check_command configtxlator
 check_command cryptogen
 
-echo_info "Prerequisites checked."
+log_ok "Prerequisites checked."

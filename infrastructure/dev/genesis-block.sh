@@ -15,8 +15,7 @@ check_script
 # Params for regnum
 ###############################################################
 for REGNUM in $REGNUMS; do
-    echo ""
-    echo_info "Channel $REGNUM configuring..."
+    log_info "Channel $REGNUM configuring..."
 
     LOCAL_INFRA_DIR=${PWD}/infrastructure
     export FABRIC_CFG_PATH=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/configuration
@@ -27,7 +26,7 @@ for REGNUM in $REGNUMS; do
     ###############################################################
     # Start of configtx.yaml
     ###############################################################
-    echo_info "$OUTPUT_CONFIGTX_FILE generating..."
+    log_info "$OUTPUT_CONFIGTX_FILE generating..."
 
 cat <<EOF > $OUTPUT_CONFIGTX_FILE
 ---
@@ -228,10 +227,10 @@ Profiles:
       $PROFILE_ORGANIZATIONS
 EOF
 
-    echo_info "Genesis block for $REGNUM generating..."
+    log_info "Genesis block for $REGNUM generating..."
     FABRIC_LOGGING_SPEC=$FABRIC_LOGGING_SPEC
     configtxgen -configPath $FABRIC_CFG_PATH -profile JedoChannel -channelID $REGNUM -outputBlock $FABRIC_CFG_PATH/genesisblock
 
-    echo_info "Channel $REGNUM configured..."
+    log_ok "Channel $REGNUM configured..."
 done
 
