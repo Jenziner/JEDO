@@ -1,0 +1,28 @@
+Docker:
+    Network: jedo
+    Wait: 60 # Max waiting time in seconds to start a docker container prior to exit
+
+Orbis:
+  Name: jedo
+  Env: test              # prod / test
+  Tld: cc                # me (prod) / cc (test)
+#  TLS:
+#    ChainFile: config/tls.ea.jedo.cc.chain.pem
+#  MSP:
+#    ChainFile: config/msp.ea.jedo.cc.chain.pem
+
+Regnum:
+  Name: ea
+  MSP:
+#    Name: msp.ea.jedo.cc
+    IP: 172.16.2.4
+    Port: 52041
+    OpPort: 52049
+  TLS:
+#    Name: tls.ea.jedo.cc
+    IP: 172.16.2.3
+    Port: 52031
+    OpPort: 52039
+  Administration:
+#    Contact: Nik
+#    Subject: "C=jd,ST=test,O=ea,CN=nik.ea.jedo.cc"
