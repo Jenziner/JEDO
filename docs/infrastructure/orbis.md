@@ -276,6 +276,9 @@ openssl enc -aes-256-cbc -salt -pbkdf2 \
   -out ${TYPE}.${REGNUM}.jedo.${TLD}-certs.tar.gz.enc \
   -pass pass:${PASS}
 
+# Don't forget to shutdown Vault-Container
+docker compose down
+
 # Deliver it to the new regnum
 
 # Regnum can decompress
