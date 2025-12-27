@@ -1,194 +1,126 @@
-# Regnum-CA Inbetriebnahme
+# Regnum CA Bootstrap
 
-Dieses Paket stellt die CA-Infrastruktur für eine Regnum bereit.
+This package provides the CA infrastructure for a Regnum.
 
-## Was bereits vorbereitet ist
+## Contents
 
-Dieses Paket wurde von Orbis/JEDO für deine Regnum-CA vorbereitet.
+This package has been prepared by Orbis/JEDO for your Regnum CA.
 
-Folgende Schritte wurden **bereits durchgeführt**:
-
-1. **Schlüsselpaar und CSR erzeugt**  
-   - Mit dem Script `scripts/regnum-generate-csr.sh` wurde ein privater Schlüssel für deine Regnum-MSP-CA erzeugt und eine Certificate Signing Request (CSR) erstellt.
-
-2. **Signierung durch die Offline-Orbis-CA**  
-   - Die CSR wurde offline von der Orbis-CA geprüft und signiert.
-   - Du erhältst von Orbis:
-     - das signierte Regnum-CA-Zertifikat (`regnum-msp-ca.cert.pem`)
-     - die vollständige Zertifikatskette (`regnum-msp-ca-chain.pem`)
-     - die Orbis-MSP-Chain (`config/orbis-msp-chain.pem`)
-     - optional die Orbis-TLS-Chain (`config/orbis-tls-chain.pem`).
-
-3. **Installation der Zertifikate in die CA-Struktur**  
-   - Mit `scripts/regnum-install-cert.sh` wurden Zertifikat und Chain an die richtigen Stellen in `ca/msp/` kopiert und für den Betrieb der Fabric-CA vorbereitet.
-
-4. **Konfigurationsdatei angelegt**  
-   - In `config/regnum-ea.yaml` sind Name, IP, Ports und Passwörter deiner Regnum-MSP-CA bereits eingetragen.
-   - Diese Werte kannst du bei Bedarf an deine Umgebung anpassen (z.B. andere IP/Ports).
-
-## Inhalte
-
+- `README.md`  
+  This installation guide.
 - `config/regnum.yaml`  
-  Konfiguration (Name, IP, Ports, Passwörter).
-- `config/orbis-msp-chain.pem`  
-  Vertrauenskette der Orbis-MSP-CA.
-- `ca/msp/`  
-  Installiertes Regnum-MSP-CA-Zertifikat + Key.
+  Configuration (name, IP, ports, passwords).
+- `scripts/regnum-generate-csr.sh`  
+  Generates key and CSR files for the respective CA (TLS or MSP).
+- `scripts/regnum-install-cert.sh`  
+  Installs the certificates signed by Orbis and the CA config file.
+- `scripts/regnum-enroll-msp.sh`  
+  Enrolls the TLS certificate for the MSP CA.
 - `scripts/regnum-start-ca.sh`  
-  Startet die Regnum-MSP-CA in Docker.
+  Starts the respective Regnum CA in Docker.
+- `scripts/utils.sh`  
+  Helper functions for script control.
+- `scripts/prereq.sh`  
+  Script that checks the local prerequisites.
 
-## Voraussetzungen
+## Prerequisites
 
-- Docker installiert.
+- Docker installed.
 
-## Schritte
+## Steps
 
+1. Extract the archive.
+2. Adjust IPs/ports in `config/regnum.yaml` to match your environment.
+3. Generate crypto material:
+   1. For TLS: `./scripts/regnum-generate-csr.sh tls new` (optionally with `--debug`)
+   2. For MSP: `./scripts/regnum-generate-csr.sh msp new` (optionally with `--debug`)
+4. According to the script output, send the encrypted tar file and the password to Orbis.
+5. Orbis signs the CSR and sends back an encrypted tar file containing `cert` and `chain` (same password).
+6. Start the TLS CA:
+   1. `./scripts/regnum-install-cert.sh tls myTLSPassword` (optionally with `--debug`)
+   2. `./scripts/regnum-start-ca.sh tls myTLSPassword` (optionally with `--debug`, starts the CA with DEBUG flag)
+   3. `docker logs <regnum-tls-name>`
+   4. `curl -k https://<regnum-tls-ip>:<regnum-tls-port>/cainfo`
+7. Enroll TLS certificates for the MSP CA:
+   1. `./scripts/regnum-enroll-msp.sh myTLSPassword myMSPPassword` (optionally with `--debug`)
+8. Start the MSP CA:
+   1. `./scripts/regnum-install-cert.sh msp myMSPPassword` (optionally with `--debug`)
+   2. `./scripts/regnum-start-ca.sh msp myMSPPassword` (optionally with `--debug`, starts the CA with DEBUG flag)
+   3. `docker logs <regnum-msp-name>`
+   4. `curl -k https://<regnum-msp-ip>:<regnum-msp-port>/cainfo`
 
+Your Regnum is now ready to register and enroll Ager CAs, admins, and nodes.
 
-1. Archive entpacken.
-2. In `config/regnum.yaml` IP/Ports ggf. an Umgebung anpassen.
-3. CA starten:
-```bash
-cd scripts
-./regnum-start-ca.sh
-```
-4. Prüfen:
-```bash
-docker logs msp.ea.jedo.test
-curl -k https://<IP>:52041/cainfo
-```
+---
 
-Die Regnum-MSP-CA ist dann bereit, um Ager-CAs, Admins und Nodes zu registrieren und zu enrolen.
+# Regnum CA Operations
 
+## Stopping the CA and restarting with an updated Regnum config
 
+If you need to change `config/regnum.yaml` or the CA config, you must stop the CA cleanly and then restart it with the new settings.
 
+- **Stop the CA**
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-# Regnum-CA Betrieb
-
-## CA stoppen und mit angepasster Config neu starten
-
-Um Anpassungen an `config/regnum-ea.yaml` oder an der CA-Config vorzunehmen, muss die CA sauber gestoppt und danach mit den neuen Einstellungen neu gestartet werden.
-
-- **CA stoppen**
-
-  ```bash
-  # Container-Name aus YAML, z.B. msp.<regnum>.jedo.<tld>
-  docker stop msp.<regnum>.jedo.<tld>
-  docker rm msp.<regnum>.jedo.<tld>
+  ```
+  docker stop <type>.<regnum>.jedo.<tld>
+  docker rm <type>.<regnum>.jedo.<tld>
   ```
 
-  Dadurch wird nur der Container entfernt, die Konfiguration und Zertifikate im gemounteten Volume `ca/msp/` bleiben unverändert erhalten.
+  This removes only the container; the configuration and certificates in the mounted volume remain untouched.
 
-- **Config anpassen**
+- **Adjust the config**
 
-  - `config/regnum-ea.yaml` nach Bedarf anpassen (IP, Ports, Log-Level, etc.).  
-  - Falls zusätzlich `ca/msp/fabric-ca-server-config.yaml` geändert werden soll, vorher ein Backup machen und nur Felder anpassen, die nicht in die Kryptographie eingreifen (z.B. Log-Level, Operation-Ports).
+  - Update `config/regnum.yaml` as needed (IP, ports, log level, etc.).
 
-- **CA mit neuer Config starten**
+- **Start the CA with the updated config**
 
-  ```bash
+  ```
   cd scripts
-  ./regnum-start-ca.sh
+  ./regnum-start-ca.sh <type> myPassword
   ```
 
-  Das Script liest die aktualisierte YAML und startet einen neuen Container mit den vorhandenen Zertifikaten und Keys im Ordner `ca/msp/`.
+  The script reads the updated YAML file and starts a new container using the existing certificates and keys.
 
-## Vorgehen bei Zertifikatserneuerung (CA-Rollover)
+## Certificate renewal (CA rollover)
 
-Irgendwann läuft das Regnum-CA-Zertifikat aus oder du möchtest aus Sicherheitsgründen einen Rollover durchführen. Da deine Regnum-CA ein Intermediate unter der Offline-Orbis-CA ist, sollte der Ablauf geregelt sein und mit Wartungsfenster erfolgen.
+At some point the Regnum CA certificate will expire, or you may want to perform a rollover for security reasons. Since the Regnum CA is an intermediate under the offline Orbis CA, the process should be controlled and scheduled within a maintenance window.
 
-**1. Vorbereitung: neue CSR generieren**
+**1. Preparation: generate a new CSR**
 
-- Regnum stoppt die CA:
+- Stop the CA:
 
-  ```bash
-  docker stop msp.<regnum>.jedo.<tld>
-  docker rm msp.<regnum>.jedo.<tld>
+  ```
+  docker stop <type>.<regnum>.jedo.<tld>
+  docker rm <type>.<regnum>.jedo.<tld>
   ```
 
-- Auf Basis des bestehenden Keys kann entweder:
-  - der vorhandene Key weiterverwendet werden (nur neues Zertifikat), oder  
-  - ein neues Schlüsselpaar erzeugt werden (empfohlen beim echten Rollover).
+- Based on the existing key you can either:
+  - reuse the existing key (new certificate only):  
+    `./scripts/regnum-generate-csr.sh <type> renew`
+  - or generate a new key pair (recommended for a real rollover):  
+    `./scripts/regnum-generate-csr.sh <type> new`
 
-- Empfohlener Weg (re-use Key, nur neues Zertifikat):
+  This script creates a new CSR in `ca/<type>/`, which must be sent to the offline Orbis CA.
 
-  ```bash
-  cd scripts
-  ./regnum-generate-csr.sh
-  ```
+**2. Install the signed certificate + new chain from Orbis**
 
-  Dieses Script erzeugt eine neue CSR im Ordner `ca/msp/` (z.B. `regnum-msp-ca.csr`), die zur Offline-Orbis-CA geschickt wird.
+- After Orbis has signed the CSR, you will receive:
+  - `*.cert.pem` (new intermediate CA certificate)  
+  - `*.chain.pem` (current chain).
 
-**2. Signiertes Zertifikat + neue Chain von Orbis einspielen**
+**3. Restart the CA**
 
-- Nach der Signierung durch Orbis werden zurückgegeben:
+1. `./scripts/regnum-install-cert.sh <type> myPassword` (optionally with `--debug`)
+2. `./scripts/regnum-start-ca.sh <type> myPassword` (optionally with `--debug`, starts the CA with DEBUG flag)
+3. `docker logs <regnum-name>`
+4. `curl -k https://<regnum-ip>:<regnum-port>/cainfo`
 
-  - `regnum-msp-ca.cert.pem` (neues Intermediate-Zertifikat)  
-  - `regnum-msp-ca-chain.pem` (aktuelle Chain; ggf. mit neuer Orbis-Root oder Zwischenstufen).
+The CA should now run with the new CA certificate; existing client certificates remain valid as long as they can be validated against the new chain.
 
-- Diese Dateien im Pfad `ca/msp/` ersetzen und danach:
+**4. Communication to downstream participants**
 
-  ```bash
-  cd scripts
-  ./regnum-install-cert.sh
-  ```
+To ensure that peers, orderers and other CAs in the Regnum hierarchy trust the new chain, the Regnum operator should:
 
-  Das Script kopiert Zertifikat und Chain an die erwarteten Stellen (`signcerts`, `intermediatecerts`, `cacerts`) im CA-Dateisystem.
-
-**3. CA wieder starten**
-
-- Nach erfolgreicher Installation:
-
-  ```bash
-  cd scripts
-  ./regnum-start-ca.sh
-  ```
-
-- Überprüfung:
-
-  ```bash
-  docker logs msp.<regnum>.jedo.<tld>
-  curl -k https://<IP>:52041/cainfo
-  ```
-
-  Die CA sollte mit dem neuen CA-Zertifikat laufen; bestehende Client-Zertifikate bleiben gültig, solange sie in die neue Chain hineinvalidiert werden können.
-
-**4. Kommunikation an nachgelagerte Teilnehmer**
-
-Damit Peers, Orderer und andere CAs der Regnum-Kette die neue Chain akzeptieren, sollte der Regnum-Betreiber:
-
-- die aktualisierte MSP-Chain (`regnum-msp-ca-chain.pem` und ggf. neue Orbis-Chain) in die jeweiligen `cacerts`/`intermediatecerts` der Org-MSPs verteilen,  
-- Genesis-/Channel-Configs bei Bedarf in einem Maintenance-Fenster aktualisieren, falls sich die „Root of Trust“ sichtbar im Consortium ändert.
+- distribute the updated MSP chain to the `cacerts`/`intermediatecerts` directories of all relevant org MSPs,  
+- update genesis/channel configurations in a maintenance window if the visible „root of trust“ changes in the consortium.
 

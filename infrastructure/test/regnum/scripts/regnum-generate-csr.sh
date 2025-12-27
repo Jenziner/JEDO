@@ -1,8 +1,8 @@
 ###############################################################
 #!/bin/bash
 #
-# This script generates a new jedo-network according infrastructure.yaml
-# Fabric Documentation: https://hyperledger-fabric.readthedocs.io
+# This script generates new regnum .csr-FIle, ready to send to
+# Orbis for signing.
 #
 ###############################################################
 set -euo pipefail
@@ -10,18 +10,21 @@ set -euo pipefail
 SCRIPTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPTDIR/utils.sh"
 
-log_section "JEDO-Ecosystem - CSR generating..."
+log_section "JEDO-Ecosystem - new Regnum - CSR generating..."
+
 
 ###############################################################
-# Check Arguments
+# Usage / Argument-Handling
 ###############################################################
 export LOGLEVEL="INFO"
 export DEBUG=false
 export FABRIC_CA_SERVER_LOGLEVEL="info"
+
 CA_TYPE_RAW=""
+MODE_RAW=""
 
 usage() {
-  log_error "Usage: $0 <tls|msp> [--debug]" >&2
+  log_error "Usage: $0 <tls|msp> <new|renew> [--debug]" >&2
   exit 1
 }
 
@@ -40,50 +43,69 @@ while [[ $# -gt 0 ]]; do
       # first non-Option-Argument = CA_TYPE
       if [[ -z "$CA_TYPE_RAW" ]]; then
         CA_TYPE_RAW="$1"
-        shift
+      elif [[ -z "$MODE_RAW" ]]; then
+        MODE_RAW="$1"
       else
         log_error "To many arguments: '$1'" >&2
         usage
       fi
+      shift
       ;;
   esac
 done
 
-if [[ -z "${CA_TYPE_RAW:-}" ]]; then
+if [[ -z "${CA_TYPE_RAW:-}" || -z "${MODE_RAW:-}" ]]; then
   usage
 fi
 
-CA_TYPE="${CA_TYPE_RAW,,}" # to lowercase
+CA_TYPE="${CA_TYPE_RAW,,}"   # to lowercase
+MODE="${MODE_RAW,,}"         # to lowercase
 
 if [[ "$CA_TYPE" != "tls" && "$CA_TYPE" != "msp" ]]; then
   log_error "Wrong CA type: '$CA_TYPE'" >&2
   usage
 fi
 
+if [[ "$MODE" != "new" && "$MODE" != "renew" ]]; then
+  log_error "Wrong mode: '$MODE'" >&2
+  usage
+fi
+
+
+###############################################################
+# Config
+###############################################################
 CONFIGFILE="${SCRIPTDIR}/../config/regnum.yaml"
-DOCKER_NETWORKE=$(yq eval '.Docker.Network' "${CONFIGFILE}")
-DOCKER_WAIT=$(yq eval '.Docker.Wait' "${CONFIGFILE}")
+
 ORBIS_NAME=$(yq eval '.Orbis.Name' "${CONFIGFILE}")
 ORBIS_ENV=$(yq eval '.Orbis.Env' "${CONFIGFILE}")
 ORBIS_TLD=$(yq eval '.Orbis.Tld' "${CONFIGFILE}")
+
 REGNUM_NAME=$(yq eval '.Regnum.Name' "${CONFIGFILE}")
-REGNUM_MSP_NAME=$CA_TYPE.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD
-REGNUM_ADMIN_SUBJECT="/C=XX/ST=$ORBIS_ENV/O=$REGNUM_NAME/CN=admin.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD"
+REGNUM_SUBJECT="/C=XX/ST=$ORBIS_ENV/O=$REGNUM_NAME/CN=$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD"
 
 OUTDIR="${SCRIPTDIR}/../ca/$CA_TYPE"
 FILENAME="$CA_TYPE.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD"
+
+KEYFILE="${OUTDIR}/${FILENAME}.key"
+CSRFILE="${OUTDIR}/${FILENAME}.csr"
+
+PACKAGE_DIR="${SCRIPTDIR}/../package"
+TARFILE="${PACKAGE_DIR}/${FILENAME}-csr.tar.gz"
+ENCFILE="${TARFILE}.enc"
+CONFIGFILE_LOCAL="${SCRIPTDIR}/../config/regnum.yaml"
 
 
 ###############################################################
 # Debug Logging
 ###############################################################
+log_debug "Mode:" "${MODE}"
 log_debug "Orbis Info:" "$ORBIS_NAME - $ORBIS_ENV - $ORBIS_TLD"
 log_debug "Regnum Info:" "$REGNUM_NAME"
-log_debug "CA Name:" "$REGNUM_MSP_NAME"
-log_debug "Admin Subject:" "$REGNUM_ADMIN_SUBJECT"
+log_debug "Subject:" "$REGNUM_SUBJECT"
 log_debug "Output Dir:" "$OUTDIR"
 log_debug "Filename:" "$FILENAME"
-
+log_debug "Encrypted .tar-file:" "$ENCFILE"
 
 ###############################################################
 # RUN
@@ -92,21 +114,63 @@ $SCRIPTDIR/prereq.sh
 
 mkdir -p "${OUTDIR}"
 
-log_info "Generation of Key + CSR for Regnum-CA: ${REGNUM_MSP_NAME}"
-log_info "Subject: ${REGNUM_ADMIN_SUBJECT}"
+log_info "Creating crypto material for Regnum-CA: ${REGNUM_NAME} with subject: ${REGNUM_SUBJECT}"
 
-# 1) Privat Key
-openssl ecparam -name prime256v1 -genkey -noout -out "${OUTDIR}/$FILENAME.key"
+# 1) Privat Key new or renew
+if [[ "${MODE}" == "new" ]]; then
+  log_info "Mode 'new': generating NEW private key and CSR..."
+  # 1) New private key
+  openssl ecparam -name prime256v1 -genkey -noout -out "${KEYFILE}"
+  log_debug "new key generated"
+elif [[ "${MODE}" == "renew" ]]; then
+  log_info "Mode 'renew': reusing EXISTING private key to generate new CSR..."
+  if [[ ! -f "${KEYFILE}" ]]; then
+    log_error "Key file not found for renew mode: ${KEYFILE}" >&2
+    exit 2
+  fi
+  log_debug "no key generated, use existing"
+fi
+
 
 # 2) CSR
-openssl req -new -key "${OUTDIR}/$FILENAME.key" \
-  -subj "${REGNUM_ADMIN_SUBJECT}" \
-  -out "${OUTDIR}/$FILENAME.csr"
+openssl req -new -key "${KEYFILE}" \
+  -subj "${REGNUM_SUBJECT}" \
+  -out "${CSRFILE}"
+log_debug "${CSRFILE} generated"
 
-ls -l "${OUTDIR}"
 
-log_info "==> Fertig. Bitte folgende CSR an Orbis-Offline-CA geben:"
-log_info "    ${OUTDIR}/$FILENAME.csr"
-log_info "==> Erwartete Rückgabe von Orbis:"
-log_info "    - signiertes Intermediate-Zertifikat  ($FILENAME.cert.pem)"
-log_info "    - komplette Chain inkl. Orbis-MSP-Chain ($FILENAME-chain.pem)"
+###############################################################
+# Encrypted TAR for Orbis
+###############################################################
+
+mkdir -p "${PACKAGE_DIR}"
+
+log_info "Creating encrypted tar-file with .csr-file and regnum.yaml"
+
+if [[ -f "${CONFIGFILE_LOCAL}" ]]; then
+  tar -czf "${TARFILE}" -C "${OUTDIR}" "${FILENAME}.csr" \
+      -C "${SCRIPTDIR}/../config" "regnum.yaml"
+else
+  tar -czf "${TARFILE}" -C "${OUTDIR}" "${FILENAME}.csr"
+fi
+log_debug "${TARFILE} generated"
+
+# Password (A-Z, a-z, 0-9)
+PASSWORD="$(openssl rand -base64 16 | tr -dc 'A-Za-z0-9' | cut -c1-16)"
+log_debug "Password:" "${PASSWORD}"
+
+# Encrypt tar with AES-256-CBC
+openssl enc -aes-256-cbc -salt -pbkdf2 \
+  -in "${TARFILE}" \
+  -out "${ENCFILE}" \
+  -pass pass:"${PASSWORD}"
+rm -f "${TARFILE}"
+log_debug "${ENCFILE} generated"
+
+log_warn "Send:"
+log_warn "1. via e-mail: ${ENCFILE}"
+log_warn "2. password via sms: ${PASSWORD}"
+log_warn "to the orbis contact."
+
+
+

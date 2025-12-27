@@ -1,43 +1,24 @@
 # ORBIS
 
 ## Crypto Hierarchy (MSP & TLS)
-Offline-Root in Vault
-rca.jedo.me
-├─ Regnum ea
-│  ├─ msp.ea.jedo.me      (Regnum-MSP-CA, Intermediate von rca.jedo.me)
-│  └─ tls.ea.jedo.me      (Regnum-TLS-CA, Intermediate von rca.jedo.me)
-├─ Regnum as
-│  ├─ msp.as.jedo.me
-│  └─ tls.as.jedo.me
-├─ Regnum af
-│  ├─ msp.af.jedo.me
-│  └─ tls.af.jedo.me
-├─ Regnum na
-│  ├─ msp.na.jedo.me
-│  └─ tls.na.jedo.me
-└─ Regnum sa
-   ├─ msp.sa.jedo.me
-   └─ tls.sa.jedo.me
+```
+rca.jedo.me (Vault – Offline Root)
+├── msp.ea.jedo.me / tls.ea.jedo.me
+├── msp.as.jedo.me  / tls.as.jedo.me
+├── msp.af.jedo.me  / tls.af.jedo.me
+├── msp.na.jedo.me  / tls.na.jedo.me
+└── msp.sa.jedo.me  / tls.sa.jedo.me
+```
 
 ## Crypto Store (in Vault)
+```
 /home/ubuntu/pki/
   root/
     rca.jedo.me.key             # Original-Key
     rca.jedo.me.cert            # Original-Root-Cert
     rca.bundle.pem              # Key + Cert for Vault import
   csr/                          # CSRs from Intermediate-PKI-Mounts (`intermediate/generate/internal`)
-    msp.ea.jedo.dev.csr.pem
-    msp.ea.jedo.cc.csr.pem
-    msp.ea.jedo.me.csr.pem
-    ...
-  certs/                        # signed Intermediate-Certs
-    msp.ea.jedo.dev.cert.pem
-    msp.ea.jedo.cc.cert.pem
-    ...
-  chains/                       # complete chains (Intermediate + Root) for Fabric (Regnum)
-    msp.ea.jedo.dev.chain.pem
-    tls.ea.jedo.dev.chain.pem
-    ...
+```
 
 
 ## Using Vault as Offline Root CA for `rca.jedo.me`
@@ -142,6 +123,7 @@ HA Enabled         false
 
 ### 4. Unseal Vault
 ```bash
+export VAULT_ADDR=http://127.0.0.1:8200
 vault operator unseal
 # Key 1 from your private safe (e.g. 1Password)
 vault operator unseal
@@ -191,24 +173,28 @@ This lets Vault manage the key from now on.
 
 ---
 
-## NEW REGNUM: Create intermediate CAs for Regnum
-New Regnum ordered:
-1. TLS-CA: `tls.<regnum>.jedo.<tld>`
-2. MSP-CA: `msp.<regnum>.jedo.<tld>`
+## Creating a new Regnum (External Intermediate)
 
-What you need to adjust in the following:
-- <type>: (tls|msp): tls
-- <regnum>: ea
-- <env> (dev|test|prod): dev
-- <tld> (dev|cc|me): dev
+### 1. Prepare from new Regnum
 
-What to do:
-1. Login - Step 1
-2. TLS: Step 2 with <type>=tls
-3. MSP: Repeat Step 2 with <type>=msp
-4. Deliver to Regnum with step 3
+```bash
+# save encrypted tar from regnum locally into:
+cd ~/Downloads/pki-regnum
 
-### 1. Login into Docker-Container
+# Un-tar .csr-File
+openssl enc -d -aes-256-cbc -salt -pbkdf2 \
+  -in <type>.<regnum>.jedo.<tld>-csr.tar.gz.enc \
+  -out <type>.<regnum>.jedo.<tld>-csr.tar.gz \
+  -pass pass:<password>
+tar -xzf <type>.<regnum>.jedo.<tld>-csr.tar.gz
+
+# Save it to Vault
+scp ./<type>.<regnum>.jedo.<tld>.csr jedo:/home/ubuntu/pki/<regnum>
+```
+
+***
+
+### 2. Log into Vault
 ```bash
 # Startup Vault-Container
 cd /home/ubuntu/vault
@@ -217,7 +203,10 @@ docker compose up -d
 # Use Vault-Container
 docker exec -it vault sh
 
-# Check Status
+# check jq
+jq --version  # optional install it: apk update && apk add jq
+
+# Check Vault status
 export VAULT_ADDR=http://127.0.0.1:8200
 vault status
 
@@ -236,103 +225,80 @@ vault secrets list
 
 ***
 
-### 2. Create an intermediate PKI mount
-
+### 3. Sign .csr-File
 ```bash
-# Add a mount path
-vault secrets enable -path=pki-<type>-<regnum>-<env> pki
-
-# 1 year validity
-vault secrets tune -max-lease-ttl=8760h pki-<type>-<regnum>-<env>
-
-# Check Path
-vault secrets list
-
-# Generate intermediate CSR
-vault write -format=json pki-<type>-<regnum>-<env>/intermediate/generate/internal \
-  common_name="<type>.<regnum>.jedo.<tld>" \
-  country="jd" \
-  province="<env>" \
-  locality="<regnum>" \
-  organization="" \
-  ttl=8760h \
-  key_type="ec" \
-  key_bits="256" \
-  format="pem" \
-  > /vault/pki/csr/<type>.<regnum>.jedo.<tld>.csr.json
-
-# Vault returns a CSR (`csr` field). Save it as `<type>.<regnum>.jedo.<tld>.csr.pem`.
-cat /vault/pki/csr/<type>.<regnum>.jedo.<tld>.csr.json \
-  | jq -r '.data.csr' \
-  > /vault/pki/csr/<type>.<regnum>.jedo.<tld>.csr.pem
-
+REGNUM="<regnum>"   # ea, as, af, na or sa
+TYPE="<type>"    # msp or tls
+TLD="<tld>"      # cc or me
 
 # Sign intermediate with root
 vault write -format=json pki-root/root/sign-intermediate \
-  csr=@/vault/pki/csr/<type>.<regnum>.jedo.<tld>.csr.pem \
-  format="pem_bundle" \
+  csr=@/vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.csr \
+  format="pem" \
   ttl=8760h \
   use_csr_values=true \
-  > /vault/pki/certs/<type>.<regnum>.jedo.<tld>.cert.json
+  > /vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.cert.json
 
 # Extract cert only
-cat /vault/pki/certs/<type>.<regnum>.jedo.<tld>.cert.json \
-  | jq -r .data.certificate \
-  > /vault/pki/certs/<type>.<regnum>.jedo.<tld>.cert.pem
+jq -r '.data.certificate' \
+  /vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.cert.json \
+  > /vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.cert.pem
 
 # Check format: should start with -----BEGIN CERTIFICATE-----
-head -n 5 /vault/pki/certs/<type>.<regnum>.jedo.<tld>.cert.pem
+head -n 5 /vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.cert.pem
 
-# The `pem_bundle` contains the intermediate cert plus the root chain.
-
-# Import signed intermediate back into its PKI
-vault write pki-<type>-<regnum>-<env>/intermediate/set-signed \
-  certificate=@/vault/pki/certs/<type>.<regnum>.jedo.<tld>.cert.pem
-
-# Check output
-vault read -field=certificate pki-<type>-<regnum>-<env>/cert/ca | head
-
-# Generate Chain
-cat /vault/pki/certs/<type>.<regnum>.jedo.<tld>.cert.pem \
-    /vault/pki/root/rca.cert \
-  > /vault/pki/chains/<type>.<regnum>.jedo.<tld>.chain.pem
+# Build Chain
+cat /vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.cert.pem /vault/pki/root/rca.cert \
+  /vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.chain.pem
 ```
-
-From this point, `pki-<type>-<regnum>-<env>` is a fully functional intermediate CA for TLS/MSP identities.
-
-These files are what you hand over to the Regnum operators to bootstrap their MSP/TLS trust and to compute on‑chain fingerprints.
 
 ***
 
-### 3. Delivery to new Regnum
+### 4. Delivery to new Regnum
 
 ```bash
-# Save it locally 
-scp jedo:/home/ubuntu/pki/chains/tls.<regnum>.jedo.<tld>.chain.pem ./ 
-scp jedo:/home/ubuntu/pki/chains/msp.<regnum>.jedo.<tld>.chain.pem ./ 
+REGNUM="<regnum>"   # ea, as, af, na or sa
+TYPE="<type>"    # msp or tls
+TLD="<tld>"      # cc or me
+PASS="<oldPassword>"
 
-# Compress and encrypt ist
-tar cz tls.<regnum>.jedo.<tld>.chain.pem msp.<regnum>.jedo.<tld>.chain.pem \
-  -f regnum-<regnum>-<env>-certs.tar.gz
+# Save it locally 
+scp jedo:/home/ubuntu/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.cert.pem ./ 
+scp jedo:/home/ubuntu/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.chain.pem ./ 
+
+# Compress cert
+tar cz ${TYPE}.${REGNUM}.jedo.${TLD}.cert.pem ${TYPE}.${REGNUM}.jedo.${TLD}.chain.pem /
+  -f ${TYPE}.${REGNUM}.jedo.${TLD}-certs.tar.gz
+
+# Encrypt tar with same password
+openssl enc -aes-256-cbc -salt -pbkdf2 \
+  -in ${TYPE}.${REGNUM}.jedo.${TLD}-certs.tar.gz \
+  -out ${TYPE}.${REGNUM}.jedo.${TLD}-certs.tar.gz.enc \
+  -pass pass:${PASS}
 
 # Deliver it to the new regnum
 
 # Regnum can decompress
-tar xz -f regnum-<regnum>-<env>-certs.tar.gz
+# openssl enc -d -aes-256-cbc -salt -pbkdf2 \
+#   -in ${TYPE}.${REGNUM}.jedo.${TLD}-certs.tar.gz.enc \
+#   -out ${TYPE}.${REGNUM}.jedo.${TLD}-certs.tar.gz \
+#   -pass pass:${PASS}
+# tar xz -f ${TYPE}.${REGNUM}.jedo.${TLD}-certs.tar.gz
 ```
 
 ***
 
-## Renewal of Regnum CAs
+### 5. Renewal
 
-When a Regnum CA is about to expire:
+When a Regnum’s certificate nears expiration:
 
-1. Use the same intermediate PKI mount (`pki-<type>-<regnum>-<env>`).  
-2. Generate a new **self CSR** (or reuse `intermediate/generate/internal` if you also rotate the key).  
-3. Sign it again with `pki-root/root/sign-intermediate`.  
-4. Call `intermediate/set-signed` with the new certificate.  
-5. Export updated CA/chain and update:
-   - Orbis on‑chain registry (fingerprints) 
-   - Fabric MSP/TLS config that trusts these CAs.
+1. The Regnum re‑runs `regnum-generate-csr.sh` using the existing or a new key.  
+2. Sends the new CSR to Orbis.  
+3. Orbis signs it again in Vault following the same procedure.  
+4. The new certificate replaces the old one within the Regnum CA without affecting existing identities (as long as the Root remains the same).
+
+***
+
+
 
 
