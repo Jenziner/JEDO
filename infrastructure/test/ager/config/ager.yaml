@@ -1,0 +1,33 @@
+Docker:
+    Network: jedo
+    Subnet: 172.16.0.0/16
+    Gateway: 172.16.0.1
+    Wait: 60             # Max waiting time in seconds to start a docker container prior to exit
+
+Orbis:
+  Name: jedo
+  Env: test              # prod / test
+  Tld: cc                # me (prod) / cc (test)
+
+Regnum:
+  Name: ea
+
+Ager:                    # An Ager needs 1 MSP, at least 1 orderer, 1 peer, 1 gateway, 1 ca-service (clavis), 1 ledger-service (porta)
+    Name: alps
+    msp: 
+        Name: msp
+        Secret: Test1
+    Orderers:
+        - Name: orderer
+          Secret: Test1
+    Peers:
+        - Name: peer
+          Secret: Test1
+    Gateway: #API-Gateway
+        Name: via
+        Secret: Test1
+        Services:
+          - Name: clavis
+            Secret: Test1
+          - Name: porta #porta.via.alps...?
+            Secret: Test1

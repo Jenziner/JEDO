@@ -18,6 +18,8 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
   Enrolls the TLS certificate for the MSP CA.
 - `scripts/regnum-start-ca.sh`  
   Starts the respective Regnum CA in Docker.
+- `scripts/regnum-register-ager.sh`  
+  Register all Identities of an Ager according provided agger.yaml.
 - `scripts/utils.sh`  
   Helper functions for script control.
 - `scripts/prereq.sh`  
@@ -32,24 +34,30 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
 1. Extract the archive.
 2. Adjust IPs/ports in `config/regnum.yaml` to match your environment.
 3. Generate crypto material:
-   1. For TLS: `./scripts/regnum-generate-csr.sh tls new` (optionally with `--debug`)
-   2. For MSP: `./scripts/regnum-generate-csr.sh msp new` (optionally with `--debug`)
+   1. For TLS: `./scripts/regnum-generate-csr.sh tls new` (optionally with `--debug`).
+   2. For MSP: `./scripts/regnum-generate-csr.sh msp new` (optionally with `--debug`).
 4. According to the script output, send the encrypted tar file and the password to Orbis.
 5. Orbis signs the CSR and sends back an encrypted tar file containing `cert` and `chain` (same password).
 6. Start the TLS CA:
-   1. `./scripts/regnum-install-cert.sh tls myTLSPassword` (optionally with `--debug`)
-   2. `./scripts/regnum-start-ca.sh tls myTLSPassword` (optionally with `--debug`, starts the CA with DEBUG flag)
-   3. `docker logs <regnum-tls-name>`
-   4. `curl -k https://<regnum-tls-ip>:<regnum-tls-port>/cainfo`
+   1. `./scripts/regnum-install-cert.sh tls myTLSPassword` (optionally with `--debug`).
+   2. `./scripts/regnum-start-ca.sh tls myTLSPassword` (optionally with `--debug`, starts the CA with DEBUG flag).
+   3. `docker logs <regnum-tls-name>`.
+   4. `curl -k https://<regnum-tls-ip>:<regnum-tls-port>/cainfo`.
 7. Enroll TLS certificates for the MSP CA:
-   1. `./scripts/regnum-enroll-msp.sh myTLSPassword myMSPPassword` (optionally with `--debug`)
+   1. `./scripts/regnum-enroll-msp.sh myTLSPassword myMSPPassword` (optionally with `--debug`).
 8. Start the MSP CA:
-   1. `./scripts/regnum-install-cert.sh msp myMSPPassword` (optionally with `--debug`)
-   2. `./scripts/regnum-start-ca.sh msp myMSPPassword` (optionally with `--debug`, starts the CA with DEBUG flag)
-   3. `docker logs <regnum-msp-name>`
-   4. `curl -k https://<regnum-msp-ip>:<regnum-msp-port>/cainfo`
+   1. `./scripts/regnum-install-cert.sh msp myMSPPassword` (optionally with `--debug`).
+   2. `./scripts/regnum-start-ca.sh msp myMSPPassword` (optionally with `--debug`, starts the CA with DEBUG flag).
+   3. `docker logs <regnum-msp-name>`.
+   4. `curl -k https://<regnum-msp-ip>:<regnum-msp-port>/cainfo`.
 
 Your Regnum is now ready to register and enroll Ager CAs, admins, and nodes.
+
+To register the Identities of an Ager:
+`./scripts/regnum-install-cert.sh myTLSPassword myMSPPassword ager-yaml-filename` (optionally with `--debug`).
+
+To list all Identities:
+`./scripts/regnum-install-cert.sh myTLSPassword myMSPPassword ager-yaml-filename --listonly` (optionally with `--debug`).
 
 ---
 

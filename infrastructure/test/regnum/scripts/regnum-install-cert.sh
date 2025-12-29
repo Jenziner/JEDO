@@ -183,11 +183,11 @@ csr:
         algo: ecdsa
         size: 384
     names:
-        - C: jd
+        - C: XX
           ST: cc
           L:
           O: jedo
-          OU: root
+          OU:
     hosts:
         - $REGNUM_CA_NAME
         - $REGNUM_IP
@@ -209,7 +209,7 @@ elif [[ "${CA_TYPE}" == "msp" ]]; then
   
   cp "${TLSDIR}/${REGNUM_CA_NAME}"/keystore/*_sk "${OUTDIR}/tls/regnum-${CA_TYPE}-ca.key"
   cp "${TLSDIR}/${REGNUM_CA_NAME}"/signcerts/cert.pem "${OUTDIR}/tls/cert.pem"
-  cp "${TLSDIR}/${REGNUM_CA_NAME}"/tlscacerts/*.pem "${OUTDIR}/tls/chain.cert"
+  cp "${TLSDIR}/${REGNUM_CA_NAME}"/tlsintermediatecerts/*.pem "${OUTDIR}/tls/tls-ca-cert.pem"
 
   log_info "Writing MSP Config-File..."
   cat > "${OUTDIR}/fabric-ca-server-config.yaml" <<EOF
@@ -241,8 +241,9 @@ registry:
       type: client
       affiliation: jedo.${REGNUM_NAME}
       attrs:
-        hf.Registrar.Roles: "client,user,admin"
-        hf.Registrar.DelegateRoles: "client,user"
+        hf.Registrar.Roles: "client,user,admin,peer,orderer"
+        hf.Registrar.DelegateRoles: "client,user,peer,orderer"
+        hf.Registrar.Attributes: "*"
         hf.Revoker: true
         hf.GenCRL: true
         hf.IntermediateCA: true
@@ -269,6 +270,8 @@ signing:
       expiry: 8760h
       caconstraint:
         isca: true
+        maxpathlen: 0
+        copyextensions: true
 
 csr:
   cn: ${REGNUM_CA_NAME}
@@ -276,7 +279,7 @@ csr:
     - C: XX
       ST: ${ORBIS_ENV}
       L: ${REGNUM_NAME}
-      O: 
+      O: jedo
       OU: 
   hosts:
     - ${REGNUM_CA_NAME}

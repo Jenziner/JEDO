@@ -1,7 +1,7 @@
 ###############################################################
 #!/bin/bash
 #
-# This script register and enroll TLS-Material for MSP-CA.
+# This script register TLS-Material for MSP-CA.
 #
 ###############################################################
 set -euo pipefail
@@ -89,7 +89,7 @@ REGNUM_MSP_PORT=$(yq eval '.Regnum.msp.Port' "${CONFIGFILE}")
 
 TLS_CA_URL=https://$REGNUM_TLS_NAME:$REGNUM_TLS_PORT
 TLS_CHAIN=/etc/hyperledger/fabric-ca-server/ca/chain.cert
-TLS_CLIENT_HOME=/etc/hyperledger/fabric-ca-server/client-tls-admin
+TLS_CACLIENT_HOME=/etc/hyperledger/fabric-ca-server/ca-client-admin
 HOST_CA_DIR="/etc/hyperledger/fabric-ca-server"
 LOCAL_MSP_DIR=/etc/hyperledger/fabric-ca-server/$REGNUM_MSP_NAME
 
@@ -110,31 +110,23 @@ log_debug "Host CA Dir:" "$HOST_CA_DIR"
 ###############################################################
 $SCRIPTDIR/prereq.sh
 
-log_info "$REGNUM_MSP_NAME enrolling ..."
-
-# Enroll TLS-Admin
-docker exec "${REGNUM_TLS_NAME}" \
-  sh -c "export FABRIC_CA_CLIENT_HOME=${TLS_CLIENT_HOME} && \
-         fabric-ca-client enroll \
-           -u https://$REGNUM_TLS_NAME:$TLS_PASS_RAW@$REGNUM_TLS_NAME:$REGNUM_TLS_PORT \
-           --tls.certfiles ${TLS_CHAIN}"
-log_debug "TLS-Admin enrolled"
+log_info "$REGNUM_MSP_NAME registering ..."
 
 # Register MSP-CA @ TLS-CA
 docker exec "${REGNUM_TLS_NAME}" \
-  sh -c "export FABRIC_CA_CLIENT_HOME=${TLS_CLIENT_HOME} && \
+  sh -c "export FABRIC_CA_CLIENT_HOME=${TLS_CACLIENT_HOME} && \
          fabric-ca-client register \
-           -u ${TLS_CA_URL} \
-           --tls.certfiles ${TLS_CHAIN} \
-           --id.name ${REGNUM_MSP_NAME} \
-           --id.secret ${MSP_PASS_RAW} \
-           --id.type client \
-           --id.affiliation jedo.$REGNUM_NAME"
+            -u ${TLS_CA_URL} \
+            --tls.certfiles ${TLS_CHAIN} \
+            --id.name ${REGNUM_MSP_NAME} \
+            --id.secret ${MSP_PASS_RAW} \
+            --id.type client \
+            --id.affiliation jedo.$REGNUM_NAME"
 log_debug "MSP-CA registered"
 
 # Enroll MSP-CA
 docker exec "${REGNUM_TLS_NAME}" \
-  sh -c "export FABRIC_CA_CLIENT_HOME=${TLS_CLIENT_HOME} && \
+  sh -c "export FABRIC_CA_CLIENT_HOME=${TLS_CACLIENT_HOME} && \
          fabric-ca-client enroll \
            -u https://${REGNUM_MSP_NAME}:${MSP_PASS_RAW}@$REGNUM_TLS_NAME:$REGNUM_TLS_PORT \
            --tls.certfiles ${TLS_CHAIN} \
@@ -143,6 +135,4 @@ docker exec "${REGNUM_TLS_NAME}" \
            --csr.hosts ${REGNUM_MSP_NAME},$REGNUM_MSP_IP"
 log_debug "MSP-CA enrolled"
 
-chmod -R 750 $LOCAL_MSP_DIR
-
-log_ok "$REGNUM_MSP_NAME enrolled."
+log_ok "$REGNUM_MSP_NAME registered."

@@ -88,6 +88,9 @@ REGNUM_OPPORT=$(yq eval '.Regnum.'$CA_TYPE'.OpPort' "${CONFIGFILE}")
 
 LOCAL_CA_DIR="${SCRIPTDIR}/../../infrastructure/$REGNUM_CA_NAME"
 HOST_CA_DIR="/etc/hyperledger/fabric-ca-server"
+CACLIENT_HOME=/etc/hyperledger/fabric-ca-server/ca-client-admin
+TLS_TLS_CHAIN=/etc/hyperledger/fabric-ca-server/ca/chain.cert
+MSP_TLS_CHAIN=/etc/hyperledger/fabric-ca-server/tls/tls-ca-cert.pem
 
 
 ###############################################################
@@ -129,5 +132,27 @@ docker run -d \
 # Waiting Orbis-TLS Container startup
 CheckContainer "$REGNUM_CA_NAME" "$DOCKER_WAIT"
 CheckContainerLog "$REGNUM_CA_NAME" "Listening on https://0.0.0.0:$REGNUM_PORT" "$DOCKER_WAIT"
+
+
+# Enroll CA-Client-Admin
+if [[ "${CA_TYPE}" == "tls" ]]; then
+  log_debug "Chain File:" "$TLS_TLS_CHAIN"
+  docker exec "${REGNUM_CA_NAME}" \
+    sh -c "export FABRIC_CA_CLIENT_HOME=${CACLIENT_HOME} && \
+          fabric-ca-client enroll \
+            -u https://$REGNUM_CA_NAME:$PASS_RAW@$REGNUM_CA_NAME:$REGNUM_PORT \
+            --tls.certfiles ${TLS_TLS_CHAIN} \
+            --enrollment.profile tls"
+  log_info "TLS CA-Client-Admin enrolled"
+elif [[ "${CA_TYPE}" == "msp" ]]; then
+  log_debug "Chain File:" "$MSP_TLS_CHAIN"
+  docker exec "${REGNUM_CA_NAME}" \
+    sh -c "export FABRIC_CA_CLIENT_HOME=${CACLIENT_HOME} && \
+          fabric-ca-client enroll \
+            -u https://$REGNUM_CA_NAME:$PASS_RAW@$REGNUM_CA_NAME:$REGNUM_PORT \
+            --tls.certfiles ${MSP_TLS_CHAIN} \
+            --enrollment.profile ca"
+  log_info "MSP CA-Client-Admin enrolled"
+fi
 
 log_ok "$REGNUM_CA_NAME started."
