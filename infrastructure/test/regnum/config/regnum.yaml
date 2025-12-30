@@ -11,11 +11,11 @@ Orbis:
 
 Regnum:
   Name: ea
-  msp:
-    IP: 172.16.2.4
-    Port: 52041
-    OpPort: 52049
   tls:
     IP: 172.16.2.3
     Port: 52031
     OpPort: 52039
+  msp:
+    IP: 172.16.2.4
+    Port: 52041
+    OpPort: 52049

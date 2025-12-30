@@ -279,8 +279,8 @@ csr:
     - C: XX
       ST: ${ORBIS_ENV}
       L: ${REGNUM_NAME}
-      O: jedo
-      OU: 
+      O:
+      OU:
   hosts:
     - ${REGNUM_CA_NAME}
     - ${REGNUM_IP}

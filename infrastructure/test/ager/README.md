@@ -8,11 +8,13 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
 
 - `README.md`  
   This installation guide.
-- `config/ager.yaml`  
-  Configuration (name, IP, ports, secrets).
-<!-- - `scripts/regnum-generate-csr.sh`  
-  Generates key and CSR files for the respective CA (TLS or MSP).
-- `scripts/regnum-install-cert.sh`  
+- `config/ager-certs.yaml`  
+  Configuration for certificates (name, secrets).
+- `config/ager-infra.yaml`  
+  Configuration for infrastructure (name, IP, ports).
+- `scripts/ager-start-ca.sh`  
+  Enrolls Server-Certs and starts Ager-MSP-CA.
+<!-- - `scripts/regnum-install-cert.sh`  
   Installs the certificates signed by Orbis and the CA config file.
 - `scripts/regnum-enroll-msp.sh`  
   Enrolls the TLS certificate for the MSP CA.
@@ -30,15 +32,19 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
 ## Steps
 
 1. Extract the archive.
-2. Copy `cp config/ager.yaml config/<myAgerName>.yaml`.
-2. Adjust IPs/ports in `config/<myAgerName>.yaml` to match your environment.
-3. to generate crypto material, send `config/<myAgerName>.yaml` to your Regnum within an encrypted tar.
-4. Install your MSP-CA.
-5. Install your Orderers.
-6. Install your Peers.
-7. Install your Servicecs.
-8. Install your Gateway.
-9. Join the channels.
+2. Register Ager identities:
+  1. Copy `cp config/ager-certs.yaml config/<myAgerName>-certs.yaml`.
+  2. Adjust names/secrets in `config/<myAgerName>-certs.yaml` to match your environment.
+  3. Copy `tls-ca-cert.pem`to your config directory (you get this from regnum: ./ca/cert.pem).
+  4. to generate crypto material, send `config/<myAgerName>.yaml` to your Regnum within an encrypted tar.
+2. Install your MSP-CA.
+  1. Copy `cp config/ager-infra.yaml config/<myAgerName>-infra.yaml`.
+  2. Run `./scripts/ager-start-ca.sh <myAgerName>-certs.yaml <myAgerName>-infra.yaml` (optionally with `--debug`).
+3. Install your Orderers.
+4. Install your Peers.
+5. Install your Servicecs.
+6. Install your Gateway.
+7. Join the channels.
 
 Your Ager is now ready to participate.
 
