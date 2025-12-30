@@ -88,10 +88,15 @@ REGNUM_MSP_IP=$(yq eval '.Regnum.msp.IP' "${CONFIGFILE}")
 REGNUM_MSP_PORT=$(yq eval '.Regnum.msp.Port' "${CONFIGFILE}")
 
 TLS_CA_URL=https://$REGNUM_TLS_NAME:$REGNUM_TLS_PORT
-TLS_CHAIN=/etc/hyperledger/fabric-ca-server/ca/chain.cert
-TLS_CACLIENT_HOME=/etc/hyperledger/fabric-ca-server/ca-client-admin
-HOST_CA_DIR="/etc/hyperledger/fabric-ca-server"
-LOCAL_MSP_DIR=/etc/hyperledger/fabric-ca-server/$REGNUM_MSP_NAME
+
+LOCAL_CAROOTS_DIR="${SCRIPTDIR}/../../infrastructure/tls-ca-roots"
+HOST_CAROOTS_DIR="/etc/hyperledger/tls-ca-roots"
+
+LOCAL_SRV_DIR="${SCRIPTDIR}/../../infrastructure/servers/${REGNUM_MSP_NAME}"
+HOST_SRV_DIR="/etc/hyperledger/fabric-ca-server"
+
+LOCAL_CLIENT_DIR="${SCRIPTDIR}/../../infrastructure/clients/bootstrap.${REGNUM_TLS_NAME}"
+HOST_CLIENT_DIR="/etc/hyperledger/fabric-ca-client"
 
 
 ###############################################################
@@ -99,10 +104,10 @@ LOCAL_MSP_DIR=/etc/hyperledger/fabric-ca-server/$REGNUM_MSP_NAME
 ###############################################################
 log_debug "Docker Network:" "${DOCKER_NETWORK} (${DOCKER_SUBNET})"
 log_debug "Orbis Info:" "$ORBIS_NAME - $ORBIS_ENV - $ORBIS_TLD"
-log_debug "TLS Info:" "$REGNUM_TLS_NAME - $TLS_PASS_RAW @ $REGNUM_TLS_IP:$REGNUM_TLS_PORT"
-log_debug "MSP Info:" "$REGNUM_MSP_NAME - $MSP_PASS_RAW @ $REGNUM_MSP_IP:$REGNUM_MSP_PORT"
-log_debug "Local MSP Dir:" "$LOCAL_MSP_DIR"
-log_debug "Host CA Dir:" "$HOST_CA_DIR"
+log_debug "TLS Info:" "$REGNUM_TLS_NAME:$TLS_PASS_RAW@$REGNUM_TLS_IP:$REGNUM_TLS_PORT"
+log_debug "MSP Info:" "$REGNUM_MSP_NAME:$MSP_PASS_RAW@$REGNUM_MSP_IP:$REGNUM_MSP_PORT"
+log_debug "CA-Roots Dir:" "$LOCAL_CAROOTS_DIR"
+log_debug "Server Dir:" "$LOCAL_SRV_DIR"
 
 
 ###############################################################
@@ -110,29 +115,42 @@ log_debug "Host CA Dir:" "$HOST_CA_DIR"
 ###############################################################
 $SCRIPTDIR/prereq.sh
 
-log_info "$REGNUM_MSP_NAME registering ..."
+log_info "$REGNUM_MSP_NAME @ $REGNUM_TLS_NAME registering and enrolling..."
 
 # Register MSP-CA @ TLS-CA
-docker exec "${REGNUM_TLS_NAME}" \
-  sh -c "export FABRIC_CA_CLIENT_HOME=${TLS_CACLIENT_HOME} && \
-         fabric-ca-client register \
-            -u ${TLS_CA_URL} \
-            --tls.certfiles ${TLS_CHAIN} \
-            --id.name ${REGNUM_MSP_NAME} \
-            --id.secret ${MSP_PASS_RAW} \
-            --id.type client \
-            --id.affiliation jedo.$REGNUM_NAME"
+docker run --rm \
+  --network "${DOCKER_NETWORK}" \
+  -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+  -v "${LOCAL_SRV_DIR}:${HOST_SRV_DIR}" \
+  -v "${LOCAL_CLIENT_DIR}:${HOST_CLIENT_DIR}" \
+  -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+  hyperledger/fabric-ca:latest \
+  fabric-ca-client register \
+      -u ${TLS_CA_URL} \
+      --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+      --mspdir ${HOST_CLIENT_DIR} \
+      --id.name ${REGNUM_MSP_NAME} \
+      --id.secret ${MSP_PASS_RAW} \
+      --id.type client \
+      --id.affiliation ${ORBIS_NAME}.${REGNUM_NAME}
 log_debug "MSP-CA registered"
 
 # Enroll MSP-CA
-docker exec "${REGNUM_TLS_NAME}" \
-  sh -c "export FABRIC_CA_CLIENT_HOME=${TLS_CACLIENT_HOME} && \
-         fabric-ca-client enroll \
-           -u https://${REGNUM_MSP_NAME}:${MSP_PASS_RAW}@$REGNUM_TLS_NAME:$REGNUM_TLS_PORT \
-           --tls.certfiles ${TLS_CHAIN} \
-           --mspdir ${LOCAL_MSP_DIR} \
-           --enrollment.profile tls \
-           --csr.hosts ${REGNUM_MSP_NAME},$REGNUM_MSP_IP"
+docker run --rm \
+  --network "${DOCKER_NETWORK}" \
+  -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+  -v "${LOCAL_SRV_DIR}:${HOST_SRV_DIR}" \
+  -v "${LOCAL_CLIENT_DIR}:${HOST_CLIENT_DIR}" \
+  -e FABRIC_MSP_CLIENT_HOME="${HOST_SRV_DIR}" \
+  hyperledger/fabric-ca:latest \
+  fabric-ca-client enroll \
+      -u https://${REGNUM_MSP_NAME}:${MSP_PASS_RAW}@$REGNUM_TLS_NAME:$REGNUM_TLS_PORT \
+      --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+      --mspdir ${HOST_SRV_DIR}/tls \
+      --enrollment.profile tls \
+      --csr.hosts ${REGNUM_MSP_NAME},$REGNUM_MSP_IP
 log_debug "MSP-CA enrolled"
+
+chmod -R 750 $SCRIPTDIR/../../infrastructure
 
 log_ok "$REGNUM_MSP_NAME registered."

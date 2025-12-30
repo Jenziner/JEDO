@@ -82,26 +82,28 @@ ORBIS_TLD=$(yq eval '.Orbis.Tld' "${CONFIGFILE}")
 
 REGNUM_NAME=$(yq eval '.Regnum.Name' "${CONFIGFILE}")
 REGNUM_CA_NAME=$CA_TYPE.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD
-REGNUM_IP=$(yq eval '.Regnum.'$CA_TYPE'.IP' "${CONFIGFILE}")
-REGNUM_PORT=$(yq eval '.Regnum.'$CA_TYPE'.Port' "${CONFIGFILE}")
-REGNUM_OPPORT=$(yq eval '.Regnum.'$CA_TYPE'.OpPort' "${CONFIGFILE}")
+REGNUM_CA_IP=$(yq eval '.Regnum.'$CA_TYPE'.IP' "${CONFIGFILE}")
+REGNUM_CA_PORT=$(yq eval '.Regnum.'$CA_TYPE'.Port' "${CONFIGFILE}")
+REGNUM_CA_OPPORT=$(yq eval '.Regnum.'$CA_TYPE'.OpPort' "${CONFIGFILE}")
 
-LOCAL_CA_DIR="${SCRIPTDIR}/../../infrastructure/$REGNUM_CA_NAME"
-HOST_CA_DIR="/etc/hyperledger/fabric-ca-server"
-CACLIENT_HOME=/etc/hyperledger/fabric-ca-server/ca-client-admin
-TLS_TLS_CHAIN=/etc/hyperledger/fabric-ca-server/ca/chain.cert
-MSP_TLS_CHAIN=/etc/hyperledger/fabric-ca-server/tls/tls-ca-cert.pem
+LOCAL_CAROOTS_DIR="${SCRIPTDIR}/../../infrastructure/tls-ca-roots"
+HOST_CAROOTS_DIR="/etc/hyperledger/tls-ca-roots"
+
+LOCAL_SRV_DIR="${SCRIPTDIR}/../../infrastructure/servers/${REGNUM_CA_NAME}"
+HOST_SRV_DIR="/etc/hyperledger/fabric-ca-server"
+
+LOCAL_CLIENT_DIR="${SCRIPTDIR}/../../infrastructure/clients/bootstrap.${REGNUM_CA_NAME}"
+HOST_CLIENT_DIR="/etc/hyperledger/fabric-ca-client"
 
 
 ###############################################################
 # Debug Logging
 ###############################################################
-log_debug "Password:" "${PASS_RAW}"
 log_debug "Docker Network:" "${DOCKER_NETWORK} (${DOCKER_SUBNET})"
 log_debug "Orbis Info:" "$ORBIS_NAME - $ORBIS_ENV - $ORBIS_TLD"
-log_debug "Regnum Info:" "$REGNUM_CA_NAME - $REGNUM_IP - $REGNUM_PORT"
-log_debug "Local CA Dir:" "$LOCAL_CA_DIR"
-log_debug "Host CA Dir:" "$HOST_CA_DIR"
+log_debug "Regnum Info:" "$REGNUM_CA_NAME:$PASS_RAW@$REGNUM_CA_IP:$REGNUM_CA_PORT"
+log_debug "CA-Roots Dir:" "$LOCAL_CAROOTS_DIR"
+log_debug "Server Dir:" "$LOCAL_SRV_DIR"
 
 
 ###############################################################
@@ -121,38 +123,76 @@ docker network inspect "$DOCKER_NETWORK"
 docker run -d \
   --name "${REGNUM_CA_NAME}" \
   --network "${DOCKER_NETWORK}" \
-  --ip "${REGNUM_IP}" \
-  -p "${REGNUM_PORT}:${REGNUM_PORT}" \
-  -p "${REGNUM_OPPORT}:${REGNUM_OPPORT}" \
-  -v "${LOCAL_CA_DIR}:${HOST_CA_DIR}" \
+  --ip "${REGNUM_CA_IP}" \
+  -p "${REGNUM_CA_PORT}:${REGNUM_CA_PORT}" \
+  -p "${REGNUM_CA_OPPORT}:${REGNUM_CA_OPPORT}" \
+  -v "${LOCAL_SRV_DIR}:${HOST_SRV_DIR}" \
+  -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
   -e FABRIC_CA_SERVER_LOGLEVEL=$LOGLEVEL \
   hyperledger/fabric-ca:latest \
-  sh -c "fabric-ca-server start -b ${REGNUM_CA_NAME}:${PASS_RAW} --home ${HOST_CA_DIR}"
+  fabric-ca-server start -b bootstrap.${REGNUM_CA_NAME}:${PASS_RAW}
+log_debug "Regnum-CA started"
 
 # Waiting Orbis-TLS Container startup
 CheckContainer "$REGNUM_CA_NAME" "$DOCKER_WAIT"
-CheckContainerLog "$REGNUM_CA_NAME" "Listening on https://0.0.0.0:$REGNUM_PORT" "$DOCKER_WAIT"
+CheckContainerLog "$REGNUM_CA_NAME" "Listening on https://0.0.0.0:$REGNUM_CA_PORT" "$DOCKER_WAIT"
 
-
-# Enroll CA-Client-Admin
+# define profile used
 if [[ "${CA_TYPE}" == "tls" ]]; then
-  log_debug "Chain File:" "$TLS_TLS_CHAIN"
-  docker exec "${REGNUM_CA_NAME}" \
-    sh -c "export FABRIC_CA_CLIENT_HOME=${CACLIENT_HOME} && \
-          fabric-ca-client enroll \
-            -u https://$REGNUM_CA_NAME:$PASS_RAW@$REGNUM_CA_NAME:$REGNUM_PORT \
-            --tls.certfiles ${TLS_TLS_CHAIN} \
-            --enrollment.profile tls"
-  log_info "TLS CA-Client-Admin enrolled"
+  CA_PROFILE="tls"
 elif [[ "${CA_TYPE}" == "msp" ]]; then
-  log_debug "Chain File:" "$MSP_TLS_CHAIN"
-  docker exec "${REGNUM_CA_NAME}" \
-    sh -c "export FABRIC_CA_CLIENT_HOME=${CACLIENT_HOME} && \
-          fabric-ca-client enroll \
-            -u https://$REGNUM_CA_NAME:$PASS_RAW@$REGNUM_CA_NAME:$REGNUM_PORT \
-            --tls.certfiles ${MSP_TLS_CHAIN} \
-            --enrollment.profile ca"
-  log_info "MSP CA-Client-Admin enrolled"
+  CA_PROFILE="ca"
 fi
+
+# Enroll Bootstrap
+log_info "Enrolling bootstrap..${REGNUM_CA_NAME}..."
+docker run --rm \
+  --network "${DOCKER_NETWORK}" \
+  -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+  -v "${LOCAL_CLIENT_DIR}:${HOST_CLIENT_DIR}" \
+  -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+  hyperledger/fabric-ca:latest \
+  fabric-ca-client enroll \
+      -u https://bootstrap.${REGNUM_CA_NAME}:${PASS_RAW}@${REGNUM_CA_NAME}:${REGNUM_CA_PORT} \
+      --tls.certfiles ${HOST_CAROOTS_DIR}/tls.${REGNUM_NAME}.${ORBIS_NAME}.${ORBIS_TLD}.pem \
+      --enrollment.profile ${CA_PROFILE} \
+      --mspdir ${HOST_CLIENT_DIR}
+log_debug "Bootstrap enrolled"
+
+# Generating ca-certs in server
+docker run --rm \
+  --network "${DOCKER_NETWORK}" \
+  -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+  -v "${LOCAL_SRV_DIR}:${HOST_SRV_DIR}" \
+  -v "${LOCAL_CLIENT_DIR}:${HOST_CLIENT_DIR}" \
+  -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+  hyperledger/fabric-ca:latest \
+  fabric-ca-client getcainfo \
+      -u https://${REGNUM_CA_NAME}:${REGNUM_CA_PORT} \
+      --tls.certfiles ${HOST_CAROOTS_DIR}/tls.${REGNUM_NAME}.${ORBIS_NAME}.${ORBIS_TLD}.pem \
+      -M ${HOST_SRV_DIR}/msp
+log_debug "CA-Certs generated"
+
+CA_CERT_FILE=$(ls $LOCAL_SRV_DIR/msp/cacerts/*.pem)
+log_debug "CA Cert-File:" "$CA_CERT_FILE"
+cat <<EOF > $LOCAL_SRV_DIR/msp/config.yaml
+NodeOUs:
+  Enable: true
+  ClientOUIdentifier:
+    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    OrganizationalUnitIdentifier: client
+  PeerOUIdentifier:
+    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    OrganizationalUnitIdentifier: peer
+  AdminOUIdentifier:
+    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    OrganizationalUnitIdentifier: admin
+  OrdererOUIdentifier:
+    Certificate: cacerts/$(basename $CA_CERT_FILE)
+    OrganizationalUnitIdentifier: orderer
+EOF
+log_debug "NodeOUs-Files generated"
+
+chmod -R 750 $SCRIPTDIR/../../infrastructure
 
 log_ok "$REGNUM_CA_NAME started."

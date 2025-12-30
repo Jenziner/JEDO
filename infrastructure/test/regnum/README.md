@@ -132,3 +132,44 @@ To ensure that peers, orderers and other CAs in the Regnum hierarchy trust the n
 - distribute the updated MSP chain to the `cacerts`/`intermediatecerts` directories of all relevant org MSPs,  
 - update genesis/channel configurations in a maintenance window if the visible „root of trust“ changes in the consortium.
 
+
+# Notes
+## Regnum TLS-CA
+ca:
+  name: tls.ea.jedo.cc
+  keyfile: /etc/hyperledger/fabric-ca-server/ca/tls-ea-ca.key
+  certfile: /etc/hyperledger/fabric-ca-server/ca/cert.pem
+  chainfile: /etc/hyperledger/fabric-ca-server/ca/chain.cert
+
+tls:
+  enabled: true  # Client-Auth
+  clientauth:
+    type: RequireAndVerifyClientCert
+    certfiles:
+      - /etc/hyperledger/tls-ca-roots/tls.ea.jedo.cc.pem
+
+## Regnum MSP-CA
+ca:
+  name: msp.ea.jedo.cc
+  keyfile: /etc/hyperledger/fabric-ca-server/ca/msp-ea-ca.key
+  certfile: /etc/hyperledger/fabric-ca-server/ca/cert.pem
+  chainfile: /etc/hyperledger/fabric-ca-server/ca/chain.cert
+
+tls:
+  enabled: true
+  certfile: /etc/hyperledger/fabric-ca-server/tls/signcerts/cert.pem
+  keyfile: /etc/hyperledger/fabric-ca-server/tls/keystore/key.pem
+
+**Client Auth for MSP-CA**
+clientauth:
+  type: RequireAndVerifyClientCert
+  certfiles:
+    - /etc/hyperledger/fabric-ca-server/tls-ca-roots/tls.ea.jedo.cc.pem
+
+**Use of Client Auth**
+fabric-ca-client enroll \
+  -u https://user:pw@msp.ea.jedo.cc:7055 \
+  --tls.certfiles /path/to/tls-ca-root.pem \
+  --tls.client.certfile /path/to/client-tls-cert.pem \  # Neu!
+  --tls.client.keyfile /path/to/client-tls-key.pem      # Neu!
+

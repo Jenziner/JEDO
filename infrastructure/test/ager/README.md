@@ -50,3 +50,36 @@ Your Ager is now ready to participate.
 
 ---
 
+# Notes
+ca:
+  name: msp.alps.ea.jedo.cc
+
+**Intermediate Configuration**
+intermediate:
+  parentserver:
+    url: https://bootstrap.msp.ea.jedo.cc:password@msp.ea.jedo.cc:7055
+    caname: msp.ea.jedo.cc
+  enrollment:
+    profile: ca
+    hosts: 'msp.alps.ea.jedo.cc,localhost'
+  tls:
+    certfiles:
+      - /etc/hyperledger/fabric-ca-server/tls-ca-roots/tls.ea.jedo.cc.pem
+
+tls:
+  enabled: true
+  certfile: /etc/hyperledger/fabric-ca-server/tls/signcerts/cert.pem
+  keyfile: /etc/hyperledger/fabric-ca-server/tls/keystore/key.pem
+
+**Client Auth**
+clientauth:
+  type: RequireAndVerifyClientCert
+  certfiles:
+    - /etc/hyperledger/fabric-ca-server/tls-ca-roots/tls.ea.jedo.cc.pem
+
+**Use of Client Auth**
+fabric-ca-client enroll \
+  -u https://user:pw@msp.ea.jedo.cc:7055 \
+  --tls.certfiles /path/to/tls-ca-root.pem \
+  --tls.client.certfile /path/to/client-tls-cert.pem \  # Neu!
+  --tls.client.keyfile /path/to/client-tls-key.pem      # Neu!

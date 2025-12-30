@@ -76,31 +76,35 @@ ORBIS_TLD=$(yq eval '.Orbis.Tld' "${CONFIGFILE}")
 
 REGNUM_NAME=$(yq eval '.Regnum.Name' "${CONFIGFILE}")
 REGNUM_CA_NAME=$CA_TYPE.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD
-REGNUM_IP=$(yq eval '.Regnum.'$CA_TYPE'.IP' "${CONFIGFILE}")
-REGNUM_PORT=$(yq eval '.Regnum.'$CA_TYPE'.Port' "${CONFIGFILE}")
-REGNUM_OPPORT=$(yq eval '.Regnum.'$CA_TYPE'.OpPort' "${CONFIGFILE}")
+REGNUM_CA_IP=$(yq eval '.Regnum.'$CA_TYPE'.IP' "${CONFIGFILE}")
+REGNUM_CA_PORT=$(yq eval '.Regnum.'$CA_TYPE'.Port' "${CONFIGFILE}")
+REGNUM_CA_OPPORT=$(yq eval '.Regnum.'$CA_TYPE'.OpPort' "${CONFIGFILE}")
 
-TLSDIR="${SCRIPTDIR}/../../infrastructure/tls.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD"
-OUTDIR="${SCRIPTDIR}/../../infrastructure/$REGNUM_CA_NAME"
-BASEDIR=${OUTDIR}/${CA_TYPE}
+LOCAL_CAROOTS_DIR="${SCRIPTDIR}/../../infrastructure/tls-ca-roots"
+HOST_CAROOTS_DIR="/etc/hyperledger/tls-ca-roots"
+
+LOCAL_SRV_DIR="${SCRIPTDIR}/../../infrastructure/servers/${REGNUM_CA_NAME}"
+HOST_SRV_DIR="/etc/hyperledger/fabric-ca-server"
+
+# LOCAL_CLIENT_DIR="${SCRIPTDIR}/../../infrastructure/clients"
+# HOST_CLIENT_DIR="/etc/hyperledger/fabric-ca-client"
+
 FILENAME=$REGNUM_CA_NAME
-
-KEYFILE="${SCRIPTDIR}/../ca/$CA_TYPE/${FILENAME}.key"
-CERTFILE="${SCRIPTDIR}/../ca/$CA_TYPE/${FILENAME}.cert.pem"
-CHAINFILE="${SCRIPTDIR}/../ca/$CA_TYPE/${FILENAME}.chain.pem"
+KEYFILE="${SCRIPTDIR}/../ca/$CA_TYPE/${REGNUM_CA_NAME}.key"
+CERTFILE="${SCRIPTDIR}/../ca/$CA_TYPE/${REGNUM_CA_NAME}.cert.pem"
+CHAINFILE="${SCRIPTDIR}/../ca/$CA_TYPE/${REGNUM_CA_NAME}.chain.pem"
 
 
 ###############################################################
 # Debug Logging
 ###############################################################
-log_debug "Password:" "${PASS_RAW}"
 log_debug "Orbis Info:" "$ORBIS_NAME - $ORBIS_ENV - $ORBIS_TLD"
-log_debug "Regnum Info:" "$REGNUM_CA_NAME - $REGNUM_IP - $REGNUM_PORT"
+log_debug "Regnum Info:" "$REGNUM_CA_NAME:$PASS_RAW@$REGNUM_CA_IP:$REGNUM_CA_PORT"
 log_debug "Key File:" "$KEYFILE"
 log_debug "Cert File:" "$CERTFILE"
 log_debug "Chain File:" "$CHAINFILE"
-log_debug "Output Dir:" "$OUTDIR"
-log_debug "TLS Dir:" "$TLSDIR"
+log_debug "CA-Roots Dir:" "$LOCAL_CAROOTS_DIR"
+log_debug "Server Dir:" "$LOCAL_SRV_DIR"
 
 
 ###############################################################
@@ -110,50 +114,61 @@ $SCRIPTDIR/prereq.sh
 
 log_info "Regnum certs installing ..."
 
-mkdir -p "${OUTDIR}/ca"
+# create folders needed
+mkdir -p "${LOCAL_SRV_DIR}/ca"
+mkdir -p "${LOCAL_CAROOTS_DIR}"
 
-cp "${KEYFILE}" "${OUTDIR}/ca/regnum-$CA_TYPE-ca.key"
-cp "${CERTFILE}" "${OUTDIR}/ca/cert.pem"
-cp "${CHAINFILE}" "${OUTDIR}/ca/chain.cert"
-
-HOST_CA_DIR="/etc/hyperledger/fabric-ca-server"
+# copy ca-certs from Package to server and ca-roots
+cp "${KEYFILE}" "${LOCAL_SRV_DIR}/ca/$CA_TYPE-$REGNUM_NAME-ca.key"  # from regnum-generate-csr.sh
+cp "${CERTFILE}" "${LOCAL_SRV_DIR}/ca/cert.pem"                     # from Vault (signed)
+cp "${CHAINFILE}" "${LOCAL_SRV_DIR}/ca/chain.cert"                  # from Vault (signed)
+cp "${CERTFILE}" "${LOCAL_CAROOTS_DIR}/${REGNUM_CA_NAME}.pem"       # ca-cert to public TLS-Root-Certs for Client-Auth
 
 # fabric-ca-server-config.yaml
 log_info "Writing Config-File"
 
 # TLS config-file
 if [[ "${CA_TYPE}" == "tls" ]]; then
-  log_info "Writing TLS Config-File..."
-  cat > "${OUTDIR}/fabric-ca-server-config.yaml" <<EOF
+  log_debug "Writing TLS Config-File..."
+
+  cat > "${LOCAL_SRV_DIR}/fabric-ca-server-config.yaml" <<EOF
 ---
 version: 0.0.1
-port: $REGNUM_PORT
+
+port: ${REGNUM_CA_PORT}
+
 tls:
     enabled: true
     clientauth:
-      type: noclientcert
-      certfiles:
+        type: noclientcert        # after bootsrap enroll:  RequireAndVerifyClientCert
+        certfiles:
+            - "${HOST_CAROOTS_DIR}/${REGNUM_CA_NAME}.pem"
+
 ca:
-    name: $REGNUM_CA_NAME
-    keyfile: ca/regnum-$CA_TYPE-ca.key
+    name: ${REGNUM_CA_NAME}
+    keyfile: ca/${CA_TYPE}-${REGNUM_NAME}-ca.key
     certfile: ca/cert.pem
     chainfile: ca/chain.cert
+
 crl:
+    expiry: 8760h
+
 registry:
     maxenrollments: -1
     identities:
-        - name: $REGNUM_CA_NAME
-          pass: $PASS_RAW
+        - name: bootstrap.${REGNUM_CA_NAME}
+          pass: ${PASS_RAW}
           type: client
           affiliation: jedo.${REGNUM_NAME}
           attrs:
               hf.Registrar.Roles: "*"
               hf.Registrar.DelegateRoles: "*"
-              hf.Revoker: true
-              hf.IntermediateCA: true
-              hf.GenCRL: true
               hf.Registrar.Attributes: "*"
+              hf.Revoker: true
+              hf.GenCRL: true
+              hf.IntermediateCA: true
               hf.AffiliationMgr: true
+
 affiliations:
     jedo:
         - ea
@@ -161,11 +176,12 @@ affiliations:
         - af
         - na
         - sa
+
 signing:
     default:
         usage:
             - digital signature
-        expiry: 8760h
+        expiry: 26280h          # 3 years
     profiles:
         tls:
             usage:
@@ -176,119 +192,127 @@ signing:
                 - server auth
                 - client auth
                 - key agreement
-            expiry: 8760h
+            expiry: 26280h      # 3 years
+
 csr:
-    cn: $REGNUM_CA_NAME
+    cn: ${REGNUM_CA_NAME}
     keyrequest:
         algo: ecdsa
         size: 384
     names:
         - C: XX
-          ST: cc
-          L:
-          O: jedo
+          ST: ${ORBIS_ENV}
+          L: ${REGNUM_NAME}
+          O:
           OU:
     hosts:
-        - $REGNUM_CA_NAME
-        - $REGNUM_IP
+        - ${REGNUM_CA_NAME}
+        - ${REGNUM_CA_IP}
     ca:
-        expiry: 131400h
-        pathlength: 1
+        expiry: 43800h          # 5 years
+        pathlength: 0
 idemix:
     curve: gurvy.Bn254
 operations:
-    listenAddress: $REGNUM_IP:$REGNUM_OPPORT
+    listenAddress: ${REGNUM_CA_IP}:${REGNUM_CA_OPPORT}
     tls:
         enabled: false
 EOF
+
 # MSP config-file
 elif [[ "${CA_TYPE}" == "msp" ]]; then
-  log_info "Copy TLS-Certs for MSP-CA"
+  log_debug "Writing MSP Config-File..."
 
-  mkdir -p "${OUTDIR}/tls"
-  
-  cp "${TLSDIR}/${REGNUM_CA_NAME}"/keystore/*_sk "${OUTDIR}/tls/regnum-${CA_TYPE}-ca.key"
-  cp "${TLSDIR}/${REGNUM_CA_NAME}"/signcerts/cert.pem "${OUTDIR}/tls/cert.pem"
-  cp "${TLSDIR}/${REGNUM_CA_NAME}"/tlsintermediatecerts/*.pem "${OUTDIR}/tls/tls-ca-cert.pem"
+  KEYFILE=$(basename $(ls ${LOCAL_SRV_DIR}/tls/keystore/*_sk | head -n 1))
+  CHAINFILE=$(basename $(ls ${LOCAL_SRV_DIR}/tls/tlsintermediatecerts/*.pem | head -n 1))
+  log_debug "Key-File:" "$KEYFILE"
+  log_debug "Chain-File:" "$CHAINFILE"
 
-  log_info "Writing MSP Config-File..."
-  cat > "${OUTDIR}/fabric-ca-server-config.yaml" <<EOF
+  cat > "${LOCAL_SRV_DIR}/fabric-ca-server-config.yaml" <<EOF
 ---
 version: 0.0.1
 
-port: ${REGNUM_PORT}
+port: ${REGNUM_CA_PORT}
 
 tls:
-  enabled: true
-  keyfile: ${HOST_CA_DIR}/tls/regnum-${CA_TYPE}-ca.key
-  certfile: ${HOST_CA_DIR}/tls/cert.pem
-  chainfile: ${HOST_CA_DIR}/tls/chain.cert
+    enabled: true
+    clientauth:
+        type: noclientcert        # after bootsrap enroll:  RequireAndVerifyClientCert
+        certfiles:
+            - "${HOST_CAROOTS_DIR}/${REGNUM_CA_NAME}.pem"
+    keyfile: ${HOST_SRV_DIR}/tls/keystore/$KEYFILE
+    certfile: ${HOST_SRV_DIR}/tls/signcerts/cert.pem
+    chainfile: ${HOST_SRV_DIR}/tls/tlsintermediatecerts/$CHAINFILE
+
 
 ca:
-  name: ${REGNUM_CA_NAME}
-  keyfile: ca/regnum-${CA_TYPE}-ca.key
-  certfile: ca/cert.pem
-  chainfile: ca/chain.cert
+    name: ${REGNUM_CA_NAME}
+    keyfile: ca/$CA_TYPE-$REGNUM_NAME-ca.key
+    certfile: ca/cert.pem
+    chainfile: ca/chain.cert
 
 crl:
-  expiry: 8760h
+    expiry: 8760h
 
 registry:
-  maxenrollments: -1
-  identities:
-    - name: ${REGNUM_CA_NAME}
-      pass: ${PASS_RAW}
-      type: client
-      affiliation: jedo.${REGNUM_NAME}
-      attrs:
-        hf.Registrar.Roles: "client,user,admin,peer,orderer"
-        hf.Registrar.DelegateRoles: "client,user,peer,orderer"
-        hf.Registrar.Attributes: "*"
-        hf.Revoker: true
-        hf.GenCRL: true
-        hf.IntermediateCA: true
-        hf.AffiliationMgr: true
+    maxenrollments: -1
+    identities:
+        - name: bootstrap.${REGNUM_CA_NAME}
+          pass: ${PASS_RAW}
+          type: client
+          affiliation: jedo.${REGNUM_NAME}
+          attrs:
+              hf.Registrar.Roles: "client,user,admin,peer,orderer"
+              hf.Registrar.DelegateRoles: "client,user,peer,orderer"
+              hf.Registrar.Attributes: "*"
+              hf.Revoker: true
+              hf.GenCRL: true
+              hf.IntermediateCA: true
+              hf.AffiliationMgr: true
 
 affiliations:
-  jedo:
-    - ea
-    - as
-    - af
-    - na
-    - sa
+    jedo:
+        - ea
+        - as
+        - af
+        - na
+        - sa
 
 signing:
-  default:
-    usage:
-      - digital signature
-    expiry: 8760h
-  profiles:
-    ca:
-      usage:
-        - cert sign
-        - crl sign
-      expiry: 8760h
-      caconstraint:
-        isca: true
-        maxpathlen: 0
-        copyextensions: true
+    default:
+        usage:
+            - digital signature
+        expiry: 26280h        # 3 years
+    profiles:
+        ca:
+            usage:
+                - cert sign
+                - crl sign
+            expiry: 26280h      # 3 years
+            caconstraint:
+                isca: true
+                maxpathlen: 0
+                copyextensions: true
 
 csr:
-  cn: ${REGNUM_CA_NAME}
-  names:
-    - C: XX
-      ST: ${ORBIS_ENV}
-      L: ${REGNUM_NAME}
-      O:
-      OU:
-  hosts:
-    - ${REGNUM_CA_NAME}
-    - ${REGNUM_IP}
+    cn: ${REGNUM_CA_NAME}
+    names:
+        - C: XX
+          ST: ${ORBIS_ENV}
+          L: ${REGNUM_NAME}
+          O:
+          OU:
+    hosts:
+        - ${REGNUM_CA_NAME}
+        - ${REGNUM_CA_IP}
+    ca:
+        expiry: 43800h        # 5 years
+        pathlength: 1
 
 operations:
-  listenAddress: ${REGNUM_IP}:${REGNUM_OPPORT}
-  tls:
-    enabled: false
+    listenAddress: ${REGNUM_CA_IP}:${REGNUM_CA_OPPORT}
+    tls:
+        enabled: false
 EOF
 fi
 

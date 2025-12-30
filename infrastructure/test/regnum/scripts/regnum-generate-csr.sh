@@ -142,7 +142,6 @@ log_debug "${CSRFILE} generated"
 ###############################################################
 # Encrypted TAR for Orbis
 ###############################################################
-
 mkdir -p "${PACKAGE_DIR}"
 
 log_info "Creating encrypted tar-file with .csr-file and regnum.yaml"
