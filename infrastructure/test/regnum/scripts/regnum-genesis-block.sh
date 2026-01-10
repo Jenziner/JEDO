@@ -228,4 +228,4 @@ $LOCAL_FABRIC_DIR/configtxgen -configPath $FABRIC_CFG_PATH -profile JedoChannel 
 
 log_ok "Channel $REGNUM_NAME configured..."
 
-
+# chmod -R 777 /mnt/user/appdata/jedo/demo/configuration
