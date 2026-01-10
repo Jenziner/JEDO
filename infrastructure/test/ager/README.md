@@ -15,17 +15,13 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
 - `scripts/ager-start-ca.sh`  
   Enrolls Server-Certs and starts Ager-MSP-CA.
 - `scripts/ager-start-orderer.sh`  
-  Enrolls Server-Certs and starts all Ager-Orderer.
-<!-- - `scripts/regnum-install-cert.sh`  
-  Installs the certificates signed by Orbis and the CA config file.
-- `scripts/regnum-enroll-msp.sh`  
-  Enrolls the TLS certificate for the MSP CA.
-- `scripts/regnum-start-ca.sh`  
-  Starts the respective Regnum CA in Docker.
+  Enrolls Server-Certs and starts all Ager-Orderer-Nodes.
+- `scripts/ager-start-peer.sh`  
+  Enrolls Server-Certs and starts all Ager-Peer-Nodes.
 - `scripts/utils.sh`  
   Helper functions for script control.
 - `scripts/prereq.sh`  
-  Script that checks the local prerequisites. -->
+  Script that checks the local prerequisites.
 
 ## Prerequisites
 

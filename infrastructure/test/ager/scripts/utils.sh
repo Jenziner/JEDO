@@ -178,3 +178,32 @@ CheckContainerLog() {
         exit 1
     fi
 }
+
+
+###############################################################
+# Function to check CouchDB
+###############################################################
+CheckCouchDB() {
+    local container_name=$1
+    local container_ip=$2
+    local wait_time_limit=$3
+    local wait_time=0
+    local success=false
+
+    while [ $wait_time -lt $wait_time_limit ]; do
+        if curl -s http://$container_ip:5984 > /dev/null; then
+            success=true
+            log_ok "CouchDB $container_name port test passed."
+            break
+        fi
+        echo "Waiting for CouchDB $container_name... ($wait_time seconds)"
+        sleep 2
+        wait_time=$((wait_time + 2))
+    done
+
+    if [ "$success" = false ]; then
+        log_error "CouchDB $container_name port test failed."
+        docker logs $container_name
+        exit 1
+    fi
+}

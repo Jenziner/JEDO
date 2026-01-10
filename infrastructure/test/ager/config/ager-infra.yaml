@@ -34,6 +34,14 @@ Ager:                    # An Ager needs 1 MSP, at least 1 orderer, 1 peer, 1 ga
           AdminPort: 53113
     Peers:
         - Name: peer
+          IP: 172.16.3.21
+          Port1: 53211
+          Port2: 53212
+          OpPort: 53219
+          DB: 
+              Name: db.peer.alps.ea.jedo.dev
+              IP: 172.16.3.22
+              Port: 53221
     Gateway: 
         Name: via        # API-Gateway
         Services:
