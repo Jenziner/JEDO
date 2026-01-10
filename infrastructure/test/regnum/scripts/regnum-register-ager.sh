@@ -32,20 +32,28 @@ usage() {
 list_ca_identities(){
       # List all Identities
     log_info "List TLS Identities"
-    docker exec "${REGNUM_TLS_NAME}" \
-      sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-            fabric-ca-client identity list \
-                -u ${TLS_CA_URL} \
-                --tls.certfiles ${TLS_TLS_CHAIN} \
-                --mspdir ${CA_CLIENT_HOME}/msp"
+    docker run --rm \
+      --network "${DOCKER_NETWORK}" \
+      -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+      -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
+      -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+      hyperledger/fabric-ca:latest \
+      fabric-ca-client identity list \
+          -u ${TLS_CA_URL} \
+          --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+          --mspdir ${HOST_CLIENT_DIR}
 
     log_info "List MSP Identities"
-    docker exec "${REGNUM_MSP_NAME}" \
-      sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-            fabric-ca-client identity list \
-                -u ${MSP_CA_URL} \
-                --tls.certfiles ${MSP_TLS_CHAIN} \
-                --mspdir ${CA_CLIENT_HOME}/msp"
+    docker run --rm \
+      --network "${DOCKER_NETWORK}" \
+      -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+      -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_MSP_NAME}:${HOST_CLIENT_DIR}" \
+      -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+      hyperledger/fabric-ca:latest \
+      fabric-ca-client identity list \
+          -u ${MSP_CA_URL} \
+          --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+          --mspdir ${HOST_CLIENT_DIR}
 }
 
 while [[ $# -gt 0 ]]; do
@@ -124,10 +132,11 @@ AFFILIATION=$ORBIS_NAME.$REGNUM_NAME.$AGER_NAME
 TLS_CA_URL=https://$REGNUM_TLS_NAME:$TLS_PASS_RAW@$REGNUM_TLS_NAME:$REGNUM_TLS_PORT
 MSP_CA_URL=https://$REGNUM_MSP_NAME:$MSP_PASS_RAW@$REGNUM_MSP_NAME:$REGNUM_MSP_PORT
 
-TLS_TLS_CHAIN=/etc/hyperledger/fabric-ca-server/ca/chain.cert
-MSP_TLS_CHAIN=/etc/hyperledger/fabric-ca-server/tls/tls-ca-cert.pem
+LOCAL_CAROOTS_DIR="${SCRIPTDIR}/../../infrastructure/tls-ca-roots"
+HOST_CAROOTS_DIR="/etc/hyperledger/tls-ca-roots"
 
-CA_CLIENT_HOME=/etc/hyperledger/fabric-ca-server/ca-client-admin
+LOCAL_CLIENT_DIR="${SCRIPTDIR}/../../infrastructure/clients"
+HOST_CLIENT_DIR="/etc/hyperledger/fabric-ca-client"
 
 
 ###############################################################
@@ -158,18 +167,28 @@ $SCRIPTDIR/prereq.sh
 # Add affiliation to CAs
 log_info "Affiliation $AFFILIATION adding..."
 
-docker exec "${REGNUM_TLS_NAME}" \
-  sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-        fabric-ca-client affiliation add $AFFILIATION \
-          -u ${TLS_CA_URL} \
-          --tls.certfiles ${TLS_TLS_CHAIN}"
+docker run --rm \
+    --network "${DOCKER_NETWORK}" \
+    -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+    -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
+    -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+    hyperledger/fabric-ca:latest \
+    fabric-ca-client affiliation add $AFFILIATION \
+        -u ${TLS_CA_URL} \
+        --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+        --mspdir ${HOST_CLIENT_DIR}
 log_debug "TLS-CA" "Affiliation $AFFILIATION added"
 
-docker exec "${REGNUM_MSP_NAME}" \
-  sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-        fabric-ca-client affiliation add $AFFILIATION \
-          -u ${MSP_CA_URL} \
-          --tls.certfiles ${MSP_TLS_CHAIN}"
+docker run --rm \
+    --network "${DOCKER_NETWORK}" \
+    -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+    -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_MSP_NAME}:${HOST_CLIENT_DIR}" \
+    -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+    hyperledger/fabric-ca:latest \
+    fabric-ca-client affiliation add $AFFILIATION \
+        -u ${MSP_CA_URL} \
+        --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+        --mspdir ${HOST_CLIENT_DIR}
 log_debug "MSP-CA" "Affiliation $AFFILIATION added"
 
 # Register Ager-MSP identity
@@ -177,25 +196,31 @@ AGER_MSP_NAME=$AGER_MSP.$AGER_NAME.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD
 AGER_MSP_SECRET=$(yq eval ".Ager.msp.Secret" "$AGERCONFIGFILE")
 log_info "$AGER_MSP_NAME registering ..."
 
-docker exec "${REGNUM_TLS_NAME}" \
-  sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-        fabric-ca-client register \
-          -u ${TLS_CA_URL} \
-          --tls.certfiles ${TLS_TLS_CHAIN} \
-          --mspdir ${CA_CLIENT_HOME}/msp \
-          --id.name $AGER_MSP_NAME --id.secret $AGER_MSP_SECRET --id.type client --id.affiliation $AFFILIATION"
+docker run --rm \
+    --network "${DOCKER_NETWORK}" \
+    -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+    -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
+    -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+    hyperledger/fabric-ca:latest \
+    fabric-ca-client register \
+        -u ${TLS_CA_URL} \
+        --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+        --mspdir ${HOST_CLIENT_DIR} \
+        --id.name $AGER_MSP_NAME --id.secret $AGER_MSP_SECRET --id.type client --id.affiliation $AFFILIATION
 log_debug "$AGER_MSP_NAME registered @ TLS-CA"
 
-docker exec "${REGNUM_MSP_NAME}" \
-  sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-        fabric-ca-client register \
-            -u ${MSP_CA_URL} \
-            --tls.certfiles ${MSP_TLS_CHAIN} \
-            --mspdir ${CA_CLIENT_HOME}/msp \
-            --id.name $AGER_MSP_NAME --id.secret $AGER_MSP_SECRET --id.type client --id.affiliation $AFFILIATION \
-            --id.attrs '\"hf.Registrar.Roles=user,client\"' \
-            --id.attrs '\"hf.Revoker=true\"' \
-            --id.attrs '\"hf.IntermediateCA=false\"'"
+docker run --rm \
+    --network "${DOCKER_NETWORK}" \
+    -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+    -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_MSP_NAME}:${HOST_CLIENT_DIR}" \
+    -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+    hyperledger/fabric-ca:latest \
+    fabric-ca-client register \
+        -u ${MSP_CA_URL} \
+        --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+        --mspdir ${HOST_CLIENT_DIR} \
+        --id.name $AGER_MSP_NAME --id.secret $AGER_MSP_SECRET --id.type client --id.affiliation $AFFILIATION \
+        --id.attrs '"hf.Registrar.Roles=user,client",hf.Revoker=true,hf.IntermediateCA=false'
 log_debug "$AGER_MSP_NAME registered @ MSP-CA"
 
 # Register Ager-Orderer identity
@@ -204,22 +229,30 @@ for ORDERER in $AGER_ORDERERS; do
     ORDERER_SECRET=$(yq eval ".Ager.Orderers[] | select(.Name == \"$ORDERER\") | .Secret" $AGERCONFIGFILE)
     log_info "$ORDERER_NAME registering ..."
 
-    docker exec "${REGNUM_TLS_NAME}" \
-      sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-            fabric-ca-client register \
-              -u ${TLS_CA_URL} \
-              --tls.certfiles ${TLS_TLS_CHAIN} \
-              --mspdir ${CA_CLIENT_HOME}/msp \
-              --id.name $ORDERER_NAME --id.secret $ORDERER_SECRET --id.type client --id.affiliation $AFFILIATION"
+    docker run --rm \
+        --network "${DOCKER_NETWORK}" \
+        -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+        -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
+        -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+        hyperledger/fabric-ca:latest \
+        fabric-ca-client register \
+            -u ${TLS_CA_URL} \
+            --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+            --mspdir ${HOST_CLIENT_DIR} \
+            --id.name $ORDERER_NAME --id.secret $ORDERER_SECRET --id.type client --id.affiliation $AFFILIATION
     log_debug "$ORDERER_NAME registered @ TLS-CA"
 
-    docker exec "${REGNUM_MSP_NAME}" \
-      sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-            fabric-ca-client register \
-              -u ${MSP_CA_URL} \
-              --tls.certfiles ${MSP_TLS_CHAIN} \
-              --mspdir ${CA_CLIENT_HOME}/msp \
-              --id.name $ORDERER_NAME --id.secret $ORDERER_SECRET --id.type orderer --id.affiliation $AFFILIATION"
+    docker run --rm \
+        --network "${DOCKER_NETWORK}" \
+        -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+        -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_MSP_NAME}:${HOST_CLIENT_DIR}" \
+        -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+        hyperledger/fabric-ca:latest \
+        fabric-ca-client register \
+            -u ${MSP_CA_URL} \
+            --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+            --mspdir ${HOST_CLIENT_DIR} \
+            --id.name $ORDERER_NAME --id.secret $ORDERER_SECRET --id.type orderer --id.affiliation $AFFILIATION
     log_debug "$ORDERER_NAME registered @ MSP-CA"
 done
 
@@ -229,22 +262,30 @@ for PEER in $AGER_PEERS; do
     PEER_SECRET=$(yq eval ".Ager.Peers[] | select(.Name == \"$PEER\") | .Secret" $AGERCONFIGFILE)
     log_info "$PEER_NAME registering ..."
 
-    docker exec "${REGNUM_TLS_NAME}" \
-      sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-            fabric-ca-client register \
-              -u ${TLS_CA_URL} \
-              --tls.certfiles ${TLS_TLS_CHAIN} \
-              --mspdir ${CA_CLIENT_HOME}/msp \
-              --id.name $PEER_NAME --id.secret $PEER_SECRET --id.type client --id.affiliation $AFFILIATION"
+    docker run --rm \
+        --network "${DOCKER_NETWORK}" \
+        -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+        -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
+        -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+        hyperledger/fabric-ca:latest \
+        fabric-ca-client register \
+            -u ${TLS_CA_URL} \
+            --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+            --mspdir ${HOST_CLIENT_DIR} \
+            --id.name $PEER_NAME --id.secret $PEER_SECRET --id.type client --id.affiliation $AFFILIATION
     log_debug "$PEER_NAME registered @ TLS-CA"
 
-    docker exec "${REGNUM_MSP_NAME}" \
-      sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-            fabric-ca-client register \
-              -u ${MSP_CA_URL} \
-              --tls.certfiles ${MSP_TLS_CHAIN} \
-              --mspdir ${CA_CLIENT_HOME}/msp \
-              --id.name $PEER_NAME --id.secret $PEER_SECRET --id.type peer --id.affiliation $AFFILIATION"
+    docker run --rm \
+        --network "${DOCKER_NETWORK}" \
+        -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+        -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_MSP_NAME}:${HOST_CLIENT_DIR}" \
+        -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+        hyperledger/fabric-ca:latest \
+        fabric-ca-client register \
+            -u ${MSP_CA_URL} \
+            --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+            --mspdir ${HOST_CLIENT_DIR} \
+            --id.name $PEER_NAME --id.secret $PEER_SECRET --id.type peer --id.affiliation $AFFILIATION
     log_debug "$PEER_NAME registered @ MSP-CA"
 done
 
@@ -253,13 +294,17 @@ AGER_GATEWAY_NAME=$AGER_GATEWAY.$AGER_NAME.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD
 AGER_GATEWAY_SECRET=$(yq eval ".Ager.Gateway.Secret" "$AGERCONFIGFILE")
 log_info "$AGER_GATEWAY_NAME registering ..."
 
-docker exec "${REGNUM_TLS_NAME}" \
-  sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-        fabric-ca-client register \
-          -u ${TLS_CA_URL} \
-          --tls.certfiles ${TLS_TLS_CHAIN} \
-          --mspdir ${CA_CLIENT_HOME}/msp \
-          --id.name $AGER_GATEWAY_NAME --id.secret $AGER_GATEWAY_SECRET --id.type client --id.affiliation $AFFILIATION"
+docker run --rm \
+    --network "${DOCKER_NETWORK}" \
+    -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+    -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
+    -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+    hyperledger/fabric-ca:latest \
+    fabric-ca-client register \
+        -u ${TLS_CA_URL} \
+        --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+        --mspdir ${HOST_CLIENT_DIR} \
+        --id.name $AGER_GATEWAY_NAME --id.secret $AGER_GATEWAY_SECRET --id.type client --id.affiliation $AFFILIATION
 log_debug "$AGER_GATEWAY_NAME registered @ TLS-CA"
 
 # Register Ager-Services identity
@@ -268,13 +313,17 @@ for SERVICE in $AGER_SERVICES; do
     SERVICE_SECRET=$(yq eval ".Ager.Gateway.Services[] | select(.Name == \"$SERVICE\") | .Secret" $AGERCONFIGFILE)
     log_info "$SERVICE_NAME registering ..."
 
-    docker exec "${REGNUM_TLS_NAME}" \
-      sh -c "export FABRIC_CA_CLIENT_HOME=${CA_CLIENT_HOME} && \
-            fabric-ca-client register \
-              -u ${TLS_CA_URL} \
-              --tls.certfiles ${TLS_TLS_CHAIN} \
-              --mspdir ${CA_CLIENT_HOME}/msp \
-              --id.name $SERVICE_NAME --id.secret $SERVICE_SECRET --id.type client --id.affiliation $AFFILIATION"
+    docker run --rm \
+        --network "${DOCKER_NETWORK}" \
+        -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+        -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
+        -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+        hyperledger/fabric-ca:latest \
+        fabric-ca-client register \
+            -u ${TLS_CA_URL} \
+            --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+            --mspdir ${HOST_CLIENT_DIR} \
+            --id.name $SERVICE_NAME --id.secret $SERVICE_SECRET --id.type client --id.affiliation $AFFILIATION
     log_debug "$SERVICE_NAME registered @ TLS-CA"
 done
 

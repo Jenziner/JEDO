@@ -27,6 +27,11 @@ Ager:                    # An Ager needs 1 MSP, at least 1 orderer, 1 peer, 1 ga
         OpPort: 53049
     Orderers:
         - Name: orderer
+          IP: 172.16.3.11
+          Port: 53111
+          ClusterPort: 53112
+          OpPort: 53119
+          AdminPort: 53113
     Peers:
         - Name: peer
     Gateway: 
