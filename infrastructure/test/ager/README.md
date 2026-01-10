@@ -14,6 +14,8 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
   Configuration for infrastructure (name, IP, ports).
 - `scripts/ager-start-ca.sh`  
   Enrolls Server-Certs and starts Ager-MSP-CA.
+- `scripts/ager-enroll-msp.sh`  
+  Enrolls Org-MSP.
 - `scripts/ager-start-orderer.sh`  
   Enrolls Server-Certs and starts all Ager-Orderer-Nodes.
 - `scripts/ager-start-peer.sh`  

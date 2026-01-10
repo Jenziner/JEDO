@@ -132,6 +132,7 @@ for PEER in $PEERS; do
     AGER_PEER_CSR="C=XX,ST=$ORBIS_ENV,L=$REGNUM_NAME,O=$AGER_NAME"
 
     AGER_PEER_DB_NAME=$(yq eval ".Ager.Peers[] | select(.Name == \"$PEER\") | .DB.Name" "$INFRA_CONFIGFILE")
+    AGER_PEER_DB_NAME=$AGER_PEER_DB_NAME.$AGER_NAME.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD
     AGER_PEER_DB_IP=$(yq eval ".Ager.Peers[] | select(.Name == \"$PEER\") | .DB.IP" "$INFRA_CONFIGFILE")
     AGER_PEER_DB_PORT=$(yq eval ".Ager.Peers[] | select(.Name == \"$PEER\") | .DB.Port" "$INFRA_CONFIGFILE")
 

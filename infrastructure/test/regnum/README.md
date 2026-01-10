@@ -20,6 +20,8 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
   Starts the respective Regnum CA in Docker.
 - `scripts/regnum-register-ager.sh`  
   Register all Identities of an Ager according provided agger.yaml.
+- `scripts/regnum-genesis-block.sh`  
+  Generates Genesisblock - To use adjust the script with inital ager and correct orderer and peer settings manually!
 - `scripts/utils.sh`  
   Helper functions for script control.
 - `scripts/prereq.sh`  
@@ -58,6 +60,44 @@ To register the Identities of an Ager:
 
 To list all Identities:
 `./scripts/regnum-install-cert.sh myTLSPassword myMSPPassword ager-yaml-filename --listonly` (optionally with `--debug`).
+
+---
+
+# Regnum Genesis Block Setup Instructions
+
+## Prerequisites
+
+Before creating the genesis block, ensure the following conditions are met:
+
+- At least one Ager Orderer node is running
+- At least one Ager Peer node is running
+- You are in contact with Ager operator, he provide all Ager settings
+
+## Initial Setup
+
+1. Edit the `regnum-genesis-block.sh` script and update the writing of the configtx.yaml file.
+2. Run `./regnum-genesis-block.sh` to create genesis block.
+3. Check that the genesis block was successfully created and distributed to the Ager Orderer nodes.
+
+## Adding Additional Ager Organizations
+
+When new Ager organizations join the network later, they follow a different process:
+
+### Channel Join Process (Not Genesis Creation)
+
+New Ager organizations do NOT create a new genesis block. Instead, they:
+
+1. Receive the existing channel configuration from Regnum
+2. Use `peer channel join` command to join the existing channel
+3. Fetch the latest blocks from existing Orderers
+4. Sync their ledger with the current blockchain state
+
+### Key Difference
+
+- **First Ager**: Creates genesis block (network initialization)
+- **Subsequent Agers**: Join existing channel (network expansion)
+
+The genesis block configuration is only executed once during initial network bootstrap. All future organizations join the already-running network through the standard channel join mechanism.
 
 ---
 
