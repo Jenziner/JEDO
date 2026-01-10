@@ -17,7 +17,10 @@ log_section "JEDO-Ecosystem - new Ager - Identities registering..."
 ###############################################################
 export LOGLEVEL="INFO"
 export DEBUG=false
-export FABRIC_CA_SERVER_LOGLEVEL="info"
+export FABRIC_CA_SERVER_LOGLEVEL="info"       # critical, fatal, warning, info, debug
+export FABRIC_CA_CLIENT_LOGLEVEL="info"       # critical, fatal, warning, info, debug
+export FABRIC_LOGGING_SPEC="INFO"             # FATAL, PANIC, ERROR, WARNING, INFO, DEBUG
+export CORE_CHAINCODE_LOGGING_LEVEL="INFO"    # CRITICAL, ERROR, WARNING, NOTICE, INFO, DEBUG
 export LISTONLY=false
 
 TLS_PASS_RAW=""
@@ -37,6 +40,7 @@ list_ca_identities(){
       -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
       -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
       -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+      -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
       hyperledger/fabric-ca:latest \
       fabric-ca-client identity list \
           -u ${TLS_CA_URL} \
@@ -49,6 +53,7 @@ list_ca_identities(){
       -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
       -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_MSP_NAME}:${HOST_CLIENT_DIR}" \
       -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+      -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
       hyperledger/fabric-ca:latest \
       fabric-ca-client identity list \
           -u ${MSP_CA_URL} \
@@ -61,7 +66,10 @@ while [[ $# -gt 0 ]]; do
     --debug)
       DEBUG=true
       LOGLEVEL="DEBUG"
-      FABRIC_CA_SERVER_LOGLEVEL="DEBUG"
+      FABRIC_CA_SERVER_LOGLEVEL="debug"
+      FABRIC_CA_CLIENT_LOGLEVEL="debug"
+      FABRIC_LOGGING_SPEC="DEBUG"
+      CORE_CHAINCODE_LOGGING_LEVEL="DEBUG"
       shift
       ;;
     --listonly)
@@ -172,6 +180,7 @@ docker run --rm \
     -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
     -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
     -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+    -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
     hyperledger/fabric-ca:latest \
     fabric-ca-client affiliation add $AFFILIATION \
         -u ${TLS_CA_URL} \
@@ -184,6 +193,7 @@ docker run --rm \
     -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
     -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_MSP_NAME}:${HOST_CLIENT_DIR}" \
     -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+    -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
     hyperledger/fabric-ca:latest \
     fabric-ca-client affiliation add $AFFILIATION \
         -u ${MSP_CA_URL} \
@@ -201,6 +211,7 @@ docker run --rm \
     -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
     -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
     -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+    -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
     hyperledger/fabric-ca:latest \
     fabric-ca-client register \
         -u ${TLS_CA_URL} \
@@ -213,6 +224,7 @@ docker run --rm \
     --network "${DOCKER_NETWORK}" \
     -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
     -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_MSP_NAME}:${HOST_CLIENT_DIR}" \
+    -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
     -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
     hyperledger/fabric-ca:latest \
     fabric-ca-client register \
@@ -234,6 +246,7 @@ for ORDERER in $AGER_ORDERERS; do
         -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
         -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
         -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+        -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
         hyperledger/fabric-ca:latest \
         fabric-ca-client register \
             -u ${TLS_CA_URL} \
@@ -247,6 +260,7 @@ for ORDERER in $AGER_ORDERERS; do
         -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
         -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_MSP_NAME}:${HOST_CLIENT_DIR}" \
         -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+        -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
         hyperledger/fabric-ca:latest \
         fabric-ca-client register \
             -u ${MSP_CA_URL} \
@@ -267,6 +281,7 @@ for PEER in $AGER_PEERS; do
         -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
         -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
         -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+        -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
         hyperledger/fabric-ca:latest \
         fabric-ca-client register \
             -u ${TLS_CA_URL} \
@@ -280,6 +295,7 @@ for PEER in $AGER_PEERS; do
         -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
         -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_MSP_NAME}:${HOST_CLIENT_DIR}" \
         -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+        -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
         hyperledger/fabric-ca:latest \
         fabric-ca-client register \
             -u ${MSP_CA_URL} \
@@ -299,6 +315,7 @@ docker run --rm \
     -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
     -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
     -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+    -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
     hyperledger/fabric-ca:latest \
     fabric-ca-client register \
         -u ${TLS_CA_URL} \
@@ -318,6 +335,7 @@ for SERVICE in $AGER_SERVICES; do
         -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
         -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
         -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+        -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
         hyperledger/fabric-ca:latest \
         fabric-ca-client register \
             -u ${TLS_CA_URL} \

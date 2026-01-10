@@ -1,7 +1,7 @@
 ###############################################################
 #!/bin/bash
 #
-# This script starts ager orderer docker container.
+# This script starts ager peer docker container.
 #
 ###############################################################
 set -euo pipefail
@@ -9,7 +9,7 @@ set -euo pipefail
 SCRIPTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPTDIR/utils.sh"
 
-log_section "JEDO-Ecosystem - new Ager - Orderer starting..."
+log_section "JEDO-Ecosystem - new Ager - Peer starting..."
 
 
 ###############################################################

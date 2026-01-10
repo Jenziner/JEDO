@@ -17,7 +17,10 @@ log_section "JEDO-Ecosystem - new Ager - CA starting..."
 ###############################################################
 export LOGLEVEL="INFO"
 export DEBUG=false
-export FABRIC_CA_SERVER_LOGLEVEL="info"
+export FABRIC_CA_SERVER_LOGLEVEL="info"       # critical, fatal, warning, info, debug
+export FABRIC_CA_CLIENT_LOGLEVEL="info"       # critical, fatal, warning, info, debug
+export FABRIC_LOGGING_SPEC="INFO"             # FATAL, PANIC, ERROR, WARNING, INFO, DEBUG
+export CORE_CHAINCODE_LOGGING_LEVEL="INFO"    # CRITICAL, ERROR, WARNING, NOTICE, INFO, DEBUG
 
 AGER_CERTS_CONFIG=""
 AGER_INFRA_CONFIG=""
@@ -32,7 +35,10 @@ while [[ $# -gt 0 ]]; do
     --debug)
       DEBUG=true
       LOGLEVEL="DEBUG"
-      FABRIC_CA_SERVER_LOGLEVEL="DEBUG"
+      FABRIC_CA_SERVER_LOGLEVEL="debug"
+      FABRIC_CA_CLIENT_LOGLEVEL="debug"
+      FABRIC_LOGGING_SPEC="DEBUG"
+      CORE_CHAINCODE_LOGGING_LEVEL="DEBUG"
       shift
       ;;
     -*)
@@ -141,7 +147,7 @@ docker run --rm \
   -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
   -v "${LOCAL_SRV_DIR}:${HOST_SRV_DIR}" \
   -e FABRIC_MSP_CLIENT_HOME="${HOST_SRV_DIR}" \
-  -e FABRIC_MSP_SERVER_LOGLEVEL=${LOGLEVEL} \
+  -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
   hyperledger/fabric-ca:latest \
   fabric-ca-client enroll \
       -u https://$AGER_CA_NAME:$AGER_CA_SECRET@$REGNUM_TLS_NAME:$REGNUM_TLS_PORT \
@@ -158,7 +164,7 @@ docker run --rm \
   -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
   -v "${LOCAL_SRV_DIR}:${HOST_SRV_DIR}" \
   -e FABRIC_MSP_CLIENT_HOME="${HOST_SRV_DIR}" \
-  -e FABRIC_MSP_SERVER_LOGLEVEL=${LOGLEVEL} \
+  -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
   hyperledger/fabric-ca:latest \
   fabric-ca-client enroll \
       -u https://$AGER_CA_NAME:$AGER_CA_SECRET@$REGNUM_MSP_NAME:$REGNUM_MSP_PORT \
@@ -281,7 +287,7 @@ docker run -d \
     -p $AGER_CA_PORT:$AGER_CA_PORT \
     -p $AGER_CA_OPPORT:$AGER_CA_OPPORT \
     -v $LOCAL_SRV_DIR:$HOST_SRV_DIR \
-    -e FABRIC_CA_SERVER_LOGLEVEL=$LOGLEVEL \
+    -e FABRIC_CA_SERVER_LOGLEVEL=$FABRIC_CA_SERVER_LOGLEVEL \
     hyperledger/fabric-ca:latest \
     sh -c "fabric-ca-server start -b $AGER_CA_NAME:$AGER_CA_SECRET \
     --home $HOST_SRV_DIR"

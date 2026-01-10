@@ -17,7 +17,10 @@ log_section "JEDO-Ecosystem - new Regnum - CA starting..."
 ###############################################################
 export LOGLEVEL="INFO"
 export DEBUG=false
-export FABRIC_CA_SERVER_LOGLEVEL="info"
+export FABRIC_CA_SERVER_LOGLEVEL="info"       # critical, fatal, warning, info, debug
+export FABRIC_CA_CLIENT_LOGLEVEL="info"       # critical, fatal, warning, info, debug
+export FABRIC_LOGGING_SPEC="INFO"             # FATAL, PANIC, ERROR, WARNING, INFO, DEBUG
+export CORE_CHAINCODE_LOGGING_LEVEL="INFO"    # CRITICAL, ERROR, WARNING, NOTICE, INFO, DEBUG
 
 TLS_PASS_RAW=""
 MSP_PASS_RAW=""
@@ -32,7 +35,10 @@ while [[ $# -gt 0 ]]; do
     --debug)
       DEBUG=true
       LOGLEVEL="DEBUG"
-      FABRIC_CA_SERVER_LOGLEVEL="DEBUG"
+      FABRIC_CA_SERVER_LOGLEVEL="debug"
+      FABRIC_CA_CLIENT_LOGLEVEL="debug"
+      FABRIC_LOGGING_SPEC="DEBUG"
+      CORE_CHAINCODE_LOGGING_LEVEL="DEBUG"
       shift
       ;;
     -*)
@@ -124,6 +130,7 @@ docker run --rm \
   -v "${LOCAL_SRV_DIR}:${HOST_SRV_DIR}" \
   -v "${LOCAL_CLIENT_DIR}:${HOST_CLIENT_DIR}" \
   -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+  -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
   hyperledger/fabric-ca:latest \
   fabric-ca-client register \
       -u ${TLS_CA_URL} \
@@ -142,6 +149,7 @@ docker run --rm \
   -v "${LOCAL_SRV_DIR}:${HOST_SRV_DIR}" \
   -v "${LOCAL_CLIENT_DIR}:${HOST_CLIENT_DIR}" \
   -e FABRIC_MSP_CLIENT_HOME="${HOST_SRV_DIR}" \
+  -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
   hyperledger/fabric-ca:latest \
   fabric-ca-client enroll \
       -u https://${REGNUM_MSP_NAME}:${MSP_PASS_RAW}@$REGNUM_TLS_NAME:$REGNUM_TLS_PORT \
