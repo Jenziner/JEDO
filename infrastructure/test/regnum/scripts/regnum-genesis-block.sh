@@ -102,9 +102,6 @@ Organizations:
       Admins:
         Type: Signature
         Rule: "OR('alps.admin')"
-      BlockValidation:
-        Type: ImplicitMeta
-        Rule: "ANY Writers"
       Endorsement:
         Type: Signature
         Rule: "OR('alps.member')"
@@ -210,7 +207,7 @@ Profiles:
             <<: *alpsPolicies
             Admins:
               Type: Signature
-              Rule: "OR('alps.member')"
+              Rule: "OR('alps.admin')"
     Application:
       <<: *ApplicationDefaults
       Organizations:
@@ -219,7 +216,7 @@ Profiles:
             <<: *alpsPolicies
             Admins:
               Type: Signature
-              Rule: "OR('alps.member')"
+              Rule: "OR('alps.admin')"
 EOF
 
 log_info "Genesis block for $REGNUM_NAME generating..."
