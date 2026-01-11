@@ -235,6 +235,40 @@ docker run --rm \
         --id.attrs '"hf.Registrar.Roles=user,client",hf.Revoker=true,hf.IntermediateCA=false'
 log_debug "$AGER_MSP_NAME registered @ MSP-CA"
 
+# Register Ager-Admin identity
+AGER_ADMIN_NAME=Admin.$AGER_NAME.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD
+AGER_ADMIN_SECRET=$(yq eval ".Ager.msp.Secret" "$AGERCONFIGFILE")
+log_info "$AGER_ADMIN_NAME registering ..."
+
+docker run --rm \
+    --network "${DOCKER_NETWORK}" \
+    -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+    -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_TLS_NAME}:${HOST_CLIENT_DIR}" \
+    -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+    -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
+    hyperledger/fabric-ca:latest \
+    fabric-ca-client register \
+        -u ${TLS_CA_URL} \
+        --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+        --mspdir ${HOST_CLIENT_DIR} \
+        --id.name $AGER_ADMIN_NAME --id.secret $AGER_ADMIN_SECRET --id.type admin --id.affiliation $AFFILIATION
+log_debug "$AGER_ADMIN_NAME registered @ TLS-CA"
+
+docker run --rm \
+    --network "${DOCKER_NETWORK}" \
+    -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+    -v "${LOCAL_CLIENT_DIR}/bootstrap.${REGNUM_MSP_NAME}:${HOST_CLIENT_DIR}" \
+    -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
+    -e FABRIC_MSP_CLIENT_HOME="${HOST_CLIENT_DIR}" \
+    hyperledger/fabric-ca:latest \
+    fabric-ca-client register \
+        -u ${MSP_CA_URL} \
+        --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+        --mspdir ${HOST_CLIENT_DIR} \
+        --id.name $AGER_ADMIN_NAME --id.secret $AGER_ADMIN_SECRET --id.type admin --id.affiliation $AFFILIATION \
+        --id.attrs '"hf.Registrar.Roles=user,client",hf.Revoker=true,hf.IntermediateCA=false'
+log_debug "$AGER_ADMIN_NAME registered @ MSP-CA"
+
 # Register Ager-Orderer identity
 for ORDERER in $AGER_ORDERERS; do
     ORDERER_NAME=$ORDERER.$AGER_NAME.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD

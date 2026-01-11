@@ -16,10 +16,16 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
   Enrolls Server-Certs and starts Ager-MSP-CA.
 - `scripts/ager-enroll-msp.sh`  
   Enrolls Org-MSP.
+- `scripts/ager-enroll-admin.sh`  
+  Enrolls Admin.
 - `scripts/ager-start-orderer.sh`  
   Enrolls Server-Certs and starts all Ager-Orderer-Nodes.
 - `scripts/ager-start-peer.sh`  
   Enrolls Server-Certs and starts all Ager-Peer-Nodes.
+- `scripts/ager-join-orderer.sh`  
+  Orderer joins Regnum-Channel.
+- `scripts/ager-join-peer.sh`  
+  Peer joins Regnum-Channel.
 - `scripts/utils.sh`  
   Helper functions for script control.
 - `scripts/prereq.sh`  
@@ -39,11 +45,19 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
   4. to generate crypto material, send `config/<myAgerName>.yaml` to your Regnum within an encrypted tar.
 2. Prepare your Infrastructure
   1. Copy `cp config/ager-infra.yaml config/<myAgerName>-infra.yaml`.
-3. Install your MSP-CA.
+3. Install your MSP (CA and certs for Org and Admin).
   1. Run `./scripts/ager-start-ca.sh <myAgerName>-certs.yaml <myAgerName>-infra.yaml` (optionally with `--debug`).
-4. Install your Orderers.
-  1. Run `./scripts/ager-start-orderer.sh <myAgerName>-certs.yaml <myAgerName>-infra.yaml` (optionally with `--debug`).
-5. Install your Peers.
+  2. Run `./scripts/ager-enroll-msp.sh <myAgerName>-certs.yaml <myAgerName>-infra.yaml <mySecret>` (optionally with `--debug`).
+  3. Run `./scripts/ager-enroll-admin.sh <myAgerName>-certs.yaml <myAgerName>-infra.yaml <mySecret>` (optionally with `--debug`).
+4. Install your Nodes.
+  1. Orderer: run `./scripts/ager-start-orderer.sh <myAgerName>-certs.yaml <myAgerName>-infra.yaml` (optionally with `--debug`).
+  2. Peer: run `./scripts/ager-start-peer.sh <myAgerName>-certs.yaml <myAgerName>-infra.yaml` (optionally with `--debug`).
+5. Join to channel.
+  1. Per orderer with genesisblock: run `./scripts/ager-join-orderer.sh <myAgerName>-infra.yaml <myOrdererName>` (optionally with `--debug`).
+  2. Per orderer with configblock from a peer: run `./scripts/ager-join-orderer.sh <myAgerName>-infra.yaml <myOrdererName> <myPeerName>` (optionally with `--debug`).
+  3. Per peer: run `./scripts/ager-join-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName>` (optionally with `--debug`).
+  4. Get Channel Info: run `./scripts/ager-join-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName> --info` (optionally with `--debug`).
+  4. List all Channels of a peer: run `./scripts/ager-join-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName> --list` (optionally with `--debug`).
 6. Install your Servicecs.
 7. Install your Gateway.
 8. Join the channels.

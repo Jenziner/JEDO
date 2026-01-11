@@ -77,7 +77,7 @@ Before creating the genesis block, ensure the following conditions are met:
 
 1. Edit the `regnum-genesis-block.sh` script and update the writing of the configtx.yaml file.
 2. Run `./regnum-genesis-block.sh` to create genesis block.
-3. Check that the genesis block was successfully created and distributed to the Ager Orderer nodes.
+3. Send the encrypted genesis block to the initial orderer-node-admins.
 
 ## Adding Additional Ager Organizations
 
