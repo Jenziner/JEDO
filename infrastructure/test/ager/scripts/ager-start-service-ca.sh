@@ -163,20 +163,20 @@ chmod -R 750 $LOCAL_SRV_DIR
 log_info "$SERVICE_NAME enrolling server certificates..."
 
 # Enroll @ Regnum TLS-CA
-# docker run --rm \
-#   --network "${DOCKER_NETWORK}" \
-#   -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
-#   -v "${LOCAL_SRV_DIR}:${HOST_SRV_DIR}" \
-#   -e FABRIC_MSP_CLIENT_HOME="${HOST_SRV_DIR}" \
-#   -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
-#   hyperledger/fabric-ca:latest \
-#   fabric-ca-client enroll \
-#       -u https://$SERVICE_NAME:$SERVICE_SECRET@$REGNUM_TLS_NAME:$REGNUM_TLS_PORT \
-#       --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
-#       --mspdir ${HOST_SRV_DIR}/tls \
-#       --enrollment.profile tls \
-#       --csr.hosts ${SERVICE_NAME},${SERVICE_IP} \
-#       --csr.cn $SERVICE_NAME --csr.names "$SERVICE_CSR"
+docker run --rm \
+  --network "${DOCKER_NETWORK}" \
+  -v "${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}" \
+  -v "${LOCAL_SRV_DIR}:${HOST_SRV_DIR}" \
+  -e FABRIC_MSP_CLIENT_HOME="${HOST_SRV_DIR}" \
+  -e FABRIC_CA_CLIENT_LOGLEVEL=${FABRIC_CA_CLIENT_LOGLEVEL} \
+  hyperledger/fabric-ca:latest \
+  fabric-ca-client enroll \
+      -u https://$SERVICE_NAME:$SERVICE_SECRET@$REGNUM_TLS_NAME:$REGNUM_TLS_PORT \
+      --tls.certfiles ${HOST_CAROOTS_DIR}/${REGNUM_TLS_NAME}.pem \
+      --mspdir ${HOST_SRV_DIR}/tls \
+      --enrollment.profile tls \
+      --csr.hosts ${SERVICE_NAME},${SERVICE_IP} \
+      --csr.cn $SERVICE_NAME --csr.names "$SERVICE_CSR"
 log_debug "TLS-CA-Service enrolled"
 
 # Crypto Material

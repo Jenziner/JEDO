@@ -59,6 +59,9 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
   4. Get Channel Info: run `./scripts/ager-join-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName> --info` (optionally with `--debug`).
   4. List all Channels of a peer: run `./scripts/ager-join-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName> --list` (optionally with `--debug`).
 6. Install your Servicecs.
+  1. CA-Service: run `./scripts/ager-start-service-ca.sh <myAgerName>-certs.yaml <myAgerName>-infra.yaml <adminName> <adminPass> <harborPass>` (optionally with `--debug`).
+    - `<adminName>` is normally the name of the MSP server: `msp.<ager>.<regnum>.<orbis>.<orbis_tld>`.
+    - `<harborPass>`is the password for the Harbor `robot$cd`-Account. Get this from your Regnum.
 7. Install your Gateway.
 8. Join the channels.
 
