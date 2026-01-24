@@ -29,7 +29,6 @@ Ager:                    # An Ager needs 1 MSP, at least 1 orderer, 1 peer, 1 ga
         Services:
           - Name: porta #porta.via.alps...?
             Secret: Test1
-    Services:
         CA-Service:
             Name: clavis
             Secret: Test1

@@ -105,13 +105,14 @@ AGER_CA_PORT=$(yq eval '.Ager.msp.Port' "${INFRA_CONFIGFILE}")
 AFFILIATION=$ORBIS_NAME.$REGNUM_NAME.$AGER_NAME
 
 # Service Config
-SERVICE_NAME=$(yq eval ".Ager.Services.CA-Service.Name" $INFRA_CONFIGFILE)
-SERVICE_NAME=$SERVICE_NAME.$AGER_NAME.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD
-SERVICE_SOURCE=$(yq eval ".Ager.Services.CA-Service.Source" $INFRA_CONFIGFILE)
-SERVICE_VERSION=$(yq eval ".Ager.Services.CA-Service.Version" $INFRA_CONFIGFILE)
-SERVICE_IP=$(yq eval ".Ager.Services.CA-Service.IP" $INFRA_CONFIGFILE)
-SERVICE_PORT=$(yq eval ".Ager.Services.CA-Service.Port" $INFRA_CONFIGFILE)
-SERVICE_SECRET=$(yq eval ".Ager.Services.CA-Service.Secret" ${CERTS_CONFIGFILE})
+GATEWAY_NAME=$(yq eval ".Ager.Gateway.Name" $INFRA_CONFIGFILE)
+SERVICE_NAME=$(yq eval ".Ager.Gateway.CA-Service.Name" $INFRA_CONFIGFILE)
+SERVICE_NAME=$SERVICE_NAME.$GATEWAY_NAME.$AGER_NAME.$REGNUM_NAME.$ORBIS_NAME.$ORBIS_TLD
+SERVICE_SOURCE=$(yq eval ".Ager.Gateway.CA-Service.Source" $INFRA_CONFIGFILE)
+SERVICE_VERSION=$(yq eval ".Ager.Gateway.CA-Service.Version" $INFRA_CONFIGFILE)
+SERVICE_IP=$(yq eval ".Ager.Gateway.CA-Service.IP" $INFRA_CONFIGFILE)
+SERVICE_PORT=$(yq eval ".Ager.Gateway.CA-Service.Port" $INFRA_CONFIGFILE)
+SERVICE_SECRET=$(yq eval ".Ager.Gateway.CA-Service.Secret" ${CERTS_CONFIGFILE})
 SERVICE_CSR="C=XX,ST=$ORBIS_ENV,L=$REGNUM_NAME,O=$AGER_NAME"
 
 LOCAL_CAROOTS_DIR="${SCRIPTDIR}/../../infrastructure/tls-ca-roots"
