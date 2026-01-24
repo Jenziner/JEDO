@@ -88,6 +88,7 @@ module.exports = {
     tlsCertPath: getEnv('FABRIC_CA_TLS_CERT_PATH'),
     tlsVerify: getEnvBoolean('FABRIC_CA_TLS_VERIFY', true),
     idemixCurve: getEnvWithDefault('FABRIC_CA_IDEMIX_CURVE', 'gurvy.Bn254'),
+    mspCaPath: getEnvWithDefault('MSP_CA_PATH', null),
     orbisName: getEnv('FABRIC_ORBIS_NAME'),
     regnumName: getEnv('FABRIC_REGNUM_NAME'),
     agerName: getEnv('FABRIC_AGER_NAME'),

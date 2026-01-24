@@ -64,7 +64,7 @@ class CertificateService {
       logger.info('Loading Idemix Issuer Keys from CA directory...');
       
       // Build path from environment variables
-      const caBasePath = path.join(
+      const caBasePath = process.env.MSP_CA_PATH || path.join(
         '/app/infrastructure',
         process.env.FABRIC_ORBIS_NAME,
         process.env.FABRIC_REGNUM_NAME,

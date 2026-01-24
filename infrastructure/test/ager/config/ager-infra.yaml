@@ -45,5 +45,12 @@ Ager:                    # An Ager needs 1 MSP, at least 1 orderer, 1 peer, 1 ga
     Gateway: 
         Name: via        # API-Gateway
         Services:
-          - Name: clavis # ca-service
           - Name: porta  # ledger-service
+    Services:
+        CA-Service:
+            Name: clavis
+            Pass: Test1
+            Source: services/ca-service
+            Version: 1.0
+            IP: 172.16.3.91
+            Port: 53911
