@@ -1,0 +1,79 @@
+version: '3.8'
+
+# ========================================
+# YAML Anchors - Wiederverwendbare Configs
+# ========================================
+x-common-settings: &common-settings
+  restart: on-failure:3
+  networks:
+    - jedo-ecosystem
+  pull_policy: always
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 30s
+  timeout: 10s
+  start_period: 40s
+  retries: 3
+
+# ========================================
+# Services
+# ========================================
+services:
+  
+  # CA Service (Microservice unter Gateway.Services[0])
+  ca-service:
+    <<: *common-settings
+    image: ${CA_SERVICE_IMAGE}
+    container_name: ca.via.alps.ea.jedo.dev
+    user: "${UID}:${GID}"
+    env_file:
+      - ./ca-service/.env
+    ports:
+      - "${CA_SERVICE_PORT}:${CA_SERVICE_PORT}"
+    volumes:
+      - ./ca-service/.env:/app/.env:ro
+      - ./infrastructure:/app/infrastructure:ro
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "node", "-e", "require('https').get({host:'localhost',port:process.env.PORT,path:'/health',rejectUnauthorized:false},(r)=>{process.exit(r.statusCode===200?0:1)})"]
+    extra_hosts:
+      - "ca.via.alps.ea.jedo.dev:172.16.3.91"
+      - "ledger.via.alps.ea.jedo.dev:172.16.3.92"
+
+  # Gateway (API-Gateway)
+  gateway:
+    <<: *common-settings
+    image: ${GATEWAY_IMAGE}
+    container_name: via.alps.ea.jedo.dev
+    user: "${UID:-1000}:${GID:-1000}"
+    env_file:
+      - ./gateway/.env
+    ports:
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
+    volumes:
+      - ./gateway/.env:/app/.env:ro
+      - ./infrastructure:/app/infrastructure:ro
+    depends_on:
+      ca-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:53901/health',(r)=>{process.exit(r.statusCode===200?0:1)})"]
+    extra_hosts:
+      - "via.alps.ea.jedo.dev:172.16.3.90"
+      - "ca.via.alps.ea.jedo.dev:172.16.3.91"
+      - "ledger.via.alps.ea.jedo.dev:172.16.3.92"
+      - "peer.alps.ea.jedo.dev:172.16.3.21"
+      - "orderer.alps.ea.jedo.dev:172.16.3.11"
+
+# ========================================
+# Networks
+# ========================================
+networks:
+  jedo-ecosystem:
+    name: ${DOCKER_NETWORK_NAME}
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.3.0/24
