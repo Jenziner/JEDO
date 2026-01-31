@@ -22,6 +22,8 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
   Register all Identities of an Ager according provided agger.yaml.
 - `scripts/regnum-genesis-block.sh`  
   Generates Genesisblock - To use adjust the script with inital ager and correct orderer and peer settings manually!
+- `scripts/orbis-genesis-block.sh`  
+  Generates Orbis-Genesisblock - To use adjust the script with inital ager and correct orderer and peer settings manually!
 - `scripts/utils.sh`  
   Helper functions for script control.
 - `scripts/prereq.sh`  

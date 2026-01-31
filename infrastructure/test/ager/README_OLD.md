@@ -22,6 +22,10 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
   Enrolls Server-Certs and starts all Ager-Orderer-Nodes.
 - `scripts/ager-start-peer.sh`  
   Enrolls Server-Certs and starts all Ager-Peer-Nodes.
+- `scripts/ager-join-orbis-orderer.sh`  
+  Orderer joins Orbis-Channel.
+- `scripts/ager-join-orbis-peer.sh`  
+  Peer joins Orbis-Channel.
 - `scripts/ager-join-orderer.sh`  
   Orderer joins Regnum-Channel.
 - `scripts/ager-join-peer.sh`  
@@ -52,18 +56,24 @@ This package has been prepared by Orbis/JEDO for your Regnum CA.
 4. Install your Nodes.
   1. Orderer: run `./scripts/ager-start-orderer.sh <myAgerName>-certs.yaml <myAgerName>-infra.yaml` (optionally with `--debug`).
   2. Peer: run `./scripts/ager-start-peer.sh <myAgerName>-certs.yaml <myAgerName>-infra.yaml` (optionally with `--debug`).
-5. Join to channel.
+5. Join to orbis channel.
+  1. Per orderer with genesisblock: run `./scripts/ager-join-orbis-orderer.sh <myAgerName>-infra.yaml <myOrdererName>` (optionally with `--debug`).
+  2. Per orderer with configblock from a peer: run `./scripts/ager-join-orbis-orderer.sh <myAgerName>-infra.yaml <myOrdererName> <myPeerName>` (optionally with `--debug`).
+  3. Per peer: run `./scripts/ager-join-orbis-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName>` (optionally with `--debug`).
+  4. Get Channel Info: run `./scripts/ager-join-orbis-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName> --info` (optionally with `--debug`).
+  5. List all Channels of a peer: run `./scripts/ager-join-orbis-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName> --list` (optionally with `--debug`).
+6. Join to regnum channel.
   1. Per orderer with genesisblock: run `./scripts/ager-join-orderer.sh <myAgerName>-infra.yaml <myOrdererName>` (optionally with `--debug`).
   2. Per orderer with configblock from a peer: run `./scripts/ager-join-orderer.sh <myAgerName>-infra.yaml <myOrdererName> <myPeerName>` (optionally with `--debug`).
   3. Per peer: run `./scripts/ager-join-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName>` (optionally with `--debug`).
   4. Get Channel Info: run `./scripts/ager-join-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName> --info` (optionally with `--debug`).
-  4. List all Channels of a peer: run `./scripts/ager-join-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName> --list` (optionally with `--debug`).
-6. Install your Servicecs.
+  5. List all Channels of a peer: run `./scripts/ager-join-peer.sh <myAgerName>-infra.yaml  <myOrdererName> <myPeerName> --list` (optionally with `--debug`).
+7. Install your Servicecs.
   1. CA-Service: run `./scripts/ager-start-service-ca.sh <myAgerName>-certs.yaml <myAgerName>-infra.yaml <adminName> <adminPass> <harborPass>` (optionally with `--debug`).
     - `<adminName>` is normally the name of the MSP server: `msp.<ager>.<regnum>.<orbis>.<orbis_tld>`.
     - `<harborPass>`is the password for the Harbor `robot$cd`-Account. Get this from your Regnum.
-7. Install your Gateway.
-8. Join the channels.
+8. Install your Gateway.
+9. Join the channels.
 
 Your Ager is now ready to participate.
 

@@ -153,7 +153,8 @@ fi
 ###############################################################
 if [[ "$opt_r" == "genesis" || "$opt_a" == "go" || "$opt_a" == "pause" ]]; then
     log_section "Genesis Block and Channel Configuration generating..."
-    $SCRIPT_DIR/genesis-block.sh
+    $SCRIPT_DIR/genesis-block-orbis.sh
+    $SCRIPT_DIR/genesis-block-regnum.sh
     cool_down $opt_a "Genesis Block and Channel Configuration generated."
 fi
 

@@ -12,40 +12,43 @@ check_script
 
 
 ###############################################################
-# Params for regnum
+# Params for orbis
 ###############################################################
-for REGNUM in $REGNUMS; do
-    log_info "Channel $REGNUM configuring..."
+log_info "Channel $ORBIS configuring..."
 
-    LOCAL_INFRA_DIR=${PWD}/infrastructure
-    export FABRIC_CFG_PATH=$LOCAL_INFRA_DIR/$ORBIS/$REGNUM/configuration
-    OUTPUT_CONFIGTX_FILE="$FABRIC_CFG_PATH/configtx.yaml"
-    ORGANIZATIONS=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
+LOCAL_INFRA_DIR=${PWD}/infrastructure
+export FABRIC_CFG_PATH=$LOCAL_INFRA_DIR/$ORBIS/configuration
+OUTPUT_CONFIGTX_FILE="$FABRIC_CFG_PATH/configtx.yaml"
+ORGANIZATIONS=$(yq eval ".Ager[] | .Name" $CONFIG_FILE)
+
+mkdir -p $FABRIC_CFG_PATH
+chmod -R 750 $FABRIC_CFG_PATH
 
 
-    ###############################################################
-    # Start of configtx.yaml
-    ###############################################################
-    log_info "$OUTPUT_CONFIGTX_FILE generating..."
+###############################################################
+# Start of configtx.yaml
+###############################################################
+log_info "$OUTPUT_CONFIGTX_FILE generating..."
 
 cat <<EOF > $OUTPUT_CONFIGTX_FILE
 ---
 EOF
 
 
-    ###############################################################
-    # Section Organization
-    ###############################################################
+###############################################################
+# Section Organization
+###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Organizations:
 EOF
 
 
+for REGNUM in $REGNUMS; do
     ORGANIZATIONS="Organizations:"
     CONSENTER_MAPPING="ConsenterMapping:"
     CONSENTER_ID=1
     PROFILE_ORGANIZATIONS="Organizations:"
-    AGERS=$(yq eval ".Ager[] | select(.Administration.Parent == \"$REGNUM\") | .Name" $CONFIG_FILE)
+    AGERS=$(yq eval ".Ager[] | .Name" $CONFIG_FILE)
     for AGER in $AGERS; do
         ORGANIZATIONS="$ORGANIZATIONS"$'\n'"    - *$AGER"
         ORDERERS=$(yq eval ".Ager[] | select(.Name == \"$AGER\") | .Orderers[].Name" $CONFIG_FILE)
@@ -103,13 +106,12 @@ cat <<EOF >> $OUTPUT_CONFIGTX_FILE
     $ORDERER_ENDPOINTS
 EOF
     done
-# TODO: Remove code
-#    $ANCHOR_PEERS
+done
 
 
-    ###############################################################
-    # Section Capabilities
-    ###############################################################
+###############################################################
+# Section Capabilities
+###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Capabilities:
   Channel: &ChannelCapabilities
@@ -121,9 +123,9 @@ Capabilities:
 EOF
 
 
-    ###############################################################
-    # Section Application
-    ###############################################################
+###############################################################
+# Section Application
+###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Application: &ApplicationDefaults
   $ORGANIZATIONS
@@ -148,9 +150,9 @@ Application: &ApplicationDefaults
 EOF
 
 
-    ###############################################################
-    # Section Orderer
-    ###############################################################
+###############################################################
+# Section Orderer
+###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Orderer: &OrdererDefaults
   OrdererType: BFT
@@ -192,9 +194,9 @@ Orderer: &OrdererDefaults
 EOF
 
 
-    ###############################################################
-    # Section Channel
-    ###############################################################
+###############################################################
+# Section Channel
+###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Channel: &ChannelDefaults
   Policies:
@@ -212,9 +214,9 @@ Channel: &ChannelDefaults
 EOF
 
 
-    ###############################################################
-    # Profile
-    ###############################################################
+###############################################################
+# Profile
+###############################################################
 cat <<EOF >> $OUTPUT_CONFIGTX_FILE
 Profiles:
   JedoChannel:
@@ -227,10 +229,10 @@ Profiles:
       $PROFILE_ORGANIZATIONS
 EOF
 
-    log_info "Genesis block for $REGNUM generating..."
-    FABRIC_LOGGING_SPEC=$FABRIC_LOGGING_SPEC
-    configtxgen -configPath $FABRIC_CFG_PATH -profile JedoChannel -channelID $REGNUM -outputBlock $FABRIC_CFG_PATH/genesisblock
+log_info "Genesis block for $ORBIS generating..."
+FABRIC_LOGGING_SPEC=$FABRIC_LOGGING_SPEC
+configtxgen -configPath $FABRIC_CFG_PATH -profile JedoChannel -channelID $ORBIS -outputBlock $FABRIC_CFG_PATH/genesisBlockOrbis
 
-    log_ok "Channel $REGNUM configured..."
-done
+log_ok "Channel $ORBIS configured..."
+
 
