@@ -1,11 +1,15 @@
-###############################################################
 #!/bin/bash
-#
+
+###############################################################
 # This script checks prerequisites
-# Documentation: https://hyperledger-fabric.readthedocs.io
-#
 ###############################################################
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load .env
+set -a
+source "${SCRIPT_DIR}/../.env"
+set +a
+
 source "$SCRIPT_DIR/utils.sh"
 
 log_section "Prerequisites checking..."
@@ -19,10 +23,13 @@ inst_help_yq() {
     echo "make it executable: chmod +x /usr/local/bin/yq"
 }
 inst_help_docker() {
-    echo "installation: sudo apt sudo apt install docker.io"
+    echo "installation: sudo apt-get install -y docker"
+}
+inst_help_docker-compose() {
+    echo "installation: sudo apt-get install -y docker-compose"
 }
 inst_help_openssl() {
-    echo "installation: sudo apt sudo apt install openssl"
+    echo "installation: sudo apt-get install -y openssl"
 }
 
 
@@ -55,6 +62,7 @@ check_command() {
 ###############################################################
 check_command yq
 check_command docker
+check_command docker-compose
 check_command openssl
 
 log_info "Prerequisites checked."

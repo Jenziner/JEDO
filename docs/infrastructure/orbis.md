@@ -3,7 +3,7 @@
 ## Crypto Hierarchy (MSP & TLS)
 ```
 rca.jedo.me (Vault – Offline Root)
-├── msp.ea.jedo.me / tls.ea.jedo.me
+├── msp.ee.jedo.me / tls.ee.jedo.me
 ├── msp.as.jedo.me  / tls.as.jedo.me
 ├── msp.af.jedo.me  / tls.af.jedo.me
 ├── msp.na.jedo.me  / tls.na.jedo.me
@@ -43,6 +43,9 @@ Environment suffix:
 ---
 
 ## Vault server (offline mode) configuration
+
+### SSH-Terminal
+`ssh -i ~/.ssh/JEDO-Ecosystem.pem ubuntu@83.228.219.30`
 
 ### 1. Vault configuration (`vault.hcl`):
 
@@ -203,8 +206,8 @@ docker compose up -d
 # Use Vault-Container
 docker exec -it vault sh
 
-# check jq
-jq --version  # optional install it: apk update && apk add jq
+# install jq
+apk update && apk add jq
 
 # Check Vault status
 export VAULT_ADDR=http://127.0.0.1:8200
@@ -248,8 +251,7 @@ jq -r '.data.certificate' \
 head -n 5 /vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.cert.pem
 
 # Build Chain
-cat /vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.cert.pem /vault/pki/root/rca.cert \
-  /vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.chain.pem
+cat /vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.cert.pem /vault/pki/root/rca.cert > /vault/pki/${REGNUM}/${TYPE}.${REGNUM}.jedo.${TLD}.chain.pem
 ```
 
 ***

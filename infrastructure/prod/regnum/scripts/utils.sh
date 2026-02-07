@@ -1,11 +1,18 @@
-###############################################################
 #!/bin/bash
+
+###############################################################
 #
-# This file provides general settings and general functions.
-#
+# JEDO-Ecosystem - Provide general settings and general functions
 #
 ###############################################################
 set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load .env
+set -a
+source "${SCRIPT_DIR}/../.env"
+set +a
 
 
 ###############################################################

@@ -1,0 +1,67 @@
+# ===================================================================
+# JEDO-Ecosystem Regnum CA Docker Compose
+# ===================================================================
+version: '3.9'
+
+networks:
+  jedo:
+    name: ${DOCKER_NETWORK}
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${DOCKER_SUBNET}
+          gateway: ${DOCKER_GATEWAY}
+
+services:
+  # =================================================================
+  # TLS Certificate Authority
+  # =================================================================
+  ca-tls:
+    image: ${FABRIC_CA_IMAGE}
+    container_name: tls.${REGNUM_NAME}.${ORBIS_NAME}.${ORBIS_TLD}
+    command: sh -c "fabric-ca-server start -b bootstrap.tls.${REGNUM_NAME}.${ORBIS_NAME}.${ORBIS_TLD}:${TLS_CA_BOOTSTRAP_PASS}"
+    environment:
+      - FABRIC_CA_SERVER_LOGLEVEL=${FABRIC_CA_SERVER_LOGLEVEL}
+      - FABRIC_CA_HOME=${HOST_SRV_DIR}
+    volumes:
+      - ${LOCAL_TLS_SRV_DIR}:${HOST_SRV_DIR}
+      - ${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}
+    ports:
+      - "${TLS_CA_PORT}:${TLS_CA_PORT}"
+      - "${TLS_CA_OPPORT}:${TLS_CA_OPPORT}"
+    networks:
+      jedo:
+        ipv4_address: ${TLS_CA_IP}
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost ${TLS_CA_PORT} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  # =================================================================
+  # MSP Certificate Authority
+  # =================================================================
+  ca-msp:
+    image: ${FABRIC_CA_IMAGE}
+    container_name: msp.${REGNUM_NAME}.${ORBIS_NAME}.${ORBIS_TLD}
+    command: sh -c "fabric-ca-server start -b bootstrap.msp.${REGNUM_NAME}.${ORBIS_NAME}.${ORBIS_TLD}:${MSP_CA_BOOTSTRAP_PASS}"
+    environment:
+      - FABRIC_CA_SERVER_LOGLEVEL=${FABRIC_CA_SERVER_LOGLEVEL}
+      - FABRIC_CA_HOME=${HOST_SRV_DIR}
+    volumes:
+      - ${LOCAL_MSP_SRV_DIR}:${HOST_SRV_DIR}
+      - ${LOCAL_CAROOTS_DIR}:${HOST_CAROOTS_DIR}
+    ports:
+      - "${MSP_CA_PORT}:${MSP_CA_PORT}"
+      - "${MSP_CA_OPPORT}:${MSP_CA_OPPORT}"
+    networks:
+      jedo:
+        ipv4_address: ${MSP_CA_IP}
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost ${MSP_CA_PORT} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
